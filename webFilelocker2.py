@@ -1861,7 +1861,7 @@ class Root:
         defaultExpiration = datetime.date.today() + (datetime.timedelta(days=fl.maxFileLifeDays))
         uploadTickets = fl.get_upload_tickets_by_user(user, user.userId)
         filesSection = self.files() 
-        indexHTML = str(header) + str(filesSection) + str(footer) 
+        indexHTML = str(header) + str(filesSection) + str(footer)
         self.saw_banner()
         return str(indexHTML)
     
