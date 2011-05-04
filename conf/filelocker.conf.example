@@ -1,0 +1,41 @@
+[global]
+server.socket_port=8083
+server.socket_host="127.0.0.1"
+server.reverse_dns=False
+server.thread_pool=20
+server.environment="production"
+server.max_request_body_size: 2147483648 
+engine.autoreload.on=False
+tools.sessions.on=True
+tools.sessions.name="filelocker"
+tools.sessions.secure = True 
+tools.sessions.storage_type='ram'
+tools.sessions.timeout=15
+log.screen = False
+log.access_file = "/var/log/filelocker2/cherrypy.access.log"
+log.error_file = "/var/log/filelocker2/cherrypy.error.log"
+
+[filelocker]
+rootpath = "/opt/filelocker2"
+rooturl = "https://dev.filelocker.itns.purdue.edu/filelocker2"
+vault = "/vault/data"
+logdir = "/var/log/filelocker2"
+clustermaster = True
+clustermemberid = 0
+loglevel = 40
+#Log levels are
+#10 - debug, 20 - info, 30 - warning, 40 - error, 50 - critical
+
+#Comment this portion out if Apace is serving the static directory
+[/static]
+tools.staticdir.root = "/opt/filelocker2"
+tools.staticdir.on = True
+tools.staticdir.dir = "static"
+
+
+[database]
+dbtype = 'mysql'
+dbhost = ''
+dbuser = ''
+dbpassword = ''
+dbname = ''

@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="description" content="Developed at Purdue University, Filelocker allows you to share files with other people both inside and outside of your organization. It is a temporary and secure storage system for sharing files and data."/> 
+    <meta name="keywords" content="filelocker, encryption, security application, enterprise, auditing, secure storage, information security, online storage, file sharing, share files, online backup, sharing, collaboration" /> 
+    <title>Filelocker</title>
+    <script type="text/javascript">
+        var FILELOCKER_ROOT = "$fl.rootURL";
+        var USER_QUOTA = $user.userQuota;
+        var HOST_IP = "$cherrypy.request.remote.ip";
+        var DEFAULT_EXPIRATION = "$defaultExpiration.strftime('%m/%d/%Y')";
+        #if $fl.geotagging
+        var GEOTAGGING = true;
+        #else
+        var GEOTAGGING = false;
+        #end if
+        #if $cherrypy.session.has_key('sawBanner') or $fl.banner is None or $fl.banner == ""
+        var BANNER = false;
+        #else
+        var BANNER = true;
+        #end if
+    </script>
+    <link rel="stylesheet" href="$fl.rootURL/css?style=jquery-ui" />
+    <link rel="stylesheet" href="$fl.rootURL/css?style=visualize" />
+    <link rel="stylesheet" href="$fl.rootURL/css?style=filelocker" />
+    <link rel="shortcut icon" href="$fl.rootURL/static/images/favicon.ico" />
+    <!--[if IE]><script src="$fl.rootURL/static/js/excanvas.js" type="text/javascript"></script><![endif]-->
+    <script type="text/javascript" src="$fl.rootURL/static/js/jquery.js" ></script>
+    <script type="text/javascript" src="$fl.rootURL/static/js/jquery.ui.js"></script>
+    <script type="text/javascript" src="$fl.rootURL/static/js/jquery.tablesorter.js"></script>
+    <script type="text/javascript" src="$fl.rootURL/static/js/jquery.tipsy.js"></script>
+    <script type="text/javascript" src="$fl.rootURL/static/js/jquery.visualize.js"></script>
+    <script type="text/javascript" src="$fl.rootURL/static/js/fileuploader.js"></script>
+    <script type="text/javascript" src="$fl.rootURL/static/js/global.js"></script>
+    <script type="text/javascript" src="$fl.rootURL/static/js/filelocker.js"></script>
+    #if $fl.geotagging
+    <script type="text/javascript" src="$fl.rootURL/static/js/geo.js"></script>
+    #end if
+    #if $fl.check_admin($user)
+    <script src="$fl.rootURL/static/js/admin.js" type="text/javascript"></script>
+    #end if
+</head>
+<body class="greyBackground">
+<div id="background">
+    <div id="wrapper_all">
+    <!--header-->
+    <div id="wrapper_header">
+        <div class="logo"><a href="$fl.rootURL"><img src="$fl.rootURL/static/images/logos/filelocker_logo.png" alt="Filelocker" /></a></div>
+        <table>
+        <tr>
+        <td id="nameRoleContainer">
+    #if $user.isRole == False
+        #if len($roles) == 0
+            <div class="userLoggedIn">$user.userDisplayName ($user.userId)</div>
+        #else
+            <div class="userLoggedInMultiple pseudoLink" title="Switch to a role" onclick="javascript:toggleRoles()">$user.userDisplayName ($user.userId)</div>
+            <span id="availableRoles">
+            #for $role in $roles
+                <div class="roleLoggedIn pseudoLink" title="Switch to '$role.userId'" onclick="javascript:switchRoles('$role.userId');" style="display: none;">$role.userDisplayName ($role.userId)</div><br/>
+            #end for
+            </span>
+        #end if
+    #else
+        #if $cherrypy.session.get("original_user").userId is not None and $cherrypy.session.get("original_user").userId != $user.userId
+            <div class="roleLoggedInMultiple pseudoLink" title="Switch back to a user" onclick="javascript:toggleRoles()">$user.userDisplayName ($user.userId)</div>
+            <span id="availableRoles">
+                <div class="userLoggedIn pseudoLink" title="Switch back to '$cherrypy.session.get('original_user').userId'" onclick="javascript:switchRoles();" style="display: none;">$cherrypy.session.get("original_user").userDisplayName ($cherrypy.session.get("original_user").userId)</div>
+            </span>
+        #else
+            <div class="roleLoggedIn">$user.userDisplayName ($user.userId)</div>
+        #end if
+    #end if
+        </td>
+        <td><div id="historyLink" class="history"><a href="javascript:dismissStatusMessage();javascript:loadHistory();" title="View your interactions with Filelocker">History</a></div></td>
+        #if $fl.check_admin($user)
+            <td id="adminBackLink"><div id="adminLink" class="settings"><a href="javascript:loadAdminInterface()" title="Launch the admin panel">Admin</a></div></td>
+        #else
+            <td><div id="accountLink" class="settings"><a href="javascript:dismissStatusMessage();javascript:loadEditAccount()" title="Edit your account settings">Account</a></div></td>
+        #end if
+      </tr>
+      <tr>
+        <td><div class="quotaText">User Quota:&nbsp;</div><span id="quotaProgressBar" class="quota"></span></td>
+        <td><div id="messagesLink" class="messages"><a href="javascript:viewMessages();">Messages</a></div></td>
+        <td><div class="logout"><a href="$fl.rootURL/logout" title="Logout of Filelocker">Logout</a></div></td>
+      </tr>
+      </table>
+    </div>
+    
+    <!--content area-->
+    <div id="statusMessageWrapper"><div id="statusMessage" class="ui-widget ui-state-error hidden"></div></div>
+    <div id="wrapper_2col">

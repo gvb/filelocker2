@@ -1,0 +1,93 @@
+<div id="${context}_sections">
+    <ul>
+        #if $context == "private_sharing"
+            <li><a href="#${context}_users_tab">Share with Users</a></li>
+            <li><a href="#${context}_groups_tab">Share with Groups</a></li>
+            #if len($userShareableAttributes) > 0
+            <li><a href="#${context}_attributes_tab">Share by Attribute</a></li>
+            #end if
+        #else if $context == "manage_groups"
+            <li><a href="#${context}_users_tab">Add Users</a></li>
+            <!--<li><a href="#${context}_groups_tab">Add Groups</a></li>-->
+            <!--<li><a href="#${context}_attributes_tab">Add by Attribute</a></li>-->
+        #else if $context == "messages"
+            <li><a href="#${context}_users_tab">Message Users</a></li>
+            <!--<li><a href="#${context}_groups_tab">Message Groups</a></li>-->
+            <!--<li><a href="#${context}_attributes_tab">Message by Attribute</a></li>-->
+        #end if
+    </ul>
+    <div id="${context}_users_tab">
+        <div id="${context}_search_userId">
+            <h3>Search for Users by ID</h3><br />
+        </div>
+        <div id="${context}_search_name" class="hidden">
+            <h3>Search for Users by Last or Full Name</h3><br />
+        </div>
+        <div id="${context}_searchTypeChooser">
+            <input type="radio" id="${context}_searchUserId" name="searchType" onClick="toggleSearchType('${context}','userId')" checked="checked" /><label for="${context}_searchUserId" style="width: 91px;">User ID</label>
+            <input type="radio" id="${context}_searchName" name="searchType" onClick="toggleSearchType('${context}','name')" /><label for="${context}_searchName" style="width: 91px;">Name</label>
+        </div>
+        <div id="${context}_externalSearchSelector" class="hidden">
+        #if $fl.authType != "local"
+            <br /><h4>Can't find who you're looking for?</h4><input type="checkbox" name="${context}_externalSearch" id="${context}_externalSearch" onclick="javascript:updateSearch('${context}');" /><span onclick="javascript:check('${context}_externalSearch');javascript:updateSearch('${context}');">Search the entire ${fl.orgName} directory.</span>
+        #end if
+        </div>
+        <div>
+            <br />
+            <input type="text" name="${context}_searchBox" id="${context}_searchBox" onkeypress="javascript:if (event.which == 13) manualSearch(\$(this).val(), '${context}');"/>
+            <a href="javascript:manualSearch(\$('#${context}_searchBox').val(), '${context}');" class="inlineLink"><span class="view">&nbsp;</span></a>
+            <br />
+        </div>
+        <div id="${context}_searchResult" class="hidden"></div>
+    </div>
+    #if $context != "messages" and $context != "manage_groups"
+    <div id="${context}_groups_tab">
+        <h3>Your Groups</h3><br />
+        <ul class="menu">
+        #if len($groups) > 0
+        #for $group in $groups
+            #set $shortenedName = $group.groupName
+            #if $len($group.groupName) > 25
+                #set $shortenedName = $group.groupName[0:17] + "..." + $group.groupName[-5:]
+            #end if
+            <li>
+                <span class="itemTitleWide"><span class="groupItem memberTitle groupName" title="$group.groupName">$shortenedName</span></span>
+                #if $context == "private_sharing"
+                <a href="javascript:privateShareFiles('group', $group.groupId)" title="Share file with '$group.groupName'" class="shareGroup">Share</a>
+                #end if
+            </li>
+        #end for
+        <span class="itemTitleMedium">
+            <li><input type='checkbox' id='${context}_notifyGroup' checked='checked' /><span onclick="javascript:check('${context}_notifyGroup');">Notify via email</span></li>
+        </span>
+        #else
+            <li>You haven't added any groups yet.</li>
+        #end if
+            <br />
+        </ul>
+    </div>
+    #end if
+    #if $context != "messages" and $context != "manage_groups" and len($userShareableAttributes) > 0
+    <div id="${context}_attributes_tab">
+        <h3>Your Attributes</h3><br/>
+        <ul class="menu">
+        #for $attribute in $userShareableAttributes
+            #set $shortenedName = $attribute.attributeName
+            #if $len($attribute.attributeName) > 25
+                #set $shortenedName = $attribute.attributeName[0:17] + "..." + $attribute.attributeName[-5:]
+            #end if
+            <li>
+                <span class="itemTitleWide"><span class="attributeItem memberTitle attributeName" title="$attribute.attributeName">$shortenedName</span></span>
+                #if $context == "private_sharing"
+                <a href="javascript:privateAttributeShareFiles('$attribute.attributeId')" title="Share file with users having the '$attribute.attributeName' attribute" class="shareAttribute">Share</a>
+                #end if
+            </li>
+        #end for
+        </ul>
+    </div>
+    #end if
+</div>
+<br />
+<br />
+<br />
+<br />

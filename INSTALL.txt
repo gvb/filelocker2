@@ -1,0 +1,41 @@
+::Requirements::
+    A MySQL Server (5.x+)
+    python-mysqldb
+    python-crypto
+    python-cheetah
+    python-json
+    python-twisted (You really only need zope.interface out of this, so if you find a lighter weight twisted install that has this component, please let me know)
+    python-cherrypy3 (I've been informed that in some Debian variants and in RedHat you'll need to get CherryPy3.1.2 or better installed from source)
+    -Optional, depending on config-
+    python-ldap
+    python-soappy
+
+::Filelocker 2 Setup Instructions::
+    1) Run the setup.py utility and answer the questions
+    3) To start Filelocker 2 in daemonized mode, run webFilelocker2.py using the "-d" parameter. Running without the "-d" parameter will start webFilelocker attached to the current terminal session.
+    4) To stop Filelocker 2 when in daemonized mode, run webFilelocker2.py with the "-a stop" parameter. 
+    5) If you store the config file somewhere other than in the local conf directory, pass the -c [configpath] option to webFilelocker2.py on startup. Ex: python webFilelocker2.py -a start -c /etc/conf/filelocker2/filelocker.conf
+
+At any time, if remote authentication (via CAS, LDAP, etc) stops working, you may revert back to local authentication by pointing your web browser to 
+http://$FILELOCKER_ROOT/local (where $FILELOCKER_ROOT is the URL you normally use to access Filelocker)
+
+::Permissions::
+
+Whenever a new attribute or a new role is created, a corresponding permission is created along with it. In order to allow people to switch roles, they must be granted permission on that role from the admin interface. 
+If a user should be able to share files with all users who have a certain attribute, they must be granted the permission for that attribute. Often, you will want to use these two features in tandem.
+The expiration_exempt permission is also typical for file distribution purposes, as it allows users or roles with this permission to set an expiration time of null or "Never".
+
+::Apache Proxying::
+    
+For production uses of Filelocker 2, it's best to run it behind Apache and leave the SSL and static file serving to the Apache server, as it can do this much more efficiently than CherryPy.
+The following configuration lines might be a good starting point for your Apache instance:
+    
+    Alias /filelocker2/static "/opt/filelocker2/static"
+    
+    ProxyPass /filelocker2/static !
+    ProxyPass /filelocker2 http://localhost:8083
+    ProxyPassReverse /filelocker2 http://localhost:8083
+    
+This is given that you've set CherryPy to listen on port 8083 (from the configuration wizard) and that you want your webserver to host Filelocker in the form of https://www.mydomain.com/filelocker2. 
+CherryPy can be set up to do the SSL management on its own, but this is probably a better solution.
+I would also suggest that you put firewall rules on or in front of the web server blocking access to whatever port CherryPy is listening to prevent un-encrypted connections.
