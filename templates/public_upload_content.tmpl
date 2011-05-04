@@ -1,0 +1,131 @@
+<div class="section_title">
+    #if $uploadTicket is not None
+    <h1 class="files_title">Upload a file for $ticketOwner.userDisplayName</h1>
+    #else
+    <h1 class="files_title">Upload a file for a Filelocker user</h1>
+    #end if
+</div>
+                
+<div> <!-- col 1 content -->
+    #for $message in $messages
+    <p style="color: red">$message</p>
+    #end for
+    #if $uploadTicket is not None 
+    <div class="file_list">
+        <table class="file_table" id="fileTableSorter">
+            <thead>
+            <tr>
+                <th class="selectAllCol"></th>
+                <th class="nameCol pseudoLink">Name</th>
+                <th class="sizeCol pseudoLink">Size</th>
+                <th class="expiresCol pseudoLink">Expires</th>
+                <th class="menuCol"></th>
+            </tr>
+            <tr>
+                <td></td>
+                <td colspan="4" class="dotted"></td>
+            </tr>
+            </thead>
+            <tbody id="filesTable">
+            #for $ticketFile in $ticketFiles
+                #set $fsSuffix = "B"
+                #set $fileSize = $ticketFile['fileSizeBytes']
+                #if $fileSize > 1024
+                    #set $fileSize = $fileSize / 1024
+                    #set $fsSuffix = "kB"
+                    #if $fileSize > 1024
+                        #set $fileSize = $fileSize / 1024
+                        #set $fsSuffix = "MB" 
+                        #if $fileSize > 1024
+                            #set $fileSize = $fileSize / 1024
+                            #set $fsSuffix = "GB" 
+                        #end if
+                    #end if
+                #end if
+                <tr id="file_$ticketFile['fileId']" class="fileRow">
+                    <td></td>
+                    <td><span class="$ticketFile['documentType'] pseudoLink">
+                        #if len($ticketFile['fileName']) > 60
+                            $ticketFile['fileName'][0:45]...$ticketFile['fileName'][-10:]
+                        #else
+                            $ticketFile['fileName']
+                        #end if
+                    </span></td>
+                    <td>$fileSize $fsSuffix</td>
+                    <td>$ticketFile['fileExpirationDatetime']</td>
+                    <td></td>
+                </tr>
+            #end for
+            </tbody>
+            <tfoot id="progressBarSection">
+            </tfoot>
+        </table>
+    </div> <!-- End File List -->
+    #end if
+    <div id="formArea" style="margin-left: 25px;">
+    #if $uploadTicket is not None and $uploadTicket.expired == False
+        <form action="$fl.rootURL/file_interface/public_upload" name="form" id="form">
+        #if $uploadTicket.maxFileSize is not None
+            #set $suffix = "bytes"
+            #set $maxSize = $uploadTicket.maxFileSize
+            #if $maxSize > 1024
+                #set $maxSize = $maxSize / 1024
+                #set $suffix = "kB"
+                #if $maxSize > 1024
+                    #set $maxSize = $maxSize / 1024
+                    #set $suffix = "MB"
+                    #if $maxSize > 1024
+                        #set $maxSize = $maxSize / 1024
+                        #set $suffix = "GB"
+                    #end if
+                #end if
+            #end if
+            <div>This file cannot be larger than $maxSize $suffix</div>
+        #end if
+        <input type="hidden" id="ticketId" value="$uploadTicket.ticketId"/>
+        <div>
+            <label for="puExpiration">Expiration date:</label>
+            <input type="text" class="dateFuture" name="puExpiration" id="puExpiration" size="9" maxlength="10" value="$defaultExpiration.strftime('%m/%d/%Y')" />
+        </div>
+        <div>
+            <label for="fileNotes">Add notes to file:</label>
+            <textarea name="fileNotes" id="fileNotes" cols="38" rows="3" onKeyUp="javascript:limitCharacters('public_upload');"></textarea>
+            <div id="publicUploadNotesInfo"></div>
+        </div>
+        <div>
+            <label for="uploadScanFile">Other options:</label>
+            #if $uploadTicket.scanFile
+                <input type="checkbox" disabled="disabled" checked="checked" name="scanFile" id="scanFile" />Scan for viruses (The user has requested that this file undergo a virus scan)
+            #else
+                <input type="checkbox" name="scanFile" id="scanFile"/><span onclick="javascript:check('scanFile');">Scan for viruses?</span>
+            #end if
+        </div>
+        <div>
+            <div class="button" id="uploadButton" class="uploadButton"></div>
+        </div>
+        <div class="clear"></div>
+    </form>
+    #elif $uploadTicket is None
+    <form action="$fl.rootURL/public_upload" name="form" method="POST" id="verifyTicketForm">
+        <div>
+            #if $ticketId is None or $ticketId == ""
+            <label for="ticketId">Ticket ID: </label>
+            <input type="text" name="ticketId" value=""/>
+            #else
+            <p>Ticket ID: <b>$ticketId</b></p>
+            <input type="hidden" name="ticketId" value="$ticketId" />
+            #end if
+        </div>
+        <div>
+            <label for="password">Password:</label>
+            <input type="password" name="password" id="password" />
+        </div>
+        <div>
+            <div class="button"><a href="javascript:verifyUploadTicket();" title="Verify password for upload request" class="uploadButton"><span>Login</span></a></div>
+        </div>
+    </form>
+    #else
+    <p><b>This upload ticket is now expired. Once your session ends you will no longer be able to view this ticket</b></p>
+    #end if
+</div> <!--End Form Area-->
+</div> <!-- End conten col 1 div -->

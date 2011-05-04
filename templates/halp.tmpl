@@ -1,0 +1,115 @@
+<div id="help_start">
+    <h4 class="hidden">What can I do with Filelocker?</h4>
+    <span class="helpDescription pseudoLink">Learn about Filelocker's features</span>
+    <ol>
+        <li>Upload a file.</li>
+        <li>Share files with other Filelocker users and groups.</li>
+        <li>Share files publicly to people outside of Filelocker.</li>
+        <li>Request files from people outside of Filelocker.</li>
+        <li>Send messages to other Filelocker users.</li>
+        <li>Advanced users can use Filelocker from the command line and script Filelocker actions.</li>
+    </ol>
+</div>
+<div id="help_upload">
+    <h4 class="hidden">How do I upload a file?</h4>
+    <span class="helpDescription pseudoLink">Learn how to upload a file to Filelocker</span>
+    <ol>
+        <li>Click the 'Upload' button located near the top of the "My Files" page.</li>
+        <li>When the pop-up box appears, you may select an expiration date, add notes to the file, and scan for viruses.</li>
+        <li>Finally, click "Browse and Upload" to select a file from your computer to upload to your Filelocker files page with the options you previously specified.</li>
+        <li>Congratulations, your file has been uploaded! Now, <a href="javascript:viewHelp('help_share');" class="helpLink" title="How do I share a file?">Learn how to share it</a>.</li>
+    </ol>
+</div>
+<div id="help_upload_large">
+    <h4 class="hidden">How do I upload large files?</h4>
+    <span class="helpDescription pseudoLink">Learn how to upload large files to Filelocker</span>
+    <ul>
+        <li>Users wanting to upload files greater than 2GB in size may need to increase their quota (the default quota is $fl.defaultQuotaMB MB).</li>
+        <li>Additionally, only certain browsers support file uploads larger than 2GB.</li>
+        <li>If you are using Microsoft's Internet Explorer versions 6, 7, or 8, you will need to upgrade to <a href="http://windows.microsoft.com/en-us/internet-explorer/products/ie/home" target="_blank" title="Download Microsoft's Internet Explorer">version 9</a>.</li>
+        <li>If you are using Mozilla's Firefox versions 1,2, or 3, you will need to upgrade to <a href="http://mozilla.com/firefox" target="_blank" title="Download Mozilla's Firefox">version 4</a>.</li>
+        <li>Google Chrome and Apple Safari users can upload large files with any version.</li>
+        <li>If you do not wish to upgrade your browser, you can upload large files using the <a href="javascript:viewHelp('help_cli');" class="helpLink" title="How do I use Filelocker CLI?">command line version of Filelocker</a>.</li>
+    </ul>
+</div>
+<div id="help_share">
+    <h4 class="hidden">How do I share a file?</h4>
+    <span class="helpDescription pseudoLink">Learn how to share an uploaded file on Filelocker</span>
+    <ol>
+        <li>After <a href="javascript:viewHelp('help_upload');" class="helpLink" title="How do I upload a file?">uploading a file</a>, click on the file that you want to share and click the "Share This File" button that appears in the drop-down window.</li>
+        <li>When the pop-up box appears, you can either select to share with a user by searching for them or share with a group by selecting the "Share with Groups" tab.</li>
+        <li>If sharing with a single user, simply type in their Purdue career account alias into the box. After a few characters have been entered, a drop-down selection box will appear with matching results so that you can select the correct user. You may also search for a user by click the "Name" box and typing in the user's full name or just last name.
+            <br />If sharing with a group, you must first create a group and add members to it. Then, click the "Share with Groups" tab and simply click the 'share' button.
+            <br />When sharing with either a single user or a group, you may select the checkbox to notify the user(s) via email so that they know you have shared a file.</li>
+        <li>Finally, for single-user sharing, click the button with the user's career account in it.</li>
+    </ol>
+</div>
+<div id="help_public_share">
+    <h4 class="hidden">How do I share a file publicly?</h4>
+    <span class="helpDescription pseudoLink">Learn how to share an uploaded file with anyone using a publicly available URL</span>
+    <ol>
+        <li>After <a href="javascript:viewHelp('help_upload');" class="helpLink" title="How do I upload a file?">uploading a file</a>, click on the file that you want to share and check the box next to "Public Share".</li>
+        <li>Once the box is checked, you'll be prompted to choose which email addresses should receive a link to the file you are sharing. You must also specify whether the share will expire after one use, or whether it can be downloaded repeatedly. </li>
+        <li>If the file may be downloaded repeatedly, you must specify a password that must be entered before the file can be downloaded. You will have to communicate this password to any intended recipients of the file through some other secure means (phone, encrypted email, etc).</li>
+        <li>Once you click share, a publicly accessible URL to download the file will be created, any email addresses you've entered will be sent an email notifying them that file is now available at the generated URL, and the URL will be displayed.</li>
+        <li>You may view the publicly accessible download URL and send it to additional people by email at any time after you share the file publicly by clicking on the "(view link)" text next to the Public Share checkbox.</li>
+    </ol>
+</div>
+<div id="help_message">
+    <h4 class="hidden">How do I send a message?</h4>
+    <span class="helpDescription pseudoLink">Learn how to send a secure message on Filelocker</span>
+    <ul>
+        <li>Filelocker can be used to send encrypted text messages to other Filelocker users.</li>
+        <li>These messages are removed from the system after $fl.maxFileLifeDays days.</li>
+        <li>You can access the messaging interface by clicking on "Messages" in the upper right corner.</li>
+        <li>The default view is your "Inbox" - messages that other users have sent you through Filelocker.</li>
+        <li>To read a message, simply click on the subject of the message.</li>
+        <li>To reply to a message, click on the mail icon with an arrow under the "Actions" column.</li>
+        <li>When you click on the "Sent" tab, you'll see messages that you have composed and sent to other users.</li>
+        <li>You may effectively revoke a message at any time by deleting the message from your "Sent" folder at which point it will no longer appear in any of the recipients' inboxes.</li>
+    </ul>    
+</div>
+<div id="help_cli">
+    <h4 class="hidden">How do I use Filelocker CLI?</h4>
+    <span class="helpDescription pseudoLink">Learn how to use the command line version of Filelocker</span>
+    <ol>
+        <li>To begin using Filelocker CLI, log in to your organization's web interface for Filelocker.</li>
+        <li>Click "Account" in the upper-right corner of the page.</li>
+        <li>Choose "Advanced" and enter the IP address of the host from which you will be running Filelocker CLI.</li>
+        <li>Click "Generate CLI Key" and click the Save/Download icon under "Actions" for the IP you just added.</li>
+        <li>Download the resulting configuration file and copy it to the host you specified earlier.</li>
+        <li>By default, Filelocker CLI will look in the current working directory for the configuration file, but you may specify an alternate location with "-c".</li>
+    </ol>
+</div>
+#if $fl.geotagging
+<div id="help_geotag">
+    <h4 class="hidden">What is Filelocker geotagging?</h4>
+    <span class="helpDescription pseudoLink">Learn how to geotag Filelocker uploads</span>
+    <ul>
+        <li>Geolocation is the art of figuring out where you are in the world and (optionally) sharing that information with people you trust (more information is available <a href="http://diveintohtml5.org/geolocation.html" target="_blank" title="Learn more about geolocation and modern browsers">here</a>).</li>
+        <li>If you are using a modern web browser, you will be given the option of geotagging a Filelocker upload on the "Upload" screen.</li>
+        <li>Checking this box causes your browser to ask to use your current location.  It will use your IP address and possibly GPS hardware, if applicable, to determine this.</li>
+        <li>If you click "Allow," Filelocker will append your latitude and longitude coordinates to the file's notes.</li>
+        <li>When viewing a geotagged file within Filelocker, you can view a map of the upload location.  This will help determine if a file that was shared with you came from within or outside of your organization's network.</li>
+    </ul>
+</div>
+#end if
+<div id="help_just_the_tips">
+    <h4 class="hidden">What else can I do with Filelocker?</h4>
+    <span class="helpDescription pseudoLink">Learn about other Filelocker features (Quick Tips)</span>
+    <ol>
+        <li>Share or delete multiple files, groups, and messages using checkboxes.</li>
+        <li>Sort multiple columns simultaneously by holding down "shift" while clicking another column header.</li>
+        <li>Hover over a currently uploading file to see more detailed upload statistics.</li>
+        <li>Hover over your user quota to see actual usage data.</li>
+        <li>Hover over the messages link to see the number of new messages.</li>
+        <li>The messages link at the top will become bold when you have new messages.</li>
+        <li>Keyboard shortcut: "a" takes you to the Edit Account dialog box.</li>
+        <li>Keyboard shortcut: "f" takes you to the Files page.</li>
+        <li>Keyboard shortcut: "g" takes you to the Manage Groups page.</li>
+        <li>Keyboard shortcut: "h" takes you to the History page.</li>
+        <li>Keyboard shortcut: "m" takes you to the Messages dialog box.</li>
+        <li>Keyboard shortcut: "x" will hide any success or error messages.</li>
+        <li>Keyboard shortcut: "ESC" will hide any dialog boxes.</li>
+    </ol>
+</div>

@@ -1,0 +1,268 @@
+<div id="wrapper_col1">
+    <div class="section_title">
+        <h1 class="admin_title">Administration</h1>
+    </div>
+
+        <div id="admin_sections" style="margin-left: 5px; width: 100%; border:none;">
+            <ul>
+                <li><a href="#filelocker_accounts">Filelocker Accounts</a></li>
+                <li><a href="#templates">Templates</a></li>
+                <li><a href="#filelocker_attributes">Dynamic Attributes</a></li>
+                <li><a href="#server_config">Server Config</a></li>
+                <li><a href="#error_logs">Error Logs</a></li>
+            </ul>
+            
+        <div id="filelocker_accounts"> <!--Filelocker accounts-->
+            <div class="button"><a href="javascript:promptCreateUser('$user.userId');" title="Create a new Filelocker user" class="userNewButton"><span>Create User</span></a></div>
+            <div class="button"><a href="javascript:deleteUsers();" title="Delete the selected Filelocker users" class="deleteButton"><span>Delete Selected</span></a></div>
+            <div class="button"><a href="javascript:loadEditAccount()" title="Edit your personal account settings" class="editAccountButton"><span>Your Account</span></a></div>
+            <div id="userSorterLoading" class="hidden">&nbsp;</div><br/><br/><br/><br/><!-- Fixes a Chrome display issue -->
+            <div id="userTableSorterWrapper">
+                <table class="file_table" id="userTableSorter">
+                    <thead>
+                        <tr>
+                            <th class="selectAllCol"><input type="checkbox" id="allUsersCheckbox" onClick="allUsersBoxChecked();"/></th>
+                            <th class="userIdCol pseudoLink">User ID</th>
+                            <th class="userLastNameCol pseudoLink">Last Name</th>
+                            <th class="userFirstNameCol pseudoLink">First Name</th>
+                            <th class="userEmailCol pseudoLink">Email</th>
+                            <th class="userQuotaCol pseudoLink">Quota</th>
+                            <th class="menuCol"></th>
+                        </tr>
+                        <tr>
+                            <td></td>
+                            <td colspan="6" class="dotted"></td>
+                        </tr>
+                    </thead>
+                    <tbody id="userTable">
+                    #for $flUser in $flUsers
+                        <tr id="user_$flUser.userId" class="userRow" >
+                            <td id="userNameElement_$flUser.userId" class="userNameElement"><input type="checkbox" name="select_user" value="$flUser.userId" class="userSelectBox" id="checkbox_$flUser.userId">
+                                <div class="posrel">
+                                    <div id="menu_row_$flUser.userId" class="menuUsers hidden">
+                                    <ul class="menu">
+                                        <li><div class="button" style="width: 185px;"><a href="javascript:promptUpdateUser('$flUser.userId', '$flUser.userFirstName', '$flUser.userLastName', '$flUser.userEmail', $flUser.userQuota, $str($flUser.isRole).lower());" title="Edit user account for '$flUser.userId'" class="editButton"><span><center>Edit Account</center></span></a></div></li>
+                                        <li><div class="button" style="width: 185px;"><a href="javascript:promptUpdatePermissions('$flUser.userId');" title="Grant and revoke user permissions for '$flUser.userId'" class="wandButton"><span><center>Edit Permissions</center></span></a></div></li>
+                                    </ul>
+                                </div>
+                            </td>
+                            #if $fl.check_admin($flUser) is False:
+                            <td onClick="userRowClick('$flUser.userId')"><a href="javascript:promptViewUserHistory('$flUser.userId');" class="clock" title="View Filelocker interactions for '$flUser.userId'">$flUser.userId</a></td>
+                            #else
+                            <td onClick="userRowClick('$flUser.userId')"><a href="javascript:promptViewUserHistory('$flUser.userId');" class="admin" title="View Filelocker interactions for '$flUser.userId' (admin)">$flUser.userId</a></td>
+                            #end if
+                            <td onClick="userRowClick('$flUser.userId')">$flUser.userLastName</td>
+                            <td onClick="userRowClick('$flUser.userId')">$flUser.userFirstName</td>
+                            <td onClick="userRowClick('$flUser.userId')">$flUser.userEmail</td>
+                            #if float($flUser.userQuota) > 0:
+                                #set $percentUsed = int(round(float($flUser.userQuotaUsed)/float($flUser.userQuota)*100,0))
+                            #else
+                                #set $percentUsed = 0
+                            #end if
+                            #set $quotaUsedMB = int(round($flUser.userQuotaUsed,0))
+                            #if $flUser.userQuota >= 1024
+                                #set $quotaInGB = round(float($flUser.userQuota)/1024,2)
+                                <td onClick="userRowClick('$flUser.userId')"><span class="userQuotaUsage pseudoLink" title="${percentUsed}% ($quotaUsedMB MB) used">$quotaInGB GB</span></td>
+                            #else
+                                <td onClick="userRowClick('$flUser.userId')"><span class="userQuotaUsage pseudoLink" title="${percentUsed}% ($quotaUsedMB MB) used">$flUser.userQuota MB</span></td>
+                            #end if
+                            <td onClick="userRowClick('$flUser.userId')" class="dropdownArrowNarrow rightborder"></td>
+                        </tr>
+                    #end for
+                    </tbody>
+                </table> <!-- End User listing -->
+            </div>
+        </div> <!-- End Filelocker Accounts -->
+        <div id="templates"> <!-- Start Templates Section -->
+            <select name="template_selector" id="template_selector" onchange="loadTemplateForEditing()">
+            <optgroup label = "Email Templates">
+                <option value="share_notification.tmpl" selected>Share Notification</option>
+                <option value="upload_request_notification.tmpl">Upload Request</option>
+                <option value="public_share_notification.tmpl">Public Share Notification</option>
+                <option value="download_notification.tmpl">Download Notifcation</option> 
+            </optgroup>
+            <optgroup label="Site Appearance">
+                <option value="tos.tmpl">Terms of Service</option>
+                <option value="footer_text.tmpl">Footer Text</option>
+                <option value="error.tmpl">Error Page</option>
+            </optgroup>
+            </select><br/>
+            <textarea id="templateEditArea"></textarea>
+            <br/>
+            <div class="button"><a href="javascript:saveTemplate();" title="Save this template" class="saveButton"><span>Save Template</span></a></div>
+            <div class="button"><a href="javascript:revertTemplate();" title="Reload this template from the default" class="revertButton"><span>Revert to Default</span></a></div>
+        </div> <!-- End Templates Section -->
+        <div id="filelocker_attributes"> <!--Filelocker attributes list-->
+        <div class="button"><a href="javascript:promptCreateAttribute();" title="Create a new Filelocker user attribute" class="attributeNewButton"><span>Create Attribute</span></a></div>
+        <div class="button"><a href="javascript:deleteAttributes();" title="Delete the selected Filelocker user attributes" class="deleteButton"><span>Delete Selected</span></a></div><br/><br/><br/><br/>
+            <table class="file_table" id="attributeTableSorter">
+                <thead>
+                    <tr>
+                        <th class="selectAllCol"><input type="checkbox" id="allAttributesCheckbox" onClick="allClassBoxChecked('allAttributesCheckbox', 'attrSelectBox')"/></th>
+                        <th class="attrIdCol pseudoLink">Attribute ID</th>
+                        <th class="attrNameCol pseudoLink">Attribute Name</th>
+                    </tr>
+                    <tr>
+                        <td></td>
+                        <td colspan="2" class="dotted"></td>
+                    </tr>
+                </thead>
+                <tbody id="attributeTable">
+                #for $attribute in $attributes
+                    <tr id="attr_$attribute.attributeId" class="userRow" >
+                        <td><input type="checkbox" name="select_attr" value="$attribute.attributeId" class="attrSelectBox"></td>
+                        <td>$attribute.attributeId</td>
+                        <td>$attribute.attributeName</td>
+                    </tr>
+                #end for
+                </tbody>
+            </table> <!-- End Attribute listing -->
+        </div>
+        <div id="server_config">
+            <form action="$fl.rootURL/admin_interface/update_server_config" method="POST" id="configForm">
+            <table>
+            #for $param in $configParameters
+                #if $param.parameterType == "boolean"
+                <tr>    
+                    <td>$param.parameterName</td>
+                    <td>$param.parameterDescription<input type="text" name="config_desc_$param.parameterName" style="display: none"/></td>
+                    <td>$param.value
+                        <select name="config_name_$param.parameterName">
+                        #if $param.value == "Yes"
+                            <option value="Yes" selected>Yes</option>
+                            <option value="No">No</option>
+                        #else
+                            <option value="No" selected>No</option>
+                            <option value="Yes">Yes</option>
+                        #end if
+                        </select>
+                    </td>
+                </tr>
+                #elif $param.parameterName == "auth_type"
+                <tr>    
+                    <td>$param.parameterName</td>
+                    <td>$param.parameterDescription<input type="text" name="config_desc_$param.parameterName" style="display: none"/></td>
+                    <td>$param.value
+                        <select name="config_name_$param.parameterName">
+                        <option value="ldap" 
+                        #if $param.value=='ldap'#slurp
+                        selected
+                        #end if#slurp
+                        >LDAP</option>
+                        <option value="cas"
+                        #if $param.value=='cas'#slurp
+                        selected
+                        #end if#slurp
+                        >CAS</option>
+                        <option value="local"
+                        #if $param.value=='local'#slurp
+                        selected
+                        #end if#slurp
+                        >Local</option>
+                        </select>
+                    </td>
+                </tr>
+                #elif $param.parameterName == "directory_type"
+                <tr>    
+                    <td>$param.parameterName</td>
+                    <td>$param.parameterDescription<input type="text" name="config_desc_$param.parameterName" style="display: none"/></td>
+                    <td>$param.value
+                        <select name="config_name_$param.parameterName">
+                        <option value="ldap" 
+                        #if $param.value=='ldap'#slurp
+                        selected
+                        #end if#slurp
+                        >LDAP</option>
+                        <option value="ws" 
+                        #if $param.value=='ws'#slurp
+                        selected
+                        #end if#slurp
+                        >Webservices</option>
+                        <option value="local"
+                        #if $param.value=='local'#slurp
+                        selected
+                        #end if#slurp
+                        >Local</option>
+                        </select>
+                    </td>
+                </tr>
+                #elif $param.parameterName == "db_version"
+                <tr>    
+                    <td>$param.parameterName</td>
+                    <td>$param.parameterDescription</td>
+                    <td>$param.value</td>
+                </tr>
+                #else
+                <tr>    
+                    <td>$param.parameterName</td>
+                    <td>$param.parameterDescription<input type="text" name="config_desc_$param.parameterName" style="display: none"/></td>
+                    <td><input type="text" name="config_name_$param.parameterName" value="$param.value" /></td>
+                </tr>
+                #end if
+            #end for
+            </table>
+            <input type="button" value="Update Config" onClick="updateConfig();"/>
+            </form>
+        </div> <!-- End Config Section -->
+        <div id="error_logs">
+        <p>
+            #for $logLine in $logs
+            $logLine.replace('<','&lt;').replace('>','&gt;') <br/>
+            #end for
+        </p>
+        </div> <!-- End Log Section -->
+    </div> <!-- End Admin Sections -->
+    <!--end content area-->
+</div> <!--End wrapper Col 1-->
+<div id="wrapper_col2">
+    <div class="text_col2">
+        <a href="$fl.orgURL" target="_blank" title="Take me to the $fl.orgName home page"><img src="$fl.rootURL/static/images/logos/logo.gif" alt="$fl.orgName" class="orgLogo" /></a>
+        <img src="$fl.rootURL/static/images/page_elements/horizontal_rule.gif" alt="" class="horizontal_rule" />
+        <p><span class="strong">Admin</span> <br/> This area allows you to edit the installed user directory, edit custom templates, edit dynamic attributes, configure the server, and view logs.</p>
+        <img src="$fl.rootURL/static/images/page_elements/horizontal_rule.gif" alt="" class="horizontal_rule" />
+        <p><strong>File Vault Usage</strong></p>
+        <div id="fileVaultUsageBar" class="vaultUsage"></div>
+        <p><strong>System State</strong></p>
+        #set $currentUsers = len($currentUsersList)
+        #set $totalUsers = len($flUsers)
+        <div><span class="systemStateItem"><a href="javascript:showCurrentUsers();" title="Show a list of every current Filelocker user">Current Users:</a></span><span class="systemStateValue">$currentUsers</span></div>
+        <div><span class="systemStateItem">Installed Users:</span><span class="systemStateValue">$totalUsers</span></div>
+        <div><span class="systemStateItem">Current Uploads:</span><span class="systemStateValue">$currentUploads</span></div>
+        <div><span class="systemStateItem">Locked Files:</span><span class="systemStateValue">$totalFileCount</span></div>
+        <div><span class="systemStateItem">Secure Messages:</span><span class="systemStateValue">$totalMessageCount</span></div>
+        <div><span class="itemTitleWide"><a href="javascript:showStatistics();" class="statistics" title="View hourly, daily, and monthly usage metrics"><strong>View System Usage Statistics</strong></a></span></div>
+    </div> <!-- End Text_col2 -->
+</div> <!--End Wrapper Col 2 -->
+
+<!-- Begin Lightboxes -->
+
+<div id="currentUsersBox" class="hidden">
+    <div class="popup_wrapper">
+        <div class="popup_small">
+            <table class="file_table" id="currentUsersTableSorter">
+            <thead>
+                <tr>
+                    <th class="spacerCol"></th>
+                    <th class="userIdCol pseudoLink">User ID</th>
+                    <th class="userFullNameCol pseudoLink">User Name</th>
+                </tr>
+                <tr>
+                    <td></td>
+                    <td colspan="2" class="dotted"></td>
+                </tr>
+            </thead>
+            <tbody>
+            #for $currentUser in $currentUsersList
+                <tr>
+                    <td></td>
+                    <td>$currentUser.userId</td>
+                    <td>$currentUser.userDisplayName</td>
+                </tr>
+            #end for
+            </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- End Lightboxes -->

@@ -1,0 +1,23 @@
+To: $varDict['recipient']
+From: $sender
+Subject: $varDict['ownerName'] shared a file with you on Filelocker
+Reply-to: $varDict['sender']
+
+$varDict['ownerName'] ($varDict['ownerId']) has shared the following files with you on Filelocker:
+
+#for $file in $varDict['files']
+$file
+#end for
+
+To view and download these files, please log in to Filelocker.
+
+To access Filelocker, please copy the following link and paste it into your browser's URL bar, removing any spaces:
+    
+    $varDict['filelockerURL']
+
+
+#if $linksObscured
+::Why are links made to be non-clickable?::
+Clickable links in emails can be unsafe, as they can take you to pages other than what the text of the link suggests. 
+Copying the text of a link and pasting it directly into the browser address bar is a more secure way to make sure your browser is going to the page you expect.
+#end if

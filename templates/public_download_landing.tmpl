@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="description" content="Developed at Purdue University, Filelocker allows you to share files with other people both inside and outside of your organization. It is a temporary and secure storage system for sharing files and data."/> 
+    <meta name="keywords" content="filelocker, encryption, security application, enterprise, auditing, secure storage, information security, online storage, file sharing, share files, online backup, sharing, collaboration" /> 
+    <title>Filelocker</title>
+    <link rel="stylesheet" href="$fl.rootURL/css?style=filelocker" />
+    <link rel="stylesheet" href="$fl.rootURL/css?style=jquery-ui" />
+    <link rel="shortcut icon" href="$fl.rootURL/static/images/favicon.ico" />
+</head>
+<body class="greyBackground">
+<div id="background">
+    <div id="wrapper_all">
+        <div id="wrapper_header">
+        <div class="logo"><a href="$fl.rootURL"><img src="$fl.rootURL/static/images/logos/filelocker_logo.png" alt="Filelocker" /></a></div>
+    </div>
+    <div id="statusMessage" class="ui-widget ui-state-error ui-corner-all hidden"></div>
+    <div id="wrapper_2col">
+        <div id="wrapper_col1">
+            <div class="section_title">
+                <h1 class="files_title">Download a Publicly Shared File</h1>
+            </div>
+            <div class="login">
+                #if $message is not None
+                    <h2 class="errorMessage">$message</h2>
+                #end if
+                <form action="$fl.rootURL/public_download" method="POST">
+                <input type="hidden" value="$shareId" name="shareId"/>
+                <div>
+                    <label for="publicSharePassword">Password:</label>
+                    <input type="password" id="publicSharePassword" name="password" value="$password"/>
+                </div>
+                <br />
+                <div>
+                    <input type="submit" value="Download"/>
+                </div>
+                </form>
+                <br/>
+            </div>
+        </div>
+        <div id="wrapper_col2">
+            <div class="text_col2"><a href="$fl.orgURL" target="_blank" title="Take me to the $fl.orgName home page"><img src="$fl.rootURL/static/images/logos/logo.gif" alt="$fl.orgName" class="orgLogo" /></a>
+            <img src="$fl.rootURL/static/images/page_elements/horizontal_rule.gif" alt="" class="horizontal_rule" />
+                <p><span class="strong">Filelocker</span> allows you to share files with other people both inside and outside of $fl.orgName. It is a temporary and secure storage system for sharing files and data.</p>
+                <img src="$fl.rootURL/static/images/page_elements/horizontal_rule.gif" alt="" class="horizontal_rule" />
+            </div>
+        </div>
+    </div>
+<div id="footer">$footerText</div>
+</div>
+</div>
+</body>
+</html>
