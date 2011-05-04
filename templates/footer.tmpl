@@ -8,7 +8,7 @@
     <div class="popup_wrapper">
         <div class="popup_small">
             <form action="" name="form" id="uploadForm">
-                <input type="text" class="blurDates"></input><!-- jQuery UI dialogs autofocus to the first element. -->
+                <input type="text" style="width: 0; height: 0; top: -100px; position: absolute;"/><!-- jQuery UI dialogs autofocus to the first element. -->
                 <div>
                     #if $fl.check_permission($user, "expiration_exempt")
                     <label for="expiration">Expiration date (you are expiration exempt):</label>
@@ -50,7 +50,7 @@
     <div class="popup_wrapper">
         <div class="popup_small">
             <form action="" name="form" id="uploadRequestForm">
-                <input type="text" class="blurDates"></input><!-- jQuery UI dialogs autofocus to the first element. -->
+                <input type="text" style="width: 0; height: 0; top: -100px; position: absolute;"/><!-- jQuery UI dialogs autofocus to the first element. -->
                 <div>
                     <label for="uploadRequestExpiration">Request expiration date:</label>
                     <input type="text" name="uploadRequestExpiration" id="uploadRequestExpiration" class="dateFuture" value="$defaultExpiration.strftime('%m/%d/%Y')"/>
@@ -108,7 +108,7 @@
     <div class="popup_wrapper">
         <div class="popup_small">
             <form>
-            <input type="text" class="blurDates"></input></a><!-- jQuery UI dialogs autofocus to the first element. -->
+            <input type="text" style="width: 0; height: 0; top: -100px; position: absolute;"/><!-- jQuery UI dialogs autofocus to the first element. -->
             <div>
                 <label for="publicShareExpiration">Expiration date:</label>
                 <input type="text" value="" class="dateCustom" id="publicShareExpiration" />
@@ -287,25 +287,28 @@
 <div id="userHistoryBox" class="hidden" >
     <div class="popup_wrapper">
         <div class="popup_large">
+            <input type="text" style="width: 0; height: 0; top: -100px; position: absolute;"/><!-- jQuery UI dialogs autofocus to the first element. -->
             <input type="hidden" id="userHistoryCurrentUser" />
             <label for="userHistoryStartDate">Start Date:</label>
             <input type="text" id="userHistoryStartDate" class="datePast" value="$startDateFormatted.strftime('%m/%d/%Y')" onselect="this.value=''" onchange="javascript:promptViewUserHistory();" />
             <label for="userHistoryEndDate">End Date:</label>
             <input type="text" id="userHistoryEndDate" class="datePast" value="$endDateFormatted.strftime('%m/%d/%Y')" onselect="this.value=''" onchange="javascript:promptViewUserHistory();" />
-            <table class="file_table" id="userHistoryTableSorter" >
-            <thead>
-                <tr>
-                    <th class="timestampCol pseudoLink">Timestamp</th>
-                    <th class="actionCol pseudoLink">Action</th>
-                    <th class="detailsCol pseudoLink">Details</th>
-                </tr>
-                <tr>
-                    <td colspan="3" class="dotted"></td>
-                </tr>
-            </thead>
-            <tbody id="userHistory">
-            </tbody>
-            </table>
+            <div id="userHistoryTableSorterWrapper">
+                <table class="file_table" id="userHistoryTableSorter" >
+                <thead>
+                    <tr>
+                        <th class="timestampCol pseudoLink">Timestamp</th>
+                        <th class="actionCol pseudoLink">Action</th>
+                        <th class="detailsCol pseudoLink">Details</th>
+                    </tr>
+                    <tr>
+                        <td colspan="3" class="dotted"></td>
+                    </tr>
+                </thead>
+                <tbody id="userHistory">
+                </tbody>
+                </table>
+            </div>
         </div>
     </div>
 </div>
@@ -372,7 +375,7 @@
 <div id="fileStatisticsBox" class="hidden">
     <div class="popup_wrapper">
         <div class="popup_large">
-            <input type="text" class="blurDates"></input><!-- jQuery UI dialogs autofocus to the first element. -->
+            <input type="text" style="width: 0; height: 0; top: -100px; position: absolute;"/><!-- jQuery UI dialogs autofocus to the first element. -->
             <div id="fileStatisticsFilter">
                 <label for="totalGraphStartDate">Start Date:</label>
                 <input type="text" id="totalGraphStartDate" class="datePast" onchange="viewDownloadStatistics(statFile)" />
@@ -562,7 +565,7 @@
             <table id="createMessage">
             <tr>
             <td>
-                <input type="text" class="blurDates"></input><!-- jQuery UI dialogs autofocus to the first element. -->
+                <input type="text" style="width: 0; height: 0; top: -100px; position: absolute;"/><!-- jQuery UI dialogs autofocus to the first element. -->
                 #if $fl.check_permission($user, "expiration_exempt")
                 <h4>Expiration date (you are expiration exempt):</h4>
                 <input type="text" name="expiration" id="flMessageExpiration" class="dateFuture" value="$defaultExpiration.strftime('%m/%d/%Y')" />

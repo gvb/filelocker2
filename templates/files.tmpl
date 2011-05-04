@@ -6,7 +6,7 @@
     
     <div class="toolbar">
         <div class="button"><a href="javascript:promptUpload();" title="Upload a new file to Filelocker" class="uploadButton"><span>Upload</span></a></div>
-        <div class="button" id="multiShare"><a href="javascript:dismissStatusMessage();javascript:promptShareFiles();" title="Manage shares for the selected files" class="shareButton"><span>Manage Shares</span></a></div>
+        <div class="button hidden" id="multiShare"><a href="javascript:dismissStatusMessage();javascript:promptShareFiles();" title="Manage shares for the selected files" class="shareButton"><span>Manage Shares</span></a></div>
         <div class="button"><a href="javascript:dismissStatusMessage();javascript:loadManageGroups();" title="Manage my groups of Filelocker users" class="manageGroupsButton"><span>Manage Groups</span></a></div>
         <div class="button"><a href="javascript:deleteFiles();" title="Permanently delete the selected files from Filelocker" class="deleteButton"><span>Delete</span></a></div>
     </div>
@@ -16,7 +16,7 @@
         <table class="file_table" id="fileTableSorter">
             <thead>
                 <tr>
-                    <th class="selectAllCol"><input type="checkbox" id="selectAllFiles" onClick="selectAll('files');"/></th>
+                    <th class="selectAllCol"><input type="checkbox" id="selectAllFiles" onClick="selectAll('files');" /></th>
                     <th class="nameCol pseudoLink">Name</th>
                     <th class="sizeCol pseudoLink">Size</th>
                     <th class="expiresCol pseudoLink">Expires</th>

@@ -10,12 +10,12 @@ var uploader;
 function initFiles()
 {
     hideMultiShare();
-    $(".fileSelectBox").attr('checked', false);
-    $(".systemFileSelectBox").attr('checked', false);
+    $(".fileSelectBox").prop("checked", false);
+    $(".systemFileSelectBox").prop("checked", false);
     $(".dateFuture").datepicker({dateFormat: 'mm/dd/yy', showAnim: 'slideDown', minDate: 0});
     $(".dateExpire").datepicker({dateFormat: 'mm/dd/yy', showAnim: 'slideDown', minDate: 0, maxDate: DEFAULT_EXPIRATION});
     $(".datePast").datepicker({dateFormat: 'mm/dd/yy', showAnim: 'slideDown', maxDate: 0});
-    $("#fileName").attr('checked', false);
+    $("#fileName").prop("checked", false);
     if($("#uploadButton")[0])
     {
         uploader = new qq.FileUploader({
@@ -28,11 +28,11 @@ function initFiles()
                 var systemUpload = "no";
                 if ($("#systemUpload").length >0)
                 {
-                    if ($("#systemUpload").attr('checked'))
+                    if ($("#systemUpload").is(":checked"))
                         systemUpload = "yes";
                 }
                 uploader.setParams({
-                    'scanFile': $("#uploadScanFile").attr('checked'),
+                    'scanFile': $("#uploadScanFile").is(":checked"),
                     'fileNotes': $("#uploadFileNotes").val(),
                     'expiration': $("#uploadExpiration").val(),
                     'uploadIndex': id,
@@ -181,18 +181,18 @@ function initFiles()
     }
     else
         $("#uploadRequestsTable").append("<tr class='oddRow'><td class='spacer'></td><td colspan='5'><i>There are no upload requests available.</i></td></tr>");
-    $('#miscFilesSections .head').click(function() {
+    $("#miscFilesSections .head").click(function() {
         if ($(this).hasClass("ui-state-default"))
         {
             $(this).removeClass("ui-state-default").addClass("ui-state-active");
             $(this).removeClass("ui-corner-all").addClass("ui-corner-top");
-            $(this).attr('aria-expanded', "true");
+            $(this).attr("aria-expanded", "true");
         }
         else
         {
             $(this).removeClass("ui-state-active").addClass("ui-state-default");
             $(this).removeClass("ui-corner-top").addClass("ui-corner-all");
-            $(this).attr('aria-expanded', "false");
+            $(this).attr("aria-expanded", "false");
         }
         $(this).next().toggle();
         return false;
@@ -236,7 +236,7 @@ function takeFile(fileId)
 }
 function setGeoData()
 {
-    if($("#uploadGeolocation").attr('checked') && GEOTAGGING)
+    if($("#uploadGeolocation").is(":checked") && GEOTAGGING)
     {
         var geoData = "";
         geo_position_js.getCurrentPosition(
@@ -253,7 +253,7 @@ function setGeoData()
                 case 1: // User denies permission.
                     if($("#uploadFileNotes").val().match(/\[geo\]-?\d+\.\d+,-?\d+\.\d+\[\/geo\]/g))
                         $("#uploadFileNotes").val($("#uploadFileNotes").val().replace(/\[geo\]-?\d+\.\d+,-?\d+\.\d+\[\/geo\]/g, ""));
-                    $("#uploadGeolocation").attr('checked', false);
+                    $("#uploadGeolocation").prop("checked", false);
                     break;
                 case 2: // Unable to determine position.
                     generatePseudoResponse("geotagging file upload", "Unable to determine your current location.", false);
@@ -374,13 +374,13 @@ function getSearchWidget(context)
         $("#"+context+"_searchUserId").button({ icons: {primary:'ui-icon-person'} });
         $("#"+context+"_searchName").button({ icons: {primary:'ui-icon-search'} });
         $("#"+context+"_sections").tabs();
-        $("#"+context+"_externalSearch").attr('checked', false);
+        $("#"+context+"_externalSearch").prop("checked", false);
         $("#"+context+"_searchBox").autocomplete({
             source: function(request, response)
             {
                 var searchOptions = {format: "autocomplete"};
                 var nameText = "";
-                if ($("#"+context+"_searchName").attr('checked'))
+                if ($("#"+context+"_searchName").is(":checked"))
                 {
                     nameText = $("#"+context+"_searchBox").val().replace(/\s+/g, " ").split(" ");
                     if (nameText.length == 1)
@@ -403,7 +403,7 @@ function getSearchWidget(context)
                     }
                 }
                 
-                if ($("#"+context+"_externalSearch").attr('checked'))
+                if ($("#"+context+"_externalSearch").is(":checked"))
                     searchOptions.external = true;
                 else
                     searchOptions.external = false;
@@ -532,9 +532,7 @@ function replyMessage(subject, recipient)
         $("#flMessageSubject").val("RE: " + subject);
     $("#flMessageBody").val("");
     getSearchWidget("messages");
-    $(".blurDates").show(); // jQuery UI autoselects datepickers. This hack selects an empty textbox then hides it.
     $("#createMessageBox").dialog("open");
-    $(".blurDates").hide();
 }
 /***Interface Functions***/
 
@@ -546,12 +544,10 @@ function promptUpload()
     $("#uploadNotesInfo").html("");
     if(GEOTAGGING && geo_position_js.init())
     {
-        $("#uploadGeolocation").attr("checked", false);
+        $("#uploadGeolocation").prop("checked", false);
         $("#uploadGeolocationOption").show();
     }
-    $(".blurDates").show(); // jQuery UI autoselects datepickers. This hack selects an empty textbox then hides it.
     $("#uploadBox").dialog("open");
-    $(".blurDates").hide();
 }
 function fileChecked()
 {
@@ -654,9 +650,7 @@ function viewDownloadStatistics(fileId)
         }
         else
             $("#totalGraph").html("<i>There are no downloads in the specified date range.</i>");
-        $(".blurDates").show(); // jQuery UI autoselects datepickers. This hack selects an empty textbox then hides it.
         $("#fileStatisticsBox").dialog("open");
-        $(".blurDates").hide();
     }, 'json');
 }
 
@@ -678,9 +672,7 @@ function promptPublicShareFile(fileId, fileName, fileExpiration, destination)
         $("#publicShareExpiration").datepicker({dateFormat: 'mm/dd/yy', showAnim: 'slideDown', minDate: 0});
         $("#publicShareExpiration").val(DEFAULT_EXPIRATION);
     }
-    $(".blurDates").show(); // jQuery UI autoselects datepickers. This hack selects an empty textbox then hides it.
     $("#publicShareBox").dialog("open");
-    $(".blurDates").hide();
     $("#publicShareDestination").attr("value",destination);
 }
 function viewPublicShareURL(shareId)
@@ -693,11 +685,11 @@ function publicShareFile()
 {
     if ($("#publicSharePassword").val() != $("#publicSharePasswordConfirm").val())
         generatePseudoResponse("sharing file", "Passwords must match for public share.", false);
-    else if ($("#publicSharePassword").val() === "" && $("#publicShareType").attr('checked'))
+    else if ($("#publicSharePassword").val() === "" && $("#publicShareType").is(":checked"))
         generatePseudoResponse("sharing file", "You must enter a password when creating a multi-use public share.", false);
     else {
         var shareType = "single";
-        if($("#publicShareType").attr('checked'))
+        if($("#publicShareType").is(":checked"))
             shareType = "multi";
         $.post(FILELOCKER_ROOT+'/share_interface/create_public_share?format=json', 
         {
@@ -729,7 +721,7 @@ function unPublicShareFile(fileId, destination)
 }
 function togglePublicSharePassword()
 {
-    if ($("#publicSharePasswordSelector").attr('checked'))
+    if ($("#publicSharePasswordSelector").is(":checked"))
         $("#publicShareSelector").show();
     else
     {
@@ -740,7 +732,7 @@ function togglePublicSharePassword()
 }
 function togglePublicShareType()
 {
-    if ($("#publicShareType").attr('checked') && !$("#publicSharePasswordSelector").attr('checked'))
+    if ($("#publicShareType").is(":checked") && !$("#publicSharePasswordSelector").is(":checked"))
     {
         check("publicSharePasswordSelector");
         togglePublicSharePassword();
@@ -763,6 +755,7 @@ function promptAddGroup()
         $("#name_new").focus();
     }
 }
+function editGroupIfEnter(event, groupId) { if (event.keyCode == 13) updateGroup(groupId); }
 function promptEditGroup(groupId, currentName)
 {
     if($("#group_new").length > 0)
@@ -782,6 +775,10 @@ function promptEditGroup(groupId, currentName)
         $("#group_" + groupId).append(rowhtml);
         $("#name_new").focus();
         $("#name_new").select();
+        if($.browser.mozilla)
+            $("#name_new").keypress(function(event) { editGroupIfEnter(event, groupId); }); 
+        else
+            $("#name_new").keydown(function(event) { editGroupIfEnter(event, groupId); });
     }
 }
 function promptViewGroup(groupId)
@@ -812,15 +809,15 @@ function toggleSearchType(context, searchType)
 {
     if (searchType == "userId")
     {
-        $("#"+context+"_search_name").attr('checked', false);
-        $("#"+context+"_search_userId").attr('checked', true);
+        $("#"+context+"_search_name").prop("checked", false);
+        $("#"+context+"_search_userId").prop("checked", true);
         $("#"+context+"_search_name").addClass("hidden");
         $("#"+context+"_search_userId").removeClass("hidden");
     }
     else if (searchType == "name")
     {
-        $("#"+context+"_search_userId").attr('checked', false);
-        $("#"+context+"_search_name").attr('checked', true);
+        $("#"+context+"_search_userId").prop("checked", false);
+        $("#"+context+"_search_name").prop("checked", true);
         $("#"+context+"_search_userId").addClass("hidden");
         $("#"+context+"_search_name").removeClass("hidden");
     }
@@ -834,9 +831,7 @@ function promptRequestUpload()
     $("#uploadRequestPassword").val("");
     $("#uploadRequestPasswordConfirm").val("");
     $("#uploadRequestNotesInfo").html("");
-    $(".blurDates").show(); // jQuery UI autoselects datepickers. This hack selects an empty textbox then hides it.
     $("#uploadRequestBox").dialog("open");
-    $(".blurDates").hide();
 }
 
 function viewUploadRequestLink(requestId)
@@ -854,9 +849,7 @@ function promptCreateMessage()
     $("#flMessageRecipientId").val("");
     $("#flMessageBody").val("");
     getSearchWidget("messages");
-    $(".blurDates").show(); // jQuery UI autoselects datepickers. This hack selects an empty textbox then hides it.
     $("#createMessageBox").dialog("open");
-    $(".blurDates").hide();
 }
 
 // Edit Account
@@ -873,52 +866,52 @@ function selectAll(destination)
 {
     if(destination == "files")
     {
-        if ($("#selectAllFiles").attr('checked'))
-            $(".fileSelectBox").attr('checked', true);
+        if ($("#selectAllFiles").is(":checked"))
+            $(".fileSelectBox").prop("checked", true);
         else
-            $(".fileSelectBox").attr('checked', false);
+            $(".fileSelectBox").prop("checked", false);
         fileChecked();
     }
     else if(destination == "systemFiles")
     {
-        if ($("#selectAllSystemFiles").attr('checked'))
-            $(".systemFileSelectBox").attr('checked', true);
+        if ($("#selectAllSystemFiles").is(":checked"))
+            $(".systemFileSelectBox").prop("checked", true);
         else
-            $(".systemFileSelectBox").attr('checked', false);
+            $(".systemFileSelectBox").prop("checked", false);
         fileChecked();
     }
     else if(destination == "manage_shares")
     {
-        if ($("#selectAllShares").attr('checked'))
-            $(".fileSelectBox").attr('checked', true);
+        if ($("#selectAllShares").is(":checked"))
+            $(".fileSelectBox").prop("checked", true);
         else
-            $(".fileSelectBox").attr('checked', false);
+            $(".fileSelectBox").prop("checked", false);
     }
     else if(destination == "manage_shares_force")
     {
-        $("#selectAllShares").attr('checked', true);
-        $(".fileSelectBox").attr('checked', true);
+        $("#selectAllShares").prop("checked", true);
+        $(".fileSelectBox").prop("checked", true);
     }
     else if(destination == "manage_groups")
     {
-        if ($("#selectAllGroups").attr('checked'))
-            $(".groupSelectBox").attr('checked', true);
+        if ($("#selectAllGroups").is(":checked"))
+            $(".groupSelectBox").prop("checked", true);
         else
-            $(".groupSelectBox").attr('checked', false);
+            $(".groupSelectBox").prop("checked", false);
     }
     else if(destination == "messageInbox")
     {
-        if ($("#selectAllMessageInbox").attr('checked'))
-            $(".messageInboxSelectBox").attr('checked', true);
+        if ($("#selectAllMessageInbox").is(":checked"))
+            $(".messageInboxSelectBox").prop("checked", true);
         else
-            $(".messageInboxSelectBox").attr('checked', false);
+            $(".messageInboxSelectBox").prop("checked", false);
     }
     else if(destination == "messageSent")
     {
-        if ($("#selectAllMessageSent").attr('checked'))
-            $(".messageSentSelectBox").attr('checked', true);
+        if ($("#selectAllMessageSent").is(":checked"))
+            $(".messageSentSelectBox").prop("checked", true);
         else
-            $(".messageSentSelectBox").attr('checked', false);
+            $(".messageSentSelectBox").prop("checked", false);
     }
 }
 function promptConfirmation(func, params)
@@ -1051,14 +1044,14 @@ function privateShareFiles(shareType, targetId, fileId)
         var selectedTab = 0;
         if (shareType == "group")
         {
-            if ($("#private_sharing_notifyGroup").attr('checked'))
+            if ($("#private_sharing_notifyGroup").is(":checked"))
                 notify = "yes";
             shareOptions = {fileIds: fileIds, groupId: targetId, notify: notify};
             selectedTab = 1;
         }
         else if (shareType == "user")
         {
-            if ($("#private_sharing_notifyUser").attr('checked'))
+            if ($("#private_sharing_notifyUser").is(":checked"))
                 notify = "yes";
             shareOptions = {fileIds: fileIds, targetId: targetId, notify: notify};
             selectedTab = 0;
@@ -1273,19 +1266,19 @@ function createUploadRequest()
 //         generatePseudoResponse("creating upload request", "Max upload size must be a number.", false);
 //     else if (parseInt($("#uploadRequestMaxSize").val() > USER_QUOTA))
 //         generatePseudoResponse("creating upload request", "Max upload size must be lower than your user quota.", false);
-    else if ($("#uploadRequestPassword").val() === "" && $("#uploadRequestShareType").attr('checked'))
+    else if ($("#uploadRequestPassword").val() === "" && $("#uploadRequestShareType").is(":checked"))
         generatePseudoResponse("creating upload request", "You must enter a password when creating a multi-use upload request.", false);
     else
     {
         var requestType = "single";
-        if($("#uploadRequestShareType").attr('checked'))
+        if($("#uploadRequestShareType").is(":checked"))
             requestType = "multi";
         $.post(FILELOCKER_ROOT+'/file_interface/generate_upload_ticket?format=json', 
         {
             password: $("#uploadRequestPassword").val(),
 //             maxFileSize: $("#uploadRequestMaxSize").val(),
             expiration: $("#uploadRequestExpiration").val(),
-            scanFile: $("#uploadRequestScanFile").attr('checked'),
+            scanFile: $("#uploadRequestScanFile").is(":checked"),
             emailAddresses: $("#uploadRequestEmail").val(),
             personalMessage: $("#uploadRequestMessage").val(),
             requestType: requestType
@@ -1300,7 +1293,7 @@ function createUploadRequest()
 }
 function toggleUploadRequestPassword()
 {
-    if ($("#uploadRequestPasswordSelector").attr('checked'))
+    if ($("#uploadRequestPasswordSelector").is(":checked"))
         $("#uploadRequestSelector").show();
     else
     {
@@ -1311,7 +1304,7 @@ function toggleUploadRequestPassword()
 }
 function toggleUploadRequestShareType()
 {
-    if ($("#uploadRequestShareType").attr('checked') && !$("#uploadRequestPasswordSelector").attr('checked'))
+    if ($("#uploadRequestShareType").is(":checked") && !$("#uploadRequestPasswordSelector").is(":checked"))
     {
         check("uploadRequestPasswordSelector");
         toggleUploadRequestPassword();
@@ -1379,8 +1372,8 @@ function sendMessage(recipientIds)
 }
 function viewMessages()
 {
-    $("#selectAllMessageInbox").attr("checked", false);
-    $("#selectAllMessageSent").attr("checked", false);
+    $("#selectAllMessageInbox").prop("checked", false);
+    $("#selectAllMessageSent").prop("checked", false);
     $("#messageInboxTable").html("");
     $("#messageSentTable").html("");
     $("#messagesBox").dialog("open");
@@ -1432,7 +1425,6 @@ function viewMessages()
             }
             $("#messageSentTable").append(senthtml);
             
-            $("#messageInboxTableSorter").trigger("update");
             $("#messageInboxTableSorter").trigger("update");
             $("#messageInboxTableSorter").trigger("sorton",[[[3,1],[2,0]]]);
             $("#messageSentTableSorter").trigger("update");
@@ -1704,10 +1696,10 @@ jQuery(document).ready(function() {
     // Messages
     messageTabs = $("#message_sections").tabs();
     $("#message_sections").bind("tabsselect", function(event, ui) {
-        $("#selectAllMessageInbox").attr("checked", false);
-        $("#selectAllMessageSent").attr("checked", false);
-        $("#messageInboxTable .messageInboxSelectBox:checked").each(function() { $(this).attr("checked", false); });
-        $("#messageSentTable .messageSentSelectBox:checked").each(function() { $(this).attr("checked", false); });
+        $("#selectAllMessageInbox").prop("checked", false);
+        $("#selectAllMessageSent").prop("checked", false);
+        $("#messageInboxTable .messageInboxSelectBox:checked").each(function() { $(this).prop("checked", false); });
+        $("#messageSentTable .messageSentSelectBox:checked").each(function() { $(this).prop("checked", false); });
     });
     $("#messageInboxTableSorter").tablesorter({
         headers: {

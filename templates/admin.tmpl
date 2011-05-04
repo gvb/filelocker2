@@ -47,9 +47,9 @@
                                 </div>
                             </td>
                             #if $fl.check_admin($flUser) is False:
-                            <td onClick="userRowClick('$flUser.userId')"><a href="javascript:promptViewUserHistory('$flUser.userId');" class="clock" title="View Filelocker interactions for '$flUser.userId'">$flUser.userId</a></td>
+                            <td><a href="javascript:promptViewUserHistory('$flUser.userId');" class="clock" title="View Filelocker interactions for '$flUser.userId'">$flUser.userId</a></td>
                             #else
-                            <td onClick="userRowClick('$flUser.userId')"><a href="javascript:promptViewUserHistory('$flUser.userId');" class="admin" title="View Filelocker interactions for '$flUser.userId' (admin)">$flUser.userId</a></td>
+                            <td><a href="javascript:promptViewUserHistory('$flUser.userId');" class="admin" title="View Filelocker interactions for '$flUser.userId' (admin)">$flUser.userId</a></td>
                             #end if
                             <td onClick="userRowClick('$flUser.userId')">$flUser.userLastName</td>
                             <td onClick="userRowClick('$flUser.userId')">$flUser.userFirstName</td>

@@ -185,17 +185,17 @@ function detectBrowserVersion(){
 }
 function check(checkboxId)
 {
-    if($("#"+checkboxId).attr('checked'))
-        $("#"+checkboxId).attr('checked', false);
+    if($("#"+checkboxId).is(":checked"))
+        $("#"+checkboxId).prop("checked", false);
     else
-        $("#"+checkboxId).attr('checked', true);
+        $("#"+checkboxId).prop("checked", true);
 }
 function allClassBoxChecked(checkboxId, classIdent)
 {
-    if ($("#"+checkboxId).attr('checked'))
-        $("."+classIdent).attr('checked', true);
+    if ($("#"+checkboxId).is(":checked"))
+        $("."+classIdent).prop("checked", true);
     else
-        $("."+classIdent).attr('checked', false);
+        $("."+classIdent).prop("checked", false);
 }
 function poll()
 {

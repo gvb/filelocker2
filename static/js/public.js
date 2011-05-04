@@ -15,7 +15,7 @@ function initPublicUpload()
             sizeLimit: 2147483647,
             onSubmit: function(id, fileName){
                 var uploadOptions = {};
-                if ($("#puScanFile").attr("checked"))
+                if ($("#puScanFile").is(":checked"))
                     uploadOptions.scanFile = "yes";
                 else
                     uploadOptions.scanFile = "no";

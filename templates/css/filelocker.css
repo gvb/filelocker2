@@ -493,15 +493,6 @@ a.inlineLink:hover {
     padding-left:18px;
     padding-bottom: 4px;
 }*/
-#userHistoryTableSorter {
-    width: 720px;
-}
-#userHistory {
-    height: 450px;
-    overflow-x: hidden;
-    overflow-y: auto;
-    width: 680px;
-}
 .unshareLink, .deleteLink, .cancelLink, .cancelLinkRight, a .deleteLink, .dismiss, .deleteMessages {
     color:#d34848 !important;
     font-size:14px;
@@ -1251,6 +1242,15 @@ ul.menu li {
 }
 .vaultUsage {
     height: 20px;
+}
+#userHistoryTableSorterWrapper {
+    width: 720px;
+    height: 450px;
+    overflow-x: hidden;
+    overflow-y: auto;
+}
+#userHistoryTableSorter {
+    width: 700px;
 }
 #userTableSorterWrapper {
     width: 580px;
