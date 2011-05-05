@@ -13,7 +13,7 @@ body {
 }
 body, p, h1, h2, h3, h4, h5, h6, a, thead, th, td, ol, ul, li, dt, dd, sub, sup, label, fieldset, form {
     font-family: "Lucida Grande", "Segoe UI", Arial, Verdana, sans-serif;
-/*     font-family: "Comic Sans MS"; */
+/*    font-family: "Comic Sans MS";*/
     font-size:8pt;
     font-weight:normal;
     line-height:180%;
