@@ -1615,9 +1615,7 @@ class HTTP_CLI:
     def create_CLIkey(self, hostIPv4, hostIPv6, format="json", **kwargs):
         user, fl, sMessages, fMessages = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [])
         hostIPv4 = strip_tags(hostIPv4)
-        if hostIPv6 != "":
-            hostIPv6 = self.expand_IPv6(strip_tags(hostIPv6))
-        if (hostIPv4 != "" and self.validIPv4.match(hostIPv4)) or (hostIPv6 != "" and self.validIPv6.match(hostIPv6)):
+        if (hostIPv4 != "" and self.validIPv4.match(hostIPv4)) or (hostIPv6 != "" and self.validIPv6.match(hostIPv6) or (hostIPv4 != "" and hostIPv6 != ""):
             try:
                 fl.create_CLIkey(user.userId, hostIPv4, hostIPv6)
                 sMessages.append("CLI key successfully created")
