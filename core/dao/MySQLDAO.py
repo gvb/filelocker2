@@ -689,7 +689,7 @@ class MySQLDAO(DAO):
             return False
         
     def createCLIKey(self, userId, hostIPv4, hostIPv6, CLIKey):
-        sql = "SELECT * FROM cli_key WHERE cli_key_user_id=%s and cli_key_host_ipv4=%s and cli_key_host_ipv6=%s"
+        sql = "SELECT * FROM cli_key WHERE cli_key_user_id=%s AND cli_key_host_ipv4=%s AND cli_key_host_ipv6=%s"
         sql_args = [userId, hostIPv4, hostIPv6]
         results = self.execute(sql, sql_args)
         if (len(results) > 0):
@@ -703,6 +703,15 @@ class MySQLDAO(DAO):
         else: #This user/host combination exists. Delete and regenerate.
             self.deleteCLIKey(userId, hostIPv4, hostIPv6)
             self.createCLIKey(userId, hostIPv4, hostIPv6, CLIKey)
+    
+    def getCLIKey(self, userId, hostIPv4, hostIPv6):
+        sql = "SELECT * FROM cli_key WHERE cli_key_user_id=%s AND cli_key_host_ipv4=%s AND cli_key_host_ipv6=%s"
+        sql_args = [userId, hostIPv4, hostIPv6]
+        results = self.execute(sql, sql_args)
+        cliKey = None
+        for row in results:
+            cliKey = row['cli_key_value']
+        return cliKey
             
     def getCLIKeyList(self, userId):
         sql = "SELECT * FROM cli_key WHERE cli_key_user_id=%s"

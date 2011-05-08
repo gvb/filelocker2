@@ -1586,6 +1586,55 @@ class HTTP_CLI:
     validIPv6 = re.compile('^\s*((([0-9A-Fa-f]{1,4}:){7}([0-9A-Fa-f]{1,4}|:))|(([0-9A-Fa-f]{1,4}:){6}(:[0-9A-Fa-f]{1,4}|((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3})|:))|(([0-9A-Fa-f]{1,4}:){5}(((:[0-9A-Fa-f]{1,4}){1,2})|:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3})|:))|(([0-9A-Fa-f]{1,4}:){4}(((:[0-9A-Fa-f]{1,4}){1,3})|((:[0-9A-Fa-f]{1,4})?:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){3}(((:[0-9A-Fa-f]{1,4}){1,4})|((:[0-9A-Fa-f]{1,4}){0,2}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){2}(((:[0-9A-Fa-f]{1,4}){1,5})|((:[0-9A-Fa-f]{1,4}){0,3}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){1}(((:[0-9A-Fa-f]{1,4}){1,6})|((:[0-9A-Fa-f]{1,4}){0,4}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(:(((:[0-9A-Fa-f]{1,4}){1,7})|((:[0-9A-Fa-f]{1,4}){0,5}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:)))(%.+)?\s*$')
     
     @cherrypy.expose
+    def register_client(self, username, password, hostIPv4="", hostIPv6="", **kwargs):
+        fl, authType, authenticated, sMessages, fMessages, cliKey = cherrypy.thread_data.flDict['app'], None, False, [], [], None
+        if kwargs.has_key("authType"):
+            authType = kwargs['authType']
+        else:
+            authType = fl.authType
+        username = strip_tags(username)
+        try:
+            if authType == "cas":
+                if fl.CAS.proxy_cas_authenticate(username, password):
+                    authenticated = True
+            else:
+                if password is None or password == "":
+                    fMessages.append("Password cannot be blank")                
+                elif (authType == "local" and fl.localDirectory.authenticate(username, password)) or (authType!="local" and fl.directory.authenticate(username, password)):
+                    currentUser = fl.get_user(username, True) #if they are authenticated and local, this MUST return a user object
+                    if currentUser is not None:
+                        if authType == "local":
+                            currentUser.isLocal = True #Tags a user if they used a local login, in case we want to use this later
+                        if currentUser.authorized == False:
+                            fMessages.append("You do not have access to this system")
+                        fl.record_login(currentUser, cherrypy.request.remote.ip)
+                        fl.log_action(currentUser.userId, "Register Client", None, "You registered a new Filelocker client.")
+                        authenticated = True
+                    else: #This should only happen in the case of a user existing in the external directory, but having never logged in before
+                        try:
+                            newUser = fl.directory.lookup_user(username)
+                            fl.install_user(newUser)
+                            currentUser = fl.get_user(username, True)
+                            if currentUser is not None and currentUser.authorized != False:
+                                authenticated = True
+                            else:
+                                fMessages.append("You do not have permission to access this system")
+                        except FLError, fle:
+                            fMessages.append("Could not install your user account on the system: %s" % fle.failureMessages)
+            if authenticated:
+                cliKey = fl.get_CLIkey(username, hostIPv4, hostIPv6)
+                if cliKey is None:
+                    cliKey = fl.create_CLIkey(username, hostIPv4, hostIPv6)
+                sMessages.append("Filelocker client successfully registered")
+        except FLError, fle:
+            sMessages.extend(fle.successMessages)
+            fMessages.extend(fle.failureMessages)
+        except Exception, e:
+            fMessages.append("Problem registering new Filelocker client: %s" % str(e))
+        return fl_response(sMessages, fMessages, format="cli", data=cliKey) 
+    
+        
+    @cherrypy.expose
     def CLI_login(self, CLIkey, userId):
         fl, sMessages, fMessages = (cherrypy.thread_data.flDict['app'], [], [])
         hostIP = cherrypy.request.remote.ip
@@ -1595,8 +1644,6 @@ class HTTP_CLI:
         elif(self.validIPv6.match(hostIP)):
             hostIPv4 = ""
             hostIPv6 = hostIP
-        else:
-            fMessages.append("Invalid IP address")
         try:
             if(fl.verify_CLIlogin(userId, hostIPv4, hostIPv6, CLIkey)):
                 currentUser = fl.get_user(userId, True)
@@ -1617,7 +1664,7 @@ class HTTP_CLI:
         hostIPv4 = strip_tags(hostIPv4)
         if hostIPv6 != "":
             hostIPv6 = self.expand_IPv6(strip_tags(hostIPv6))
-        if (hostIPv4 != "" and self.validIPv4.match(hostIPv4)) or (hostIPv6 != "" and self.validIPv6.match(hostIPv6) or (hostIPv4 != "" and hostIPv6 != ""):
+        if (hostIPv4 != "" and self.validIPv4.match(hostIPv4)) or (hostIPv6 != "" and self.validIPv6.match(hostIPv6)) or (hostIPv4 != "" and hostIPv6 != ""):
             try:
                 fl.create_CLIkey(user.userId, hostIPv4, hostIPv6)
                 sMessages.append("CLI key successfully created")
@@ -1648,7 +1695,7 @@ class HTTP_CLI:
         hostIPv4 = strip_tags(hostIPv4)
         if hostIPv6 != "":
             hostIPv6 = self.expand_IPv6(strip_tags(hostIPv6))
-        if (hostIPv4 != "" and self.validIPv4.match(hostIPv4)) or (hostIPv6 != "" and self.validIPv6.match(hostIPv6)):
+        if (hostIPv4 != "" and self.validIPv4.match(hostIPv4)) or (hostIPv6 != "" and self.validIPv6.match(hostIPv6)) or (hostIPv4 == "" and hostIPv6 == ""):
             try:
                 fl.delete_CLIkey(user.userId, hostIPv4, hostIPv6)
                 sMessages.append("CLI key successfully deleted")
@@ -1796,7 +1843,7 @@ class Root:
         username = strip_tags(username)
         if authType == "cas":
             pass
-        elif authType == "ldap" or authType=="local":
+        else:
             if password is None or password == "":
                 raise cherrypy.HTTPRedirect("%s/login?msg=3&authType=%s" % (fl.rootURL, authType))
             elif (authType == "local" and fl.localDirectory.authenticate(username, password)) or (authType!="local" and fl.directory.authenticate(username, password)):
@@ -1812,9 +1859,9 @@ class Root:
                 else: #This should only happen in the case of a user existing in the external directory, but having never logged in before
                     try:
                         newUser = fl.directory.lookup_user(username)
+                        fl.install_user(newUser)
                         currentUser = fl.get_user(username, True)
                         if currentUser is not None and currentUser.authorized != False:
-                            fl.install_user(newUser)
                             cherrypy.session['user'], cherrypy.session['original_user'], cherrypy.session['sMessages'], cherrypy.session['fMessages'] = currentUser, currentUser, [], []
                             raise cherrypy.HTTPRedirect(fl.rootURL)
                         else:
@@ -1823,9 +1870,6 @@ class Root:
                         return "Unable to install user: %s" % fle.failureMessages
             else:
                 raise cherrypy.HTTPRedirect("%s/login?msg=1&authType=%s" % (fl.rootURL, authType))
-        else:
-            logging.error("[system] [login] [No authentication variable set in config]")
-            raise cherrypy.HTTPError(403, "No authentication mechanism")
     
     @cherrypy.expose
     def css(self, style):

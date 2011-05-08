@@ -1613,6 +1613,18 @@ function deleteCLIKey(hostIP)
             getCLIKeyList();
         }, 'json');
     }
+    else if (hostIP == "")
+    {
+        $.post(FILELOCKER_ROOT+'/cli_interface/delete_CLIkey?format=json', 
+        {
+            hostIPv4: "",
+            hostIPv6: ""
+        }, 
+        function(returnData) 
+        {
+            getCLIKeyList();
+        }, 'json');
+    }
 }
 
 //Roles
