@@ -39,7 +39,7 @@ __author__      = "Brett Davis"
 __copyright__   = "Copyright 2011, Purdue University"
 __credits__     = "Christopher Miller, Brett Davis"
 __license__     = "Open Source License. See LICENSE.txt."
-__version__     = "2.4.%s" % revision
+__version__     = "2.5.%s" % revision
 __maintainer__  = "Brett Davis"
 __email__       = "wbdavis@purdue.edu"
 __status__      = "Production"
@@ -198,11 +198,20 @@ class Filelocker:
             return False
 
     def create_CLIkey(self, userId, hostIPv4, hostIPv6):
-        CLIkey = os.urandom(32).encode('hex')
+        CLIkey = str(os.urandom(32).encode('hex'))[0:32]
         try:
             self.db.createCLIKey(userId, hostIPv4, hostIPv6, CLIkey)
+            return CLIkey
         except Exception, e:
             raise FLError(False, ["Unable to create CLI key: %s" % str(e)])
+    
+    def get_CLIkey(self, userId, hostIPv4, hostIPv6):
+        try:
+            cliKey = self.db.getCLIKey(userId, hostIPv4, hostIPv6)
+            return cliKey
+        except Exception, e:
+            logging.error("Problem getting clikey: %s" % str(e))
+            raise FLError(False, ["Unable to search for pre-existing CLI Key: %s" % str(e)]) 
         
     def get_CLIkey_list(self, userId):
         try:

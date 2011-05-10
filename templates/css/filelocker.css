@@ -1,3 +1,10 @@
+/*****
+ * Icons courtesy of Mark James (http://mark.james.name/)
+ * http://www.famfamfam.com/lab/icons/silk/
+ * Licensed under Creative Commons Attribution 2.5 License
+ * http://creativecommons.org/licenses/by/2.5/
+ */
+
 /* CSS Reset and Basic Styles */
 html, body, div, span, applet, object, iframe, h1, h2, h3, h4, h5, h6, p, blockquote, pre, a, abbr, acronym, address, big, cite, code, del, dfn, em, font, img, ins, kbd, q, s, samp, small, strike, strong, sub, sup, tt, var, b, u, i, center, dl, dt, dd, ol, ul, li, fieldset, form, label, legend, table, caption, tbody, tfoot, thead, tr, th, td {
     margin: 0;
@@ -13,7 +20,6 @@ body {
 }
 body, p, h1, h2, h3, h4, h5, h6, a, thead, th, td, ol, ul, li, dt, dd, sub, sup, label, fieldset, form {
     font-family: "Lucida Grande", "Segoe UI", Arial, Verdana, sans-serif;
-/*     font-family: "Comic Sans MS"; */
     font-size:8pt;
     font-weight:normal;
     line-height:180%;
@@ -172,7 +178,7 @@ ul {
 #footer p {
     font-size:8pt;
     text-align:center;
-    color: #333333;
+    color: #666666;
 }
 #footer a {
     font-size:8pt;
@@ -493,15 +499,6 @@ a.inlineLink:hover {
     padding-left:18px;
     padding-bottom: 4px;
 }*/
-#userHistoryTableSorter {
-    width: 720px;
-}
-#userHistory {
-    height: 450px;
-    overflow-x: hidden;
-    overflow-y: auto;
-    width: 680px;
-}
 .unshareLink, .deleteLink, .cancelLink, .cancelLinkRight, a .deleteLink, .dismiss, .deleteMessages {
     color:#d34848 !important;
     font-size:14px;
@@ -1251,6 +1248,15 @@ ul.menu li {
 }
 .vaultUsage {
     height: 20px;
+}
+#userHistoryTableSorterWrapper {
+    width: 720px;
+    height: 450px;
+    overflow-x: hidden;
+    overflow-y: auto;
+}
+#userHistoryTableSorter {
+    width: 700px;
 }
 #userTableSorterWrapper {
     width: 580px;

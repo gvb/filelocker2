@@ -39,14 +39,11 @@ from functools import wraps
 from optparse import OptionParser
 from xml.sax import parseString, handler
 
-revisionString = "$Revision: 329$"
-revision = re.search('^\$Revision:\s+(\d+)\s*\$$', revisionString).group(1)
-
 __author__      = "Christopher Miller"
 __copyright__   = "Copyright 2011, Purdue University"
 __credits__     = "Christopher Miller, Brett Davis, Jim Dalton"
 __license__     = "Open Source License. See LICENSE.txt."
-__version__     = "2.3.%s" % revision
+__version__     = "2.4.2"
 __maintainer__  = "Brett Davis"
 __email__       = "wbdavis@purdue.edu"
 __status__      = "Production"

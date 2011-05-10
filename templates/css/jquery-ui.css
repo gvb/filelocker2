@@ -34,7 +34,7 @@
 ----------------------------------*/
 
 /* Overlays */
-.ui-widget-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+.ui-widget-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; }
 /* Accordion
 ----------------------------------*/
 .ui-accordion .ui-accordion-header { cursor: pointer; position: relative; margin-top: 1px; zoom: 1;}

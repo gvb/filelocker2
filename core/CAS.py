@@ -18,6 +18,7 @@ class CAS(object):
             'login_path': '/login',
             'logout_path': '/logout',
             'validate_path': '/serviceValidate',
+            'authenticate_path': '/v1/tickets'
         }
         self.paths.update(kwords)  
        
@@ -61,4 +62,20 @@ class CAS(object):
         except Exception, e:
             logging.critical("Error in CAS ticket validation: %s" % (str(e)))
             return (False, None)
-       
+            
+    def proxy_cas_authenticate(self, username, password):
+        try:
+            authURL = self.url + self.paths['authenticate_path']
+            values = {'username': username, 'password': password}
+            data = urllib.urlencode(values)
+            req = urllib2.Request(authURL, data)
+            response = urllib2.urlopen(req)
+            if response.getcode() >=200 and response.getcode() <= 299:
+                return True
+        except urllib2.HTTPError, htpe:
+            return False
+        except Exception, e:
+            logging.error("[system] [proxyCasLogin] [%s]" % str(e))
+            return False
+            
+           

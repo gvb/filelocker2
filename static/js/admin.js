@@ -120,7 +120,7 @@ function loadAdminInterface(tabIndex)
 function createUser()
 {
     var isRole = "no";
-    if ($("#createUserRole").attr("checked"))
+    if ($("#createUserRole").is(":checked"))
         isRole = "yes";
     if($("#createUserId").val() == "")
         generatePseudoResponse("creating user", "New user must have a user ID.", false);
@@ -128,9 +128,7 @@ function createUser()
         generatePseudoResponse("creating user", "New user must have a name.", false);
     else if($("#createUserQuota").val() == "")
         generatePseudoResponse("creating user", "New user must have a quota.", false);
-    else if($("#createUserEmail").val() == "")
-        generatePseudoResponse("creating user", "New user must have an email address.", false);
-    else if($("#createUserPassword").val() == "" || $("#createUserPasswordConfirm").val() == "" || $("#createUserPassword").val() != $("#createUserPasswordConfirm").val())
+    else if($("#createUserPassword").val() != $("#createUserPasswordConfirm").val())
         generatePseudoResponse("creating user", "Passwords do not match.", false);
     else
     {
@@ -222,18 +220,18 @@ function updateConfig()
 }
 function allUsersBoxChecked()
 {
-    if ($("#allUsersCheckbox").attr('checked') )
-        $(".userSelectBox").attr('checked', true);
+    if ($("#allUsersCheckbox").is(":checked"))
+        $(".userSelectBox").prop("checked", true);
     else
-        $(".userSelectBox").attr('checked', false);
+        $(".userSelectBox").prop("checked", false);
 }
 
 function promptUpdateUser(userId, firstName, lastName, email, quota, isRole)
 {
     if (isRole)
-        $("#updateUserRole").attr("checked", true);
+        $("#updateUserRole").prop("checked", true);
     else
-        $("#updateUserRole").attr("checked", false);
+        $("#updateUserRole").prop("checked", false);
     $("#updateUserFirstName").val(firstName);
     $("#updateUserLastName").val(lastName);
     $("#updateUserEmail").val(email);
@@ -279,7 +277,7 @@ function promptUpdatePermissions(userId)
 }
 function permissionChecked(userId, permissionId, rowId)
 {
-    if ($("#checkbox_"+rowId).attr("checked"))
+    if ($("#checkbox_"+rowId).is(":checked"))
     {
         $.post(FILELOCKER_ROOT+'/admin_interface/grant_user_permission?format=json', 
         {
@@ -311,7 +309,7 @@ function permissionChecked(userId, permissionId, rowId)
 function updateFilelockerUser()
 {
     var isRole = "no";
-    if ($("#updateUserRole").attr("checked"))
+    if ($("#updateUserRole").is(":checked"))
         isRole = "yes";
     $.post(FILELOCKER_ROOT+'/admin_interface/update_filelocker_user?format=json', 
     {
@@ -442,9 +440,9 @@ function promptViewUserHistory(userId)
                 2: {sorter: 'text'}
             }
         });
+        $("#userHistoryBox").dialog("open");
         $("#userHistoryTableSorter").trigger("update");
         $("#userHistoryTableSorter").trigger("sorton",[[[0,0]]]);
-        $("#userHistoryBox").dialog("open");
     });
 }
 function showStatistics()

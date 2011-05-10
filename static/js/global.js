@@ -185,17 +185,17 @@ function detectBrowserVersion(){
 }
 function check(checkboxId)
 {
-    if($("#"+checkboxId).attr('checked'))
-        $("#"+checkboxId).attr('checked', false);
+    if($("#"+checkboxId).is(":checked"))
+        $("#"+checkboxId).prop("checked", false);
     else
-        $("#"+checkboxId).attr('checked', true);
+        $("#"+checkboxId).prop("checked", true);
 }
 function allClassBoxChecked(checkboxId, classIdent)
 {
-    if ($("#"+checkboxId).attr('checked'))
-        $("."+classIdent).attr('checked', true);
+    if ($("#"+checkboxId).is(":checked"))
+        $("."+classIdent).prop("checked", true);
     else
-        $("."+classIdent).attr('checked', false);
+        $("."+classIdent).prop("checked", false);
 }
 function poll()
 {
@@ -438,4 +438,6 @@ jQuery(document).ready(function(){
     }
     
     tipsyfy();
+    $("#footer p").html($("#footer p").html().replace("©","<span onclick='javascript:toggleTypography();'>&copy;</span>"));
 });
+function toggleTypography(){var y="body, p, h1, h2, h3, h4, h5, h6, a, thead, th, td, ol, ul, li, dt, dd, sub, sup, label, fieldset, form";if($.browser.mozilla)var z="\"Lucida Grande\",\"Segoe UI\",Arial,Verdana,sans-serif";else var z="'Lucida Grande', 'Segoe UI', Arial, Verdana, sans-serif";if($("body").css("font-family")==z||$("body").css("font-family")==z)$(y).css("font-family","\"Comic Sans MS\"");else $(y).css("font-family",z);}

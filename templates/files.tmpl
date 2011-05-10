@@ -6,7 +6,7 @@
     
     <div class="toolbar">
         <div class="button"><a href="javascript:promptUpload();" title="Upload a new file to Filelocker" class="uploadButton"><span>Upload</span></a></div>
-        <div class="button" id="multiShare"><a href="javascript:dismissStatusMessage();javascript:promptShareFiles();" title="Manage shares for the selected files" class="shareButton"><span>Manage Shares</span></a></div>
+        <div class="button hidden" id="multiShare"><a href="javascript:dismissStatusMessage();javascript:promptShareFiles();" title="Manage shares for the selected files" class="shareButton"><span>Manage Shares</span></a></div>
         <div class="button"><a href="javascript:dismissStatusMessage();javascript:loadManageGroups();" title="Manage my groups of Filelocker users" class="manageGroupsButton"><span>Manage Groups</span></a></div>
         <div class="button"><a href="javascript:deleteFiles();" title="Permanently delete the selected files from Filelocker" class="deleteButton"><span>Delete</span></a></div>
     </div>
@@ -16,7 +16,7 @@
         <table class="file_table" id="fileTableSorter">
             <thead>
                 <tr>
-                    <th class="selectAllCol"><input type="checkbox" id="selectAllFiles" onClick="selectAll('files');"/></th>
+                    <th class="selectAllCol"><input type="checkbox" id="selectAllFiles" onClick="selectAll('files');" /></th>
                     <th class="nameCol pseudoLink">Name</th>
                     <th class="sizeCol pseudoLink">Size</th>
                     <th class="expiresCol pseudoLink">Expires</th>
@@ -231,7 +231,7 @@
                                 #end if
                                 #set $fileGeoData = $re.search(r'.*\[geo\](-?\d+\.\d+),(-?\d+\.\d+)\[/geo\].*', $f.fileNotes)
                                 #if $fileGeoData and $fl.geotagging
-                                    <li><div class="itemTitleMedium"><span class="map"><a href="javascript:viewUploadLocationMap($fileGeoData.group(1),$fileGeoData.group(2));" title="View this file's upload location on Google Maps">View Upload Location</a></span></div></li>
+                                    <li><div class="itemTitleMedium"><span class="map"><a href="http://maps.google.com/maps?q=${fileGeoData.group(1)},${fileGeoData.group(2)}" title="View this file's upload location on Google Maps" target="_blank">View Upload Location</a></span></div></li>
                                 #end if
                                 <li><div class="button" style="width: 185px;"><a href="javascript:promptShareFiles('$f.fileId');" title="Share this file with Filelocker users and groups" class="shareButton"><span><center>Share This File</center></span></a></div></li>
                             </ul>
@@ -318,7 +318,7 @@
                                     #end if
                                     #set $fileGeoData = $re.search(r'.*\[geo\](-?\d+\.\d+),(-?\d+\.\d+)\[/geo\].*', $f.fileNotes)
                                     #if $fileGeoData and $fl.geotagging
-                                        <li><div class="itemTitleMedium"><span class="map"><a href="javascript:viewUploadLocationMap($fileGeoData.group(1),$fileGeoData.group(2));" title="View this file's upload location on Google Maps">View Upload Location</a></span></div></li>
+                                        <li><div class="itemTitleMedium"><span class="map"><a href="http://maps.google.com/maps?q=${fileGeoData.group(1)},${fileGeoData.group(2)}" title="View this file's upload location on Google Maps" target="_blank">View Upload Location</a></span></div></li>
                                     #end if
                                     <li><div class="itemTitleMedium"><span class="hide"><a href="javascript:hidePrivateShare('$f.fileId');" title="Hide this share from Filelocker. Unhide shares in Account Settings" class="redText">Hide This Share</a></span></div></li>
                                     <li><div class="itemTitleWide"><span id="takeOwnership_$f.fileId" class="take_ownership"><a href="javascript:takeFile('$f.fileId');" title="Move this file to 'My Files' for resharing">Take Ownership (to Reshare)</a></span></div></li>
@@ -407,7 +407,7 @@
                                             #end if
                                             #set $fileGeoData = $re.search(r'.*\[geo\](-?\d+\.\d+),(-?\d+\.\d+)\[/geo\].*', $f.fileNotes)
                                             #if $fileGeoData and $fl.geotagging
-                                                <li><div class="itemTitleMedium"><span class="map"><a href="javascript:viewUploadLocationMap($fileGeoData.group(1),$fileGeoData.group(2));" title="View this file's upload location on Google Maps">View Upload Location</a></span></div></li>
+                                                <li><div class="itemTitleMedium"><span class="map"><a href="http://maps.google.com/maps?q=${fileGeoData.group(1)},${fileGeoData.group(2)}" title="View this file's upload location on Google Maps" target="_blank">View Upload Location</a></span></div></li>
                                             #end if
                                             <li><div class="itemTitleWide"><span id="takeOwnership_$f.fileId" class="take_ownership"><a href="javascript:takeFile('$f.fileId');" title="Move this file to 'My Files' for resharing">Take Ownership (to Reshare)</a></span></div></li>
                                             <li><div class="button" style="width: 185px"><a href="$fl.rootURL/file_interface/download?fileId=$f.fileId" title="Download this file from Filelocker" class="saveButton"><span><center>Download This File</center></span></a></div></li>
