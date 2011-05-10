@@ -128,7 +128,7 @@ class LDAPDirectory(object):
             if userId is "" or password is "":
                 logging.info("Username or password cannot be blank.  Anonymous logins are not permitted")
                 raise ldap.INVALID_CREDENTIALS
-            if self.isActiveDirectory:
+            if self.isActiveDirectory.lower()=="yes":
                 result = l.simple_bind_s(userId+"@"+self.domainName , password)
             else:
                 result = l.simple_bind_s(self.userIdAttr+"="+userId+","+ self.directoryBindDn , password)
