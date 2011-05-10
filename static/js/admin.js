@@ -128,9 +128,7 @@ function createUser()
         generatePseudoResponse("creating user", "New user must have a name.", false);
     else if($("#createUserQuota").val() == "")
         generatePseudoResponse("creating user", "New user must have a quota.", false);
-    else if($("#createUserEmail").val() == "")
-        generatePseudoResponse("creating user", "New user must have an email address.", false);
-    else if($("#createUserPassword").val() == "" || $("#createUserPasswordConfirm").val() == "" || $("#createUserPassword").val() != $("#createUserPasswordConfirm").val())
+    else if($("#createUserPassword").val() != $("#createUserPasswordConfirm").val())
         generatePseudoResponse("creating user", "Passwords do not match.", false);
     else
     {
