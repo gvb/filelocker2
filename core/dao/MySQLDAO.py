@@ -647,18 +647,25 @@ class MySQLDAO(DAO):
         self.execute(sql, sql_args)
         return True
     
-    def getAllUsers (self):
+    def getAllUsers(self):
         sql = "SELECT * FROM user"
         psql = "SELECT * FROM permission"
+        qsql = "SELECT sum(file_size) as quotausage, file_owner_id FROM file GROUP BY file_owner_id"
         perms = []
+        quotas = {}
         results = self.execute(psql, None)
         for row in results:
             perms.append(row['permission_id'])
+        results = self.execute(qsql, None)
+        for row in results:
+            quotas[row['file_owner_id']] = row['quotausage']
         results = self.execute(sql, None)
         users = []
         for row in results:
-            quotaUsedMB = self.getCurrentQuotaUsage(row['user_id']) / 1024 / 1024
-            newUser = User(row['user_first_name'], row['user_last_name'], row['user_email'], row['user_quota'], row['user_last_login_datetime'], row['user_tos_accept_datetime'], row['user_id'], quotaUsedMB)
+            quotaUsageMB = 0
+            if quotas.has_key(row['user_id']):
+                quotaUsageMB = float(quotas[row['user_id']]) / 1024 / 1024
+            newUser = User(row['user_first_name'], row['user_last_name'], row['user_email'], row['user_quota'], row['user_last_login_datetime'], row['user_tos_accept_datetime'], row['user_id'], quotaUsageMB)
             if "(role)%s" % row['user_id'] in perms:
                 newUser.isRole = True
             users.append(newUser)
