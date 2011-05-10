@@ -922,8 +922,8 @@ class MySQLDAO(DAO):
         return hasPermission
         
     def getCurrentQuotaUsage(self, userId):
-        sql = "SELECT sum(file_size) as quotaUsage FROM file WHERE file_owner_id=%s AND file_location <> %s"
-        sql_args = [userId, "remote"]
+        sql = "SELECT sum(file_size) as quotaUsage FROM file WHERE file_owner_id=%s"
+        sql_args = [userId]
         results = self.execute(sql, sql_args) 
         currentUsageBytes = results[0]['quotaUsage']
         if currentUsageBytes is None:
