@@ -1740,7 +1740,7 @@ jQuery(document).ready(function() {
             if(e.target) element=e.target;
             else if(e.srcElement) element=e.srcElement;
             if(element.nodeType==3) element=element.parentNode;
-            if(element.tagName == 'INPUT' || element.tagName == 'TEXTAREA') return;
+            if(element.tagName == 'INPUT' || element.tagName == 'TEXTAREA' || e.ctrlKey || e.altKey || e.metaKey) return;
             var code = e.charCode || e.which || e.keyCode;
             if (code == 97)  { loadEditAccount(); }     // A
             if (code == 102) { loadMyFiles(); }         // F
@@ -1757,7 +1757,7 @@ jQuery(document).ready(function() {
             if(e.target) element=e.target;
             else if(e.srcElement) element=e.srcElement;
             if(element.nodeType==3) element=element.parentNode;
-            if(element.tagName == 'INPUT' || element.tagName == 'TEXTAREA') return;
+            if(element.tagName == 'INPUT' || element.tagName == 'TEXTAREA' || e.ctrlKey || e.altKey || e.metaKey) return;
             var code = e.charCode || e.which || e.keyCode;
             if (code == 65) { loadEditAccount(); }     // A
             if (code == 70) { loadMyFiles(); }         // F
