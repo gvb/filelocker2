@@ -143,7 +143,7 @@ cherrypy.file_transfers = dict()
 class HTTP_Admin:
     @cherrypy.expose
     @cherrypy.tools.requires_login()
-    def get_all_users(self, start=0, end=50, **kwargs)
+    def get_all_users(self, start=0, end=50, format="json", **kwargs):
         user, fl, flUserList = cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], None
         try:
             flUsers = fl.get_all_users(user)
