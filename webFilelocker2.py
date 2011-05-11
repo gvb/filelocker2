@@ -143,6 +143,23 @@ cherrypy.file_transfers = dict()
 class HTTP_Admin:
     @cherrypy.expose
     @cherrypy.tools.requires_login()
+    def get_all_users(self, start=0, end=50, format="json", **kwargs):
+        user, fl, flUserList, sMessages, fMessages = cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], None, [], []
+        try:
+            start, end = int(strip_tags(start)), int(strip_tags(end)) 
+            flUsers = fl.get_all_users(user, start, end)
+            flUserList = []
+            for user in flUsers:
+                flUserList.append(user.get_dict())
+        except FLError, fle:
+            sMessages.extend(fle.successMessages)
+            fMessages.extend(fle.failureMessages)
+        except Exception, e:
+            fMessages.append("Problem getting users: %s" % str(e))
+        return fl_response(sMessages, fMessages, format, data=flUserList)  
+        
+    @cherrypy.expose
+    @cherrypy.tools.requires_login()
     def get_user_permissions(self, userId, format="json", **kwargs):
         user, fl, sMessages, fMessages, permissionData = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [], [])
         try:
@@ -1943,18 +1960,14 @@ class Root:
         userFiles = self.file_interface.get_user_file_list(format="list")
         templateFiles = os.listdir(fl.templatePath)
         configParameters = fl.get_config(user)
-        flUsers = fl.get_all_users(user)
+        flUsers = fl.get_all_users(user, 0, 50)
         totalFileCount = fl.get_file_count(user)
         totalMessageCount = fl.get_message_count(user)
         currentUsersList = []
         currentUploads = len(cherrypy.file_transfers)
         logsFile = open(fl.logFile)
         logs = tail(logsFile, 50)
-        #for line in allLogs:
-            #if line.find("cherrypy.access") > -1 and (line.find("200") > -1 or line.find("303") > -1 or line.find("304") > -1):
-                #pass
-            #else:
-                #logs.append(line)
+
         attributes = fl.get_available_attributes_by_user(user)
         currentUserIds = []
         sessionCache = {}
