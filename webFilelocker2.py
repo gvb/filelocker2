@@ -144,15 +144,18 @@ class HTTP_Admin:
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def get_all_users(self, start=0, end=50, format="json", **kwargs):
-        user, fl, flUserList = cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], None
+        user, fl, flUserList, sMessages, fMessages = cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], None, [], []
         try:
-            flUsers = fl.get_all_users(user)
+            start, end = int(strip_tags(start)), int(strip_tags(end)) 
+            flUsers = fl.get_all_users(user, start, end)
             flUserList = []
             for user in flUsers:
                 flUserList.append(user.get_dict())
         except FLError, fle:
             sMessages.extend(fle.successMessages)
             fMessages.extend(fle.failureMessages)
+        except Exception, e:
+            fMessages.append("Problem getting users: %s" % str(e))
         return fl_response(sMessages, fMessages, format, data=flUserList)  
         
     @cherrypy.expose
