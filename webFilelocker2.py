@@ -1960,7 +1960,7 @@ class Root:
         userFiles = self.file_interface.get_user_file_list(format="list")
         templateFiles = os.listdir(fl.templatePath)
         configParameters = fl.get_config(user)
-        flUsers = fl.get_all_users(user)
+        flUsers = fl.get_all_users(user, 0, 50)
         totalFileCount = fl.get_file_count(user)
         totalMessageCount = fl.get_message_count(user)
         currentUsersList = []
