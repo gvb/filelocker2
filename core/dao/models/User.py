@@ -24,5 +24,8 @@ class User:
         cUser = User(self.userFirstName, self.userLastName, self.userEmail, self.userQuota, self.userLastLogin, self.userTosAcceptDatetime, self.userId, self.userQuotaUsed)
         return cUser
     
+    def get_dict(self):
+        return {'userFirstName':self.userFirstName, 'userLastName':self.userLastName, 'userDisplayName': self.userDisplayName, 'userEmail': self.userEmail, 'isRole': self.isRole, 'userId': self.userId, 'userQuotaUsed': self.userQuotaUsed, 'userQuota': self.userQuota}
+    
     def __str__(self):
         return "First Name: %s Last Name: %s Display Name: %s Email: %s Quota: %s Last Login: %s TOS Accept Time: %s" % (self.userFirstName, self.userLastName, self.userDisplayName, self.userEmail, self.userQuota, self.userLastLogin, self.userTosAcceptDatetime)

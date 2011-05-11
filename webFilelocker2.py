@@ -143,6 +143,20 @@ cherrypy.file_transfers = dict()
 class HTTP_Admin:
     @cherrypy.expose
     @cherrypy.tools.requires_login()
+    def get_all_users(self, start=0, end=50, **kwargs)
+        user, fl, flUserList = cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], None
+        try:
+            flUsers = fl.get_all_users(user)
+            flUserList = []
+            for user in flUsers:
+                flUserList.append(user.get_dict())
+        except FLError, fle:
+            sMessages.extend(fle.successMessages)
+            fMessages.extend(fle.failureMessages)
+        return fl_response(sMessages, fMessages, format, data=flUserList)  
+        
+    @cherrypy.expose
+    @cherrypy.tools.requires_login()
     def get_user_permissions(self, userId, format="json", **kwargs):
         user, fl, sMessages, fMessages, permissionData = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [], [])
         try:
@@ -1950,11 +1964,7 @@ class Root:
         currentUploads = len(cherrypy.file_transfers)
         logsFile = open(fl.logFile)
         logs = tail(logsFile, 50)
-        #for line in allLogs:
-            #if line.find("cherrypy.access") > -1 and (line.find("200") > -1 or line.find("303") > -1 or line.find("304") > -1):
-                #pass
-            #else:
-                #logs.append(line)
+
         attributes = fl.get_available_attributes_by_user(user)
         currentUserIds = []
         sessionCache = {}

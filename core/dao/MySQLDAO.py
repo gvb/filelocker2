@@ -647,8 +647,12 @@ class MySQLDAO(DAO):
         self.execute(sql, sql_args)
         return True
     
-    def getAllUsers(self):
+    def getAllUsers(self, start=None, end=None):
         sql = "SELECT * FROM user"
+        sql_args = None
+        if start is not None and end is not None:
+            sql += " LIMIT %s, %s"
+            sql_args = [start, end]
         psql = "SELECT * FROM permission"
         qsql = "SELECT sum(file_size) as quotausage, file_owner_id FROM file GROUP BY file_owner_id"
         perms = []
@@ -659,7 +663,7 @@ class MySQLDAO(DAO):
         results = self.execute(qsql, None)
         for row in results:
             quotas[row['file_owner_id']] = row['quotausage']
-        results = self.execute(sql, None)
+        results = self.execute(sql, sql_args)
         users = []
         for row in results:
             quotaUsageMB = 0
