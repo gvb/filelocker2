@@ -301,7 +301,7 @@ function promptShareFiles(fileId, accordionIndex, tabIndex)
         });
     }
     
-    $("#shareMultiBox").load(FILELOCKER_ROOT+"/file_interface/get_user_file_list?format=lightbox_html&ms=" + new Date().getTime(), {fileIdList: fileIds}, function (responseText, textStatus, xhr) {
+    $("#shareMultiBox").load(FILELOCKER_ROOT+"/file_interface/get_user_file_list?format=searchbox_html&ms=" + new Date().getTime(), {fileIdList: fileIds}, function (responseText, textStatus, xhr) {
         if (textStatus == "error")
             generatePseudoResponse("loading sharing page", "Error "+xhr.status+": "+xhr.textStatus, false);
         else
@@ -314,7 +314,7 @@ function promptShareFiles(fileId, accordionIndex, tabIndex)
                     title: "<span class='share'>Share a File</span>",
                     width: popup_large_width
                 }));
-                getSearchWidget("private_sharing");
+                initSearchWidget("private_sharing");
                 $("#current_shares").accordion({ autoHeight: false });
                 if(accordionIndex !== undefined)
                     $("#current_shares").accordion("activate", tabIndex);
@@ -364,80 +364,77 @@ function loadManageGroups()
 }
 
 // Search
-function getSearchWidget(context)
+function initSearchWidget(context)
 {
     $("#"+context+"_externalSearchSelector").hide();
     //Context Must be a valid ID for which to inject the search HTML
-    $("#"+context+"_searchContainer").load(FILELOCKER_ROOT+"/user_interface/get_search_widget", {context:context}, function()
-    {
-        $("#"+context+"_searchTypeChooser").buttonset();
-        $("#"+context+"_searchUserId").button({ icons: {primary:'ui-icon-person'} });
-        $("#"+context+"_searchName").button({ icons: {primary:'ui-icon-search'} });
-        $("#"+context+"_sections").tabs();
-        $("#"+context+"_externalSearch").prop("checked", false);
-        $("#"+context+"_searchBox").autocomplete({
-            source: function(request, response)
+    $("#"+context+"_searchTypeChooser").buttonset();
+    $("#"+context+"_searchUserId").button({ icons: {primary:'ui-icon-person'} });
+    $("#"+context+"_searchName").button({ icons: {primary:'ui-icon-search'} });
+    $("#"+context+"_sections").tabs();
+    $("#"+context+"_externalSearch").prop("checked", false);
+    $("#"+context+"_searchBox").autocomplete({
+        source: function(request, response)
+        {
+            var searchOptions = {format: "autocomplete"};
+            var nameText = "";
+            if ($("#"+context+"_searchName").is(":checked"))
             {
-                var searchOptions = {format: "autocomplete"};
-                var nameText = "";
-                if ($("#"+context+"_searchName").is(":checked"))
-                {
-                    nameText = $("#"+context+"_searchBox").val().replace(/\s+/g, " ").split(" ");
-                    if (nameText.length == 1)
-                        searchOptions.lastName = $("#"+context+"_searchBox").val();
-                    else
-                    {
-                        searchOptions.firstName = nameText[0];
-                        searchOptions.lastName = nameText[1];
-                    }
-                }
-                else // Searching by user ID but entered a full name, let's help them out a little...
-                {
-                    nameText = $("#"+context+"_searchBox").val().replace(/\s+/g, " ").split(" ");
-                    if (nameText.length == 1)
-                        searchOptions.userId = $("#"+context+"_searchBox").val();
-                    else
-                    {
-                        searchOptions.firstName = nameText[0];
-                        searchOptions.lastName = nameText[1];
-                    }
-                }
-                
-                if ($("#"+context+"_externalSearch").is(":checked"))
-                    searchOptions.external = true;
+                nameText = $("#"+context+"_searchBox").val().replace(/\s+/g, " ").split(" ");
+                if (nameText.length == 1)
+                    searchOptions.lastName = $("#"+context+"_searchBox").val();
                 else
-                    searchOptions.external = false;
-                
-                $.getJSON(FILELOCKER_ROOT+"/user_interface/search_users", searchOptions, function(returnData, textStatus) 
-                    {
-                        $("#"+context+"_externalSearchSelector").show();
-                        if (returnData.fMessages.length>0)
-                            showMessages(returnData, "looking up user");
-                        else if (typeof returnData.data !== undefined && returnData.data.length > 0)
-                        {
-                            response(returnData.data);
-                        }
-                    });
-            },
-            minLength: 2,
-            focus: function (event, ui) 
-            {
-                if (ui.item.value !== "0")
-                    $("#"+context+"_searchResult").val(ui.item.value);
-                return false;
-            },
-            select: function(event, ui) 
-            {
-                selectSearchResult(ui.item.value, ui.item.label, context);
+                {
+                    searchOptions.firstName = nameText[0];
+                    searchOptions.lastName = nameText[1];
+                }
             }
-        }).data( "autocomplete" )._renderItem = function( ul, item ) {
-            if (item.value === "0")
-                return $("<li class='person_search_result'></li>").data("item.autocomplete", item).append(item.label).appendTo(ul);
+            else // Searching by user ID but entered a full name, let's help them out a little...
+            {
+                nameText = $("#"+context+"_searchBox").val().replace(/\s+/g, " ").split(" ");
+                if (nameText.length == 1)
+                    searchOptions.userId = $("#"+context+"_searchBox").val();
+                else
+                {
+                    searchOptions.firstName = nameText[0];
+                    searchOptions.lastName = nameText[1];
+                }
+            }
+            
+            if ($("#"+context+"_externalSearch").is(":checked"))
+                searchOptions.external = true;
             else
-                return $("<li class='person_search_result'></li>").data("item.autocomplete", item).append("<a>"+item.label+"</a>").appendTo(ul);
-        };
-        tipsyfy();
-    });
+                searchOptions.external = false;
+            
+            $.getJSON(FILELOCKER_ROOT+"/user_interface/search_users", searchOptions, function(returnData, textStatus) 
+                {
+                    $("#"+context+"_externalSearchSelector").show();
+                    if (returnData.fMessages.length>0)
+                        showMessages(returnData, "looking up user");
+                    else if (typeof returnData.data !== undefined && returnData.data.length > 0)
+                    {
+                        response(returnData.data);
+                    }
+                });
+        },
+        minLength: 2,
+        focus: function (event, ui) 
+        {
+            if (ui.item.value !== "0")
+                $("#"+context+"_searchResult").val(ui.item.value);
+            return false;
+        },
+        select: function(event, ui) 
+        {
+            selectSearchResult(ui.item.value, ui.item.label, context);
+        }
+    }).data( "autocomplete" )._renderItem = function( ul, item ) {
+        if (item.value === "0")
+            return $("<li class='person_search_result'></li>").data("item.autocomplete", item).append(item.label).appendTo(ul);
+        else
+            return $("<li class='person_search_result'></li>").data("item.autocomplete", item).append("<a>"+item.label+"</a>").appendTo(ul);
+    };
+    tipsyfy();
 }
 function updateSearch(context)
 {
@@ -531,7 +528,7 @@ function replyMessage(subject, recipient)
     else
         $("#flMessageSubject").val("RE: " + subject);
     $("#flMessageBody").val("");
-    getSearchWidget("messages");
+    initSearchWidget("messages");
     $("#createMessageBox").dialog("open");
 }
 /***Interface Functions***/
@@ -783,7 +780,7 @@ function promptEditGroup(groupId, currentName)
 }
 function promptViewGroup(groupId)
 {
-    $("#viewGroupBox").load(FILELOCKER_ROOT+"/group_interface/get_group_members?format=lightbox_html&ms=" + new Date().getTime(), {groupId: groupId}, function (responseText, textStatus, xhr) {
+    $("#viewGroupBox").load(FILELOCKER_ROOT+"/group_interface/get_group_members?format=searchbox_html&ms=" + new Date().getTime(), {groupId: groupId}, function (responseText, textStatus, xhr) {
         if (textStatus == "error")
             generatePseudoResponse("loading group membership", "Error "+xhr.status+": "+xhr.textStatus, false);
         else {
@@ -796,7 +793,7 @@ function promptViewGroup(groupId)
                     width: popup_large_width
                 }));
                 $("#current_members").accordion({ autoHeight: false });
-                getSearchWidget("manage_groups");
+                initSearchWidget("manage_groups");
                 $("#viewGroupBox").dialog("open");
             }
         }
@@ -848,7 +845,7 @@ function promptCreateMessage()
     $("#flMessageSubject").val("");
     $("#flMessageRecipientId").val("");
     $("#flMessageBody").val("");
-    getSearchWidget("messages");
+    initSearchWidget("messages");
     $("#createMessageBox").dialog("open");
 }
 

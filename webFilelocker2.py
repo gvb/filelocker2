@@ -592,9 +592,10 @@ class HTTP_Groups:
 
     @cherrypy.expose
     @cherrypy.tools.requires_login()
-    def get_group_members(self, groupId, format="lightbox_html", **kwargs):
+    def get_group_members(self, groupId, format="searchbox_html", **kwargs):
         user, fl = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'])
         group = fl.get_group(user, groupId)
+        searchWidget = HTTP_User.get_search_widget(HTTP_User(), "manage_groups")
         templateFile = fl.get_template_file('view_group.tmpl')
         tpl = Template(file=templateFile, searchList=[locals(),globals()])  
         return str(tpl)
@@ -912,7 +913,7 @@ class HTTP_File:
             if flFile.fileId in bothSharedList:
                 flFile.documentType = "document_both"
                 #TODO: Account for attribute shares here 'document_attribute'
-        if format=="json" or format=="lightbox_html" or format=="cli":
+        if format=="json" or format=="searchbox_html" or format=="cli":
             myFilesJSON = []
             groups = fl.get_user_groups(user, user.userId)
             userShareableAttributes = fl.get_available_attributes_by_user(user)
@@ -935,8 +936,9 @@ class HTTP_File:
                 myFilesJSON.append({'fileName': flFile.fileName, 'fileId': flFile.fileId, 'fileOwnerId': flFile.fileOwnerId, 'fileSizeBytes': flFile.fileSizeBytes, 'fileUploadedDatetime': flFile.fileUploadedDatetime.strftime("%m/%d/%Y"), 'fileExpirationDatetime': flFile.fileExpirationDatetime, 'filePassedAvScan':flFile.filePassedAvScan, 'documentType': flFile.documentType, 'fileUserShares': flFile.fileUserShares, 'fileGroupShares': flFile.fileGroupShares, 'availableGroups': flFile.availableGroups, 'fileAttributeShares': flFile.fileAttributeShares})
             if format=="json":
                 return fl_response(sMessages, fMessages, format, data=myFilesJSON)
-            elif format=="lightbox_html":
+            elif format=="searchbox_html":
                 selectedFileIds = ",".join(fileIdList)
+                searchWidget = str(HTTP_User.get_search_widget(HTTP_User(), "private_sharing"))
                 tpl = Template(file=fl.get_template_file('share_files.tmpl'), searchList=[locals(),globals()])  
                 return str(tpl)
             elif format=="cli":
@@ -1939,6 +1941,7 @@ class Root:
         sevenDaysAgo = sevenDaysAgo.replace(hour=0, minute=0, second=0, microsecond=0)
         startDateFormatted = sevenDaysAgo
         endDateFormatted = today
+        messageSearchWidget = HTTP_User.get_search_widget(HTTP_User(), "messages")
         header = Template(file=fl.get_template_file('header.tmpl'), searchList=[locals(),globals()])
         footerText = str(Template(file=fl.get_template_file('footer_text.tmpl'), searchList=[locals(),globals()]))
         footer = Template(file=fl.get_template_file('footer.tmpl'), searchList=[locals(),globals()])
