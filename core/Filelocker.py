@@ -388,6 +388,18 @@ class Filelocker:
         except Exception, e:
             logging.error("[%s] [getAllUsers] [Unable to get all users: %s]" % (user.userId, str(e)))
             raise FLError(False, ["Unable to get all users: %s" % str(e)])
+
+    def get_user_count(self, user):
+        try:
+            if self.check_admin(user):
+                totalUserCount = self.db.getUserCount()
+                return totalUserCount
+            else:
+                logging.warning("[%s] [getUserCount] [Unauthorized attempt to get total user count by %s]" % (user.userId, user.userId))
+                raise FLError(False, ["You are not allowed to get the total user count."])
+        except Exception, e:
+            logging.error("[%s] [getUserCount] [Unable to get total user count: %s]" % (user.userId, str(e)))
+            raise FLError(False, ["Unable to get total user count: %s" % str(e)])
         
     def get_file_count(self, user):
         try:

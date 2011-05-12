@@ -224,9 +224,8 @@
         <div id="fileVaultUsageBar" class="vaultUsage"></div>
         <p><strong>System State</strong></p>
         #set $currentUsers = len($currentUsersList)
-        #set $totalUsers = len($flUsers)
         <div><span class="systemStateItem"><a href="javascript:showCurrentUsers();" title="Show a list of every current Filelocker user">Current Users:</a></span><span class="systemStateValue">$currentUsers</span></div>
-        <div><span class="systemStateItem">Installed Users:</span><span class="systemStateValue">$totalUsers</span></div>
+        <div><span class="systemStateItem">Installed Users:</span><span class="systemStateValue">$totalUserCount</span></div>
         <div><span class="systemStateItem">Current Uploads:</span><span class="systemStateValue">$currentUploads</span></div>
         <div><span class="systemStateItem">Locked Files:</span><span class="systemStateValue">$totalFileCount</span></div>
         <div><span class="systemStateItem">Secure Messages:</span><span class="systemStateValue">$totalMessageCount</span></div>

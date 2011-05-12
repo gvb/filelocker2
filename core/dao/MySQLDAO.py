@@ -674,6 +674,13 @@ class MySQLDAO(DAO):
                 newUser.isRole = True
             users.append(newUser)
         return users
+
+    def getUserCount(self):
+        sql = "SELECT COUNT(*) AS total_user_count FROM user"
+        results = self.execute(sql, None)
+        for row in results:
+            totalUserCount = row['total_user_count']
+        return totalUserCount
         
     def getFileCount(self):
         sql = "SELECT COUNT(*) AS total_file_count FROM file"

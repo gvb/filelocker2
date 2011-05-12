@@ -1962,6 +1962,7 @@ class Root:
         configParameters = fl.get_config(user)
         flUsers = fl.get_all_users(user, 0, 50)
         totalFileCount = fl.get_file_count(user)
+        totalUserCount = fl.get_user_count(user)
         totalMessageCount = fl.get_message_count(user)
         currentUsersList = []
         currentUploads = len(cherrypy.file_transfers)
