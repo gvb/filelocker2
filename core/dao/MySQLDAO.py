@@ -647,12 +647,12 @@ class MySQLDAO(DAO):
         self.execute(sql, sql_args)
         return True
     
-    def getAllUsers(self, start=None, end=None):
-        sql = "SELECT * FROM user"
+    def getAllUsers(self, start=None, length=None):
+        sql = "SELECT * FROM user ORDER BY user_id"
         sql_args = None
-        if start is not None and end is not None:
+        if start is not None and length is not None:
             sql += " LIMIT %s, %s"
-            sql_args = [start, end]
+            sql_args = [start, length]
         psql = "SELECT * FROM permission"
         qsql = "SELECT sum(file_size) as quotausage, file_owner_id FROM file GROUP BY file_owner_id"
         perms = []

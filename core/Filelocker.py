@@ -377,10 +377,13 @@ class Filelocker:
             logging.error("[system] [getUser] [Unable to get user: %s]" % str(e))
             raise FLError(False, ["Unable to get user: %s" % str(e)])
     
-    def get_all_users(self, user, start=None, end=None):
+    def get_all_users(self, user, start=None, length=None):
         try:
             if self.check_admin(user):
-                users = self.db.getAllUsers(start, end)
+                users = self.db.getAllUsers(start, length)
+                for flUser in users:
+                    if self.db.checkUserPrivilege(flUser.userId, "admin"):
+                        flUser.isAdmin = True
                 return users
             else:
                 logging.warning("[%s] [getAllUsers] [Unauthorized attempt to get all users by %s]" % (user.userId, user.userId))

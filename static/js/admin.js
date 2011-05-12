@@ -56,21 +56,18 @@ function initAdmin(tabIndex)
                 0: {sorter: false},
                 1: {sorter: 'text'}, 
                 2: {sorter: 'text'},
-                3: {sorter: 'text'}, 
+                3: {sorter: 'text'},
                 4: {sorter: 'text'},
-                5: {sorter: 'fileSize'}, 
+                5: {sorter: 'fileSize'},
                 6: {sorter: false}
             },
             sortList: [[1,0]]
         });
-        if($("#userTable tr").length>250) // Number of rows necessary for there to be about a one second lag when sorting.
-        {
-            $("#userTableSorter").bind("sortStart",function() {
-                $("#userSorterLoading").show();
-            }).bind("sortEnd",function() {
-                $("#userSorterLoading").hide();
-            });
-        }
+        $("#userTableSorter").bind("sortStart",function() {
+            $("#userSorterLoading").show();
+        }).bind("sortEnd",function() {
+            $("#userSorterLoading").hide();
+        });
     }
     if($("#attributeTableSorter tr").length>2) // Accounts for header and dotted line row
     {
@@ -115,7 +112,64 @@ function loadAdminInterface(tabIndex)
                 initAdmin(tabIndex);
         }
         tipsyfy();
+        $("#userTableSorterWrapper").scroll(function(){
+            if ($(this)[0].scrollHeight - $(this).scrollTop() == $(this).outerHeight()) {
+                loadUsers();
+            }
+        });
     });
+}
+function loadUsers(length)
+{
+    if(length === undefined || length === null)
+        var length = 50;
+    $("#userSorterLoading").show();
+    var currentRowsLoaded = $("#userTable tr").length;
+    $.post(FILELOCKER_ROOT+'/admin_interface/get_all_users?format=json', 
+    {
+        start: currentRowsLoaded,
+        length: length
+    }, 
+    function(returnData) 
+    {
+        var html = "";
+        $.each(returnData.data, function() {
+            html += "<tr id='user_"+this.userId+"' class='userRow'>";
+            html += "<td id='userNameElement_"+this.userId+"' class='userNameElement'><input type='checkbox' name='select_user' value='"+this.userId+"' class='userSelectBox' id='checkbox_"+this.userId+"'>";
+            html += "<div class='posrel'>";
+            html += "<div id='menu_row_"+this.userId+"' class='menuUsers hidden'>";
+            html += "<ul class='menu'>";
+            html += "<li><div class='button' style='width: 185px;'><a href='javascript:promptUpdateUser(\""+this.userId+"\", \""+this.userFirstName+"\", \""+this.userLastName+"\", \""+this.userEmail+"\", "+this.userQuota+", "+this.isRole.toString()+");' title='Edit user account for \""+this.userId+"\"' class='editButton'><span><center>Edit Account</center></span></a></div></li>";
+            html += "<li><div class='button' style='width: 185px;'><a href='javascript:promptUpdatePermissions(\""+this.userId+"\");' title='Grant and revoke user permissions for \""+this.userId+"\"' class='wandButton'><span><center>Edit Permissions</center></span></a></div></li>";
+            html += "</ul>";
+            html += "</div>";
+            html += "</td>";
+            if(this.isAdmin)
+                html += "<td><a href='javascript:promptViewUserHistory(\""+this.userId+"\");' class='admin' title='View Filelocker interactions for \""+this.userId+"\" (admin)'>"+this.userId+"</a></td>";
+            else
+                html += "<td><a href='javascript:promptViewUserHistory(\""+this.userId+"\");' class='clock' title='View Filelocker interactions for \""+this.userId+"\"'>"+this.userId+"</a></td>";
+            html += "<td onClick='userRowClick(\""+this.userId+"\")'>"+this.userLastName+"</td>";
+            html += "<td onClick='userRowClick(\""+this.userId+"\")'>"+this.userFirstName+"</td>";
+            html += "<td onClick='userRowClick(\""+this.userId+"\")'>"+this.userEmail+"</td>";
+  
+            var percentUsed = 0;
+            var quotaUsedMB = Math.round(parseFloat(this.userQuotaUsed));
+            if(parseInt(this.userQuota) > 0)
+                percentUsed = Math.round(parseFloat(this.userQuotaUsed)/parseFloat(this.userQuota)*100)
+            if(parseInt(this.userQuota) >= 1024)
+                html += "<td onClick='userRowClick(\""+this.userId+"\")'><span class='userQuotaUsage pseudoLink' title='"+percentUsed+"% ("+quotaUsedMB+" MB) used'>"+Math.round(parseFloat(this.userQuota)/1024).toFixed(1)+" GB</span></td>";
+            else
+                html += "<td onClick='userRowClick(\""+this.userId+"\")'><span class='userQuotaUsage pseudoLink' title='"+percentUsed+"% ("+quotaUsedMB+" MB) used'>"+this.userQuota+" MB</span></td>";
+            html += "<td onClick='userRowClick(\""+this.userId+"\")' class='dropdownArrowNarrow rightborder'></td>";
+            html += "</tr>";
+        });
+        $("#userTable").append(html);
+        $("#userTableSorter").trigger("update");
+        $("#userTableSorter").trigger("applyWidgets");
+        tipsyfy();
+        $("#usersLoadedNow").html($("#userTable tr").length);
+        $("#userSorterLoading").hide();
+    }, 'json');
 }
 function createUser()
 {
@@ -650,7 +704,6 @@ function userRowClick(userId)
         $("#menu_row_"+userId).removeClass("hidden"); // Show the menu on the selected file
     }
 }
-
 jQuery(document).ready(function(){
     bulkUserUploader = new qq.FileUploader({
         element: $("#bulkCreateUserUploadButton")[0],

@@ -36,7 +36,7 @@
                     </thead>
                     <tbody id="userTable">
                     #for $flUser in $flUsers
-                        <tr id="user_$flUser.userId" class="userRow" >
+                        <tr id="user_$flUser.userId" class="userRow">
                             <td id="userNameElement_$flUser.userId" class="userNameElement"><input type="checkbox" name="select_user" value="$flUser.userId" class="userSelectBox" id="checkbox_$flUser.userId">
                                 <div class="posrel">
                                     <div id="menu_row_$flUser.userId" class="menuUsers hidden">
@@ -54,24 +54,25 @@
                             <td onClick="userRowClick('$flUser.userId')">$flUser.userLastName</td>
                             <td onClick="userRowClick('$flUser.userId')">$flUser.userFirstName</td>
                             <td onClick="userRowClick('$flUser.userId')">$flUser.userEmail</td>
-                            #if float($flUser.userQuota) > 0:
-                                #set $percentUsed = int(round(float($flUser.userQuotaUsed)/float($flUser.userQuota)*100,0))
-                            #else
-                                #set $percentUsed = 0
-                            #end if
-                            #set $quotaUsedMB = int(round($flUser.userQuotaUsed,0))
-                            #if $flUser.userQuota >= 1024
-                                #set $quotaInGB = round(float($flUser.userQuota)/1024,2)
-                                <td onClick="userRowClick('$flUser.userId')"><span class="userQuotaUsage pseudoLink" title="${percentUsed}% ($quotaUsedMB MB) used">$quotaInGB GB</span></td>
-                            #else
-                                <td onClick="userRowClick('$flUser.userId')"><span class="userQuotaUsage pseudoLink" title="${percentUsed}% ($quotaUsedMB MB) used">$flUser.userQuota MB</span></td>
-                            #end if
+                        #if float($flUser.userQuota) > 0:
+                            #set $percentUsed = int(round(float($flUser.userQuotaUsed)/float($flUser.userQuota)*100,0))
+                        #else
+                            #set $percentUsed = 0
+                        #end if
+                        #set $quotaUsedMB = int(round($flUser.userQuotaUsed,0))
+                        #if $flUser.userQuota >= 1024
+                            #set $quotaInGB = round(float($flUser.userQuota)/1024,2)
+                            <td onClick="userRowClick('$flUser.userId')"><span class="userQuotaUsage pseudoLink" title="${percentUsed}% ($quotaUsedMB MB) used">$quotaInGB GB</span></td>
+                        #else
+                            <td onClick="userRowClick('$flUser.userId')"><span class="userQuotaUsage pseudoLink" title="${percentUsed}% ($quotaUsedMB MB) used">$flUser.userQuota MB</span></td>
+                        #end if
                             <td onClick="userRowClick('$flUser.userId')" class="dropdownArrowNarrow rightborder"></td>
                         </tr>
                     #end for
                     </tbody>
                 </table> <!-- End User listing -->
             </div>
+            <p><span id="usersLoadedNow">50</span> of $totalUserCount users loaded.  <a href="javascript:loadUsers($totalUserCount);" title="Load all Filelocker users into the table.">Load all users</a>.</p>
         </div> <!-- End Filelocker Accounts -->
         <div id="templates"> <!-- Start Templates Section -->
             <select name="template_selector" id="template_selector" onchange="loadTemplateForEditing()">

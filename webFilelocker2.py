@@ -143,11 +143,11 @@ cherrypy.file_transfers = dict()
 class HTTP_Admin:
     @cherrypy.expose
     @cherrypy.tools.requires_login()
-    def get_all_users(self, start=0, end=50, format="json", **kwargs):
+    def get_all_users(self, start=0, length=50, format="json", **kwargs):
         user, fl, flUserList, sMessages, fMessages = cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], None, [], []
         try:
-            start, end = int(strip_tags(start)), int(strip_tags(end)) 
-            flUsers = fl.get_all_users(user, start, end)
+            start, length = int(strip_tags(start)), int(strip_tags(length)) 
+            flUsers = fl.get_all_users(user, start, length)
             flUserList = []
             for user in flUsers:
                 flUserList.append(user.get_dict())
