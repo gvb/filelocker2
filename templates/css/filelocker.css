@@ -999,7 +999,7 @@ ul.menu li {
 }
 
 /* Line-Level Icons */
-.admin, .alert, .android, .attribute, .attribute_new, .clock, .cross, .document, .document_alert, .document_attribute, .document_both, .document_globe, .document_person, .edit, .fileID, .gear, .globe, .group, .help, .hide, .ios, .key, .macintosh, .map, .message, .new_message, .notifyOnDownload, .person_search_result, .plus, .privatelyShared, .refresh, .replyMessage, .save, .script, .share, .statistics, .take_ownership, .taking_ownership, .upload, .user_new, .view, .virusFailed, .virusPassed, .virusUnknown, .wand, .windows {
+.admin, .alert, .android, .attribute, .attribute_new, .clock, .cross, .document, .document_alert, .document_attribute, .document_both, .document_globe, .document_person, .edit, .excel, .fileID, .gear, .globe, .group, .help, .hide, .ios, .key, .macintosh, .map, .message, .new_message, .notifyOnDownload, .person_search_result, .plus, .privatelyShared, .refresh, .replyMessage, .save, .script, .share, .statistics, .take_ownership, .taking_ownership, .upload, .user_new, .view, .virusFailed, .virusPassed, .virusUnknown, .wand, .windows {
     padding-left:20px;
     padding-bottom:6px;
 }
@@ -1024,6 +1024,7 @@ ul.menu li {
 .document_globe     { background:url($staticDir/images/icons/document_globe.gif) top left no-repeat; }
 .document_person    { background:url($staticDir/images/icons/document_share.gif) top left no-repeat; }
 .edit               { background:url($staticDir/images/icons/pencil.gif) top left no-repeat; }
+.excel              { background:url($staticDir/images/icons/excel.png) top left no-repeat; }
 .fileID             { background:url($staticDir/images/icons/id.png) top left no-repeat; }
 .gear               { background:url($staticDir/images/icons/gear.gif) top left no-repeat; }
 .globe              { background:url($staticDir/images/icons/world.png) top left no-repeat; }
