@@ -16,58 +16,7 @@ function initFiles()
     $(".dateExpire").datepicker({dateFormat: 'mm/dd/yy', showAnim: 'slideDown', minDate: 0, maxDate: DEFAULT_EXPIRATION});
     $(".datePast").datepicker({dateFormat: 'mm/dd/yy', showAnim: 'slideDown', maxDate: 0});
     $("#fileName").prop("checked", false);
-    if($("#uploadButton")[0])
-    {
-        uploader = new qq.FileUploader({
-            element: $("#uploadButton")[0],
-            listElement: $("#progressBarSection")[0],
-            action: FILELOCKER_ROOT+'/file_interface/upload?format=json',
-            params: {},
-            sizeLimit: 2147483647,
-            onSubmit: function(id, fileName){
-                var systemUpload = "no";
-                if ($("#systemUpload").length >0)
-                {
-                    if ($("#systemUpload").is(":checked"))
-                        systemUpload = "yes";
-                }
-                uploader.setParams({
-                    'scanFile': $("#uploadScanFile").is(":checked"),
-                    'fileNotes': $("#uploadFileNotes").val(),
-                    'expiration': $("#uploadExpiration").val(),
-                    'uploadIndex': id,
-                    'systemUpload': systemUpload,
-                    'fileName': fileName
-                });
-                $("#uploadBox").dialog("close");
-                continuePolling = true;
-                if(pollerId === "")
-                    pollerId = setInterval(function() { poll(); }, 1000);
-            },
-            onProgress: function(id, fileName, loaded, total){
-                checkServerMessages("uploading file");
-            },
-            onComplete: function(id, fileName, response){
-                var serverMsg = checkServerMessages("uploading file");
-                if(!serverMsg)
-                    showMessages(response, "uploading file");
-                loadMyFiles();
-            },
-            onCancel: function(id, fileName){
-                generatePseudoResponse("cancelling upload", "File upload cancelled by user.", true);
-            },
-            messages: {
-                sizeError: "sizeError"
-            },
-            showMessage: function(message){
-                if(message === "sizeError")
-                {
-                    var browserAndVersion = detectBrowserVersion();
-                    generatePseudoResponse("uploading large file", "Your browser ("+browserAndVersion[0]+" "+browserAndVersion[1]+") does not support large file uploads.  Click <span id='helpUploadLarge' class='helpLink'>here</span> for more information.", false);
-                }
-            }
-        });
-    }
+    
     $("#uploadBox").dialog($.extend({}, modalDefaults, {
         title: "<span class='upload'>Upload a File</span>",
         width: popup_small_width
@@ -545,6 +494,58 @@ function promptUpload()
         $("#uploadGeolocationOption").show();
     }
     $("#uploadBox").dialog("open");
+    if($("#uploadButton")[0])
+    {
+        uploader = new qq.FileUploader({
+            element: $("#uploadButton")[0],
+            listElement: $("#progressBarSection")[0],
+            action: FILELOCKER_ROOT+'/file_interface/upload?format=json',
+            params: {},
+            sizeLimit: 2147483647,
+            onSubmit: function(id, fileName){
+                var systemUpload = "no";
+                if ($("#systemUpload").length >0)
+                {
+                    if ($("#systemUpload").is(":checked"))
+                        systemUpload = "yes";
+                }
+                uploader.setParams({
+                    'scanFile': $("#uploadScanFile").is(":checked"),
+                    'fileNotes': $("#uploadFileNotes").val(),
+                    'expiration': $("#uploadExpiration").val(),
+                    'uploadIndex': id,
+                    'systemUpload': systemUpload,
+                    'fileName': fileName
+                });
+                $("#uploadBox").dialog("close");
+                continuePolling = true;
+                if(pollerId === "")
+                    pollerId = setInterval(function() { poll(); }, 1000);
+            },
+            onProgress: function(id, fileName, loaded, total){
+                checkServerMessages("uploading file");
+            },
+            onComplete: function(id, fileName, response){
+                var serverMsg = checkServerMessages("uploading file");
+                if(!serverMsg)
+                    showMessages(response, "uploading file");
+                loadMyFiles();
+            },
+            onCancel: function(id, fileName){
+                generatePseudoResponse("cancelling upload", "File upload cancelled by user.", true);
+            },
+            messages: {
+                sizeError: "sizeError"
+            },
+            showMessage: function(message){
+                if(message === "sizeError")
+                {
+                    var browserAndVersion = detectBrowserVersion();
+                    generatePseudoResponse("uploading large file", "Your browser ("+browserAndVersion[0]+" "+browserAndVersion[1]+") does not support large file uploads.  Click <span id='helpUploadLarge' class='helpLink'>here</span> for more information.", false);
+                }
+            }
+        });
+    }
 }
 function fileChecked()
 {
