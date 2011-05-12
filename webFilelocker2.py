@@ -235,6 +235,29 @@ class HTTP_Admin:
             sMessages.extend(fle.successMessages)
             fMessages.extend(fle.failureMessages)
         return fl_response(sMessages, fMessages, format)
+        
+    @cherrypy.expose
+    @cherrypy.tools.requires_login()
+    def download_user_data(self):
+        user, fl, sMessages, fMessages = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [])
+        try:
+            userList = fl.get_all_users(user, None, None)
+            mycsv = ""
+            for flUser in userList:
+                mycsv = mycsv + flUser.userId + ", " + flUser.userFirstName + ", " + flUser.userLastName + ", " + flUser.userEmail + "\n"
+            response = cherrypy.response
+            response.headers['Cache-Control'] = "no-cache"
+            response.headers['Content-Disposition'] = '%s; filename="%s"' % ("attachment", "fileLockerUsers.csv")
+            response.headers['Content-Type'] = "application/x-download"
+            response.headers['Pragma']="no-cache"
+            response.body = mycsv
+            response.headers['Content-Length'] = len(response.body[0])
+            response.stream = True
+            return response.body
+        except Exception, e:
+            fMessages.append("Error creating CSV of all users.")
+            logging.error("Error: %s" % str(e))
+            raise HTTPError(500, "Unable to serve user data CSV: %s" % str(e))
     
     @cherrypy.expose
     @cherrypy.tools.requires_login()

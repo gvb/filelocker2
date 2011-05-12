@@ -224,10 +224,6 @@ function deleteUsers()
     else
         generatePseudoResponse("deleting users", "Select user(s) for deletion.", false);
 }
-function downloadUserData()
-{
-    
-}
 function createAttribute()
 {
     var attributeId = $("#createAttributeId").val();
