@@ -204,7 +204,6 @@ function createUser()
             loadAdminInterface(0);
         }, 'json');
     }
-        
 }
 function deleteUsers() 
 {
