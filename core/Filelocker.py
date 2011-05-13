@@ -32,14 +32,12 @@ from dao import dao_creator
 from mail import Mail
 from directory import Directory
 from CAS import CAS
-revisionString = "$Revision: 0$"
-revision = re.search('^\$Revision:\s+(\d+)\s*\$$', revisionString).group(1)
 
 __author__      = "Brett Davis"
 __copyright__   = "Copyright 2011, Purdue University"
 __credits__     = "Christopher Miller, Brett Davis"
 __license__     = "Open Source License. See LICENSE.txt."
-__version__     = "2.5.%s" % revision
+__version__     = "2.4.3"
 __maintainer__  = "Brett Davis"
 __email__       = "wbdavis@purdue.edu"
 __status__      = "Production"
