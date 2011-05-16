@@ -143,6 +143,23 @@ cherrypy.file_transfers = dict()
 class HTTP_Admin:
     @cherrypy.expose
     @cherrypy.tools.requires_login()
+    def get_all_users(self, start=0, length=50, format="json", **kwargs):
+        user, fl, flUserList, sMessages, fMessages = cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], None, [], []
+        try:
+            start, length = int(strip_tags(start)), int(strip_tags(length)) 
+            flUsers = fl.get_all_users(user, start, length)
+            flUserList = []
+            for user in flUsers:
+                flUserList.append(user.get_dict())
+        except FLError, fle:
+            sMessages.extend(fle.successMessages)
+            fMessages.extend(fle.failureMessages)
+        except Exception, e:
+            fMessages.append("Problem getting users: %s" % str(e))
+        return fl_response(sMessages, fMessages, format, data=flUserList)  
+        
+    @cherrypy.expose
+    @cherrypy.tools.requires_login()
     def get_user_permissions(self, userId, format="json", **kwargs):
         user, fl, sMessages, fMessages, permissionData = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [], [])
         try:
@@ -218,6 +235,29 @@ class HTTP_Admin:
             sMessages.extend(fle.successMessages)
             fMessages.extend(fle.failureMessages)
         return fl_response(sMessages, fMessages, format)
+        
+    @cherrypy.expose
+    @cherrypy.tools.requires_login()
+    def download_user_data(self):
+        user, fl, sMessages, fMessages = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [])
+        try:
+            userList = fl.get_all_users(user, None, None)
+            mycsv = ""
+            for flUser in userList:
+                mycsv = mycsv + flUser.userId + ", " + flUser.userFirstName + ", " + flUser.userLastName + ", " + flUser.userEmail + "\n"
+            response = cherrypy.response
+            response.headers['Cache-Control'] = "no-cache"
+            response.headers['Content-Disposition'] = '%s; filename="%s"' % ("attachment", "fileLockerUsers.csv")
+            response.headers['Content-Type'] = "application/x-download"
+            response.headers['Pragma']="no-cache"
+            response.body = mycsv
+            response.headers['Content-Length'] = len(response.body[0])
+            response.stream = True
+            return response.body
+        except Exception, e:
+            fMessages.append("Error creating CSV of all users.")
+            logging.error("Error: %s" % str(e))
+            raise HTTPError(500, "Unable to serve user data CSV: %s" % str(e))
     
     @cherrypy.expose
     @cherrypy.tools.requires_login()
@@ -552,9 +592,10 @@ class HTTP_Groups:
 
     @cherrypy.expose
     @cherrypy.tools.requires_login()
-    def get_group_members(self, groupId, format="lightbox_html", **kwargs):
+    def get_group_members(self, groupId, format="searchbox_html", **kwargs):
         user, fl = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'])
         group = fl.get_group(user, groupId)
+        searchWidget = HTTP_User.get_search_widget(HTTP_User(), "manage_groups")
         templateFile = fl.get_template_file('view_group.tmpl')
         tpl = Template(file=templateFile, searchList=[locals(),globals()])  
         return str(tpl)
@@ -872,7 +913,7 @@ class HTTP_File:
             if flFile.fileId in bothSharedList:
                 flFile.documentType = "document_both"
                 #TODO: Account for attribute shares here 'document_attribute'
-        if format=="json" or format=="lightbox_html" or format=="cli":
+        if format=="json" or format=="searchbox_html" or format=="cli":
             myFilesJSON = []
             groups = fl.get_user_groups(user, user.userId)
             userShareableAttributes = fl.get_available_attributes_by_user(user)
@@ -895,8 +936,9 @@ class HTTP_File:
                 myFilesJSON.append({'fileName': flFile.fileName, 'fileId': flFile.fileId, 'fileOwnerId': flFile.fileOwnerId, 'fileSizeBytes': flFile.fileSizeBytes, 'fileUploadedDatetime': flFile.fileUploadedDatetime.strftime("%m/%d/%Y"), 'fileExpirationDatetime': flFile.fileExpirationDatetime, 'filePassedAvScan':flFile.filePassedAvScan, 'documentType': flFile.documentType, 'fileUserShares': flFile.fileUserShares, 'fileGroupShares': flFile.fileGroupShares, 'availableGroups': flFile.availableGroups, 'fileAttributeShares': flFile.fileAttributeShares})
             if format=="json":
                 return fl_response(sMessages, fMessages, format, data=myFilesJSON)
-            elif format=="lightbox_html":
+            elif format=="searchbox_html":
                 selectedFileIds = ",".join(fileIdList)
+                searchWidget = str(HTTP_User.get_search_widget(HTTP_User(), "private_sharing"))
                 tpl = Template(file=fl.get_template_file('share_files.tmpl'), searchList=[locals(),globals()])  
                 return str(tpl)
             elif format=="cli":
@@ -1899,6 +1941,7 @@ class Root:
         sevenDaysAgo = sevenDaysAgo.replace(hour=0, minute=0, second=0, microsecond=0)
         startDateFormatted = sevenDaysAgo
         endDateFormatted = today
+        messageSearchWidget = HTTP_User.get_search_widget(HTTP_User(), "messages")
         header = Template(file=fl.get_template_file('header.tmpl'), searchList=[locals(),globals()])
         footerText = str(Template(file=fl.get_template_file('footer_text.tmpl'), searchList=[locals(),globals()]))
         footer = Template(file=fl.get_template_file('footer.tmpl'), searchList=[locals(),globals()])
@@ -1943,18 +1986,15 @@ class Root:
         userFiles = self.file_interface.get_user_file_list(format="list")
         templateFiles = os.listdir(fl.templatePath)
         configParameters = fl.get_config(user)
-        flUsers = fl.get_all_users(user)
+        flUsers = fl.get_all_users(user, 0, 50)
         totalFileCount = fl.get_file_count(user)
+        totalUserCount = fl.get_user_count(user)
         totalMessageCount = fl.get_message_count(user)
         currentUsersList = []
         currentUploads = len(cherrypy.file_transfers)
         logsFile = open(fl.logFile)
         logs = tail(logsFile, 50)
-        #for line in allLogs:
-            #if line.find("cherrypy.access") > -1 and (line.find("200") > -1 or line.find("303") > -1 or line.find("304") > -1):
-                #pass
-            #else:
-                #logs.append(line)
+
         attributes = fl.get_available_attributes_by_user(user)
         currentUserIds = []
         sessionCache = {}

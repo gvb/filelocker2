@@ -647,8 +647,12 @@ class MySQLDAO(DAO):
         self.execute(sql, sql_args)
         return True
     
-    def getAllUsers(self):
-        sql = "SELECT * FROM user"
+    def getAllUsers(self, start=None, length=None):
+        sql = "SELECT * FROM user ORDER BY user_id"
+        sql_args = None
+        if start is not None and length is not None:
+            sql += " LIMIT %s, %s"
+            sql_args = [start, length]
         psql = "SELECT * FROM permission"
         qsql = "SELECT sum(file_size) as quotausage, file_owner_id FROM file GROUP BY file_owner_id"
         perms = []
@@ -659,7 +663,7 @@ class MySQLDAO(DAO):
         results = self.execute(qsql, None)
         for row in results:
             quotas[row['file_owner_id']] = row['quotausage']
-        results = self.execute(sql, None)
+        results = self.execute(sql, sql_args)
         users = []
         for row in results:
             quotaUsageMB = 0
@@ -670,6 +674,13 @@ class MySQLDAO(DAO):
                 newUser.isRole = True
             users.append(newUser)
         return users
+
+    def getUserCount(self):
+        sql = "SELECT COUNT(*) AS total_user_count FROM user"
+        results = self.execute(sql, None)
+        for row in results:
+            totalUserCount = row['total_user_count']
+        return totalUserCount
         
     def getFileCount(self):
         sql = "SELECT COUNT(*) AS total_file_count FROM file"

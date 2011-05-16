@@ -36,7 +36,7 @@
                     </thead>
                     <tbody id="userTable">
                     #for $flUser in $flUsers
-                        <tr id="user_$flUser.userId" class="userRow" >
+                        <tr id="user_$flUser.userId" class="userRow">
                             <td id="userNameElement_$flUser.userId" class="userNameElement"><input type="checkbox" name="select_user" value="$flUser.userId" class="userSelectBox" id="checkbox_$flUser.userId">
                                 <div class="posrel">
                                     <div id="menu_row_$flUser.userId" class="menuUsers hidden">
@@ -54,24 +54,33 @@
                             <td onClick="userRowClick('$flUser.userId')">$flUser.userLastName</td>
                             <td onClick="userRowClick('$flUser.userId')">$flUser.userFirstName</td>
                             <td onClick="userRowClick('$flUser.userId')">$flUser.userEmail</td>
-                            #if float($flUser.userQuota) > 0:
-                                #set $percentUsed = int(round(float($flUser.userQuotaUsed)/float($flUser.userQuota)*100,0))
-                            #else
-                                #set $percentUsed = 0
-                            #end if
-                            #set $quotaUsedMB = int(round($flUser.userQuotaUsed,0))
-                            #if $flUser.userQuota >= 1024
-                                #set $quotaInGB = round(float($flUser.userQuota)/1024,2)
-                                <td onClick="userRowClick('$flUser.userId')"><span class="userQuotaUsage pseudoLink" title="${percentUsed}% ($quotaUsedMB MB) used">$quotaInGB GB</span></td>
-                            #else
-                                <td onClick="userRowClick('$flUser.userId')"><span class="userQuotaUsage pseudoLink" title="${percentUsed}% ($quotaUsedMB MB) used">$flUser.userQuota MB</span></td>
-                            #end if
+                        #if float($flUser.userQuota) > 0:
+                            #set $percentUsed = int(round(float($flUser.userQuotaUsed)/float($flUser.userQuota)*100,0))
+                        #else
+                            #set $percentUsed = 0
+                        #end if
+                        #set $quotaUsedMB = int(round($flUser.userQuotaUsed,0))
+                        #if $flUser.userQuota >= 1024
+                            #set $quotaInGB = round(float($flUser.userQuota)/1024,2)
+                            <td onClick="userRowClick('$flUser.userId')"><span class="userQuotaUsage pseudoLink" title="${percentUsed}% ($quotaUsedMB MB) used">$quotaInGB GB</span></td>
+                        #else
+                            <td onClick="userRowClick('$flUser.userId')"><span class="userQuotaUsage pseudoLink" title="${percentUsed}% ($quotaUsedMB MB) used">$flUser.userQuota MB</span></td>
+                        #end if
                             <td onClick="userRowClick('$flUser.userId')" class="dropdownArrowNarrow rightborder"></td>
                         </tr>
                     #end for
                     </tbody>
                 </table> <!-- End User listing -->
             </div>
+            <br />
+            <ul>
+                #if $totalUserCount < 50
+                <li><span id="usersLoadedNow">$totalUserCount</span> of $totalUserCount users loaded. <a href="javascript:loadUsers($totalUserCount);" title="Load all Filelocker users into the above table.">Load all users...</a></li>
+                #else
+                <li><span id="usersLoadedNow">50</span> of $totalUserCount users loaded. <a href="javascript:loadUsers($totalUserCount);" title="Load all Filelocker users into the above table.">Load all users...</a></li>
+                #end if
+                <li><div class="itemTitleWide"><span class="excel"><a href="${fl.rootURL}/admin_interface/download_user_data" title="Download a CSV file with all Filelocker user data.">Download all Filelocker user data</a></span></div></li>
+            </ul>
         </div> <!-- End Filelocker Accounts -->
         <div id="templates"> <!-- Start Templates Section -->
             <select name="template_selector" id="template_selector" onchange="loadTemplateForEditing()">
@@ -224,9 +233,8 @@
         <div id="fileVaultUsageBar" class="vaultUsage"></div>
         <p><strong>System State</strong></p>
         #set $currentUsers = len($currentUsersList)
-        #set $totalUsers = len($flUsers)
         <div><span class="systemStateItem"><a href="javascript:showCurrentUsers();" title="Show a list of every current Filelocker user">Current Users:</a></span><span class="systemStateValue">$currentUsers</span></div>
-        <div><span class="systemStateItem">Installed Users:</span><span class="systemStateValue">$totalUsers</span></div>
+        <div><span class="systemStateItem">Installed Users:</span><span class="systemStateValue">$totalUserCount</span></div>
         <div><span class="systemStateItem">Current Uploads:</span><span class="systemStateValue">$currentUploads</span></div>
         <div><span class="systemStateItem">Locked Files:</span><span class="systemStateValue">$totalFileCount</span></div>
         <div><span class="systemStateItem">Secure Messages:</span><span class="systemStateValue">$totalMessageCount</span></div>

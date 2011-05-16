@@ -32,14 +32,12 @@ from dao import dao_creator
 from mail import Mail
 from directory import Directory
 from CAS import CAS
-revisionString = "$Revision: 0$"
-revision = re.search('^\$Revision:\s+(\d+)\s*\$$', revisionString).group(1)
 
 __author__      = "Brett Davis"
 __copyright__   = "Copyright 2011, Purdue University"
 __credits__     = "Christopher Miller, Brett Davis"
 __license__     = "Open Source License. See LICENSE.txt."
-__version__     = "2.5.%s" % revision
+__version__     = "2.4.3"
 __maintainer__  = "Brett Davis"
 __email__       = "wbdavis@purdue.edu"
 __status__      = "Production"
@@ -377,10 +375,13 @@ class Filelocker:
             logging.error("[system] [getUser] [Unable to get user: %s]" % str(e))
             raise FLError(False, ["Unable to get user: %s" % str(e)])
     
-    def get_all_users(self, user):
+    def get_all_users(self, user, start=None, length=None):
         try:
             if self.check_admin(user):
-                users = self.db.getAllUsers()
+                users = self.db.getAllUsers(start, length)
+                for flUser in users:
+                    if self.db.checkUserPrivilege(flUser.userId, "admin"):
+                        flUser.isAdmin = True
                 return users
             else:
                 logging.warning("[%s] [getAllUsers] [Unauthorized attempt to get all users by %s]" % (user.userId, user.userId))
@@ -388,6 +389,18 @@ class Filelocker:
         except Exception, e:
             logging.error("[%s] [getAllUsers] [Unable to get all users: %s]" % (user.userId, str(e)))
             raise FLError(False, ["Unable to get all users: %s" % str(e)])
+
+    def get_user_count(self, user):
+        try:
+            if self.check_admin(user):
+                totalUserCount = self.db.getUserCount()
+                return totalUserCount
+            else:
+                logging.warning("[%s] [getUserCount] [Unauthorized attempt to get total user count by %s]" % (user.userId, user.userId))
+                raise FLError(False, ["You are not allowed to get the total user count."])
+        except Exception, e:
+            logging.error("[%s] [getUserCount] [Unable to get total user count: %s]" % (user.userId, str(e)))
+            raise FLError(False, ["Unable to get total user count: %s" % str(e)])
         
     def get_file_count(self, user):
         try:
