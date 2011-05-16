@@ -19,6 +19,7 @@ from models.ActionLog import ActionLog
 from models.FLError import FLError
 from models.Attribute import Attribute
 from models.Permission import Permission
+from models.ClusterNode import ClusterNode
 from models.CLIKey import CLIKey
 try:
     from hashlib import md5
@@ -1138,16 +1139,35 @@ class MySQLDAO(DAO):
             statList.append({"month": str(row['month']), "total": str(row['monthly_total'])})
         return statList
     
+    def getAllClusterNodes(self):
+        sql = "SELECT * FROM cluster_node"
+        results = self.execute(sql, None)
+        nodes = []
+        for row in results:
+            nodes.append(ClusterNode(row['cluster_node_id'], row['cluster_node_url'], row['cluster_node_is_master'], row['cluster_node_last_check_in']))
+        return nodes
+    
+    def getClusterNode(self, nodeId):
+        sql = "SELECT * FROM cluster_node WHERE cluster_node_id = %s"
+        sql_args = [nodeId]
+        results = self.execute(sql, sql_args)
+        node = None
+        for row in results:
+            node = ClusterNode(row['cluster_node_id'], row['cluster_node_url'], row['cluster_node_is_master'], row['cluster_node_last_check_in'])
+        return node
+    
+    def deleteClusterNode(self, nodeId):
+        sql = "DELETE FROM cluster_node WHERE cluster_node_id = %s"
+        sql_args = [nodeId]
+        self.execute(sql, sql_args)
+    
+    def checkInClusterNode(self, clusterNode):
+        sql = "INSERT INTO cluster_node (cluster_node_id, cluster_node_url, cluster_node_is_master) VALUES(%s, %s, %s) ON DUPLICATE KEY UPDATE cluster_node_url=%s, cluster_node_is_master=%s"
+        sql_args = [clusterNode.clusterNodeId, clusterNode.clusterNodeURL, clusterNode.clusterNodeIsMaster, clusterNode.clusterNodeURL, clusterNode.clusterNodeIsMaster]
+        self.execute(sql, sql_args)
+    
     def updateDB(self, FLVersion, dbSessions=False):
-        #Get DB version
         dbUpdates = []
-        DBVersion = self.getParameter("db_version")
-        if DBVersion is None:
-            DBVersion = "2.0"
-        else:
-            DBVersion = DBVersion.value
-        majorRevision = int(DBVersion.split(".")[1])
-        
         if dbSessions:
             dbUpdates.append("""
             CREATE TABLE IF NOT EXISTS `session` (
@@ -1161,7 +1181,17 @@ class MySQLDAO(DAO):
             DROP TABLE IF EXISTS `session`
             """)
 
+        #Apply cumulative updates to the database to bring it up to the latest version
         dbUpdates.extend(["""
+            DELETE FROM config WHERE config_parameter_name = %s
+            """ % "db_version", """
+            CREATE TABLE IF NOT EXISTS `cluster_node` (
+            `cluster_node_id` MEDIUMINT NOT NULL DEFAULT 0,
+            `cluster_node_url` TEXT NOT NULL,
+            `cluster_node_is_master` TINYINT(1) DEFAULT 1,
+            `cluster_node_last_check_in` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY (`cluster_node_id`) )
+            """, """
             DROP TABLE IF EXISTS tip
             """, """
             CREATE TABLE IF NOT EXISTS `hidden_share` (
@@ -1195,9 +1225,7 @@ class MySQLDAO(DAO):
             INSERT IGNORE INTO config VALUES("ldap_is_active_directory", "Is this LDAP server and Active Directory server?", "boolean", "No")
             """, """
             INSERT IGNORE INTO config VALUES("ldap_domain_name", "Active Directory will not authenticate a bind unless you use the FQDN", "text", "")
-            ""","""
-            UPDATE config SET config_parameter_value = "%s" WHERE config_parameter_name = "db_version"
-            """ % FLVersion, """
+            """, """
             UPDATE audit_log SET audit_log_action = "%s" WHERE audit_log_action = "%s"
             """ % ("Check In File", "File Checked In"), """
             UPDATE audit_log SET audit_log_action = "%s" WHERE audit_log_action = "%s"
@@ -1418,7 +1446,7 @@ class DbSession(Session):
         self.db.commit()
         return self.cursor.fetchall()
             
-INIT_TABLE_DELETE_SQL = ["DROP TABLE IF EXISTS `session`","DROP TABLE IF EXISTS `config`","DROP TABLE IF EXISTS `attribute`", "DROP TABLE IF EXISTS `user`", "DROP TABLE IF EXISTS `deletion_queue`", "DROP TABLE IF EXISTS `group_membership`", "DROP TABLE IF EXISTS `group_permission`", 
+INIT_TABLE_DELETE_SQL = ["DROP TABLE IF EXISTS `cluster_node`","DROP TABLE IF EXISTS `session`","DROP TABLE IF EXISTS `config`","DROP TABLE IF EXISTS `attribute`", "DROP TABLE IF EXISTS `user`", "DROP TABLE IF EXISTS `deletion_queue`", "DROP TABLE IF EXISTS `group_membership`", "DROP TABLE IF EXISTS `group_permission`", 
 "DROP TABLE IF EXISTS `groups`", "DROP TABLE IF EXISTS `permission`", "DROP TABLE IF EXISTS `file`","DROP TABLE IF EXISTS `hidden_share`","DROP TABLE IF EXISTS `private_group_share`","DROP TABLE IF EXISTS `private_share`",
 "DROP TABLE IF EXISTS `private_attribute_share`","DROP TABLE IF EXISTS `public_share`","DROP TABLE IF EXISTS `upload_ticket`","DROP TABLE IF EXISTS `user_permission`","DROP TABLE IF EXISTS `audit_log`","DROP TABLE IF EXISTS `cli_key`","DROP TABLE IF EXISTS `message`", "DROP TABLE IF EXISTS `message_recipient`" ]
 
@@ -1570,6 +1598,13 @@ CREATE TABLE `session` (
   `data` text DEFAULT NULL,
   `expiration_time` DATETIME DEFAULT NULL,
   PRIMARY KEY (`id`) ) ENGINE=InnoDB
+""", """
+CREATE TABLE `cluster_node` (
+  `cluster_node_id` MEDIUMINT NOT NULL DEFAULT 0,
+  `cluster_node_url` TEXT NOT NULL,
+  `cluster_node_is_master` TINYINT(1) DEFAULT 1,
+  `cluster_node_last_check_in` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`cluster_node_id`) )
 """]
   
 INIT_DATA_SQL = ["INSERT INTO config VALUES(\"db_version\", \"Running version of the Filelocker Database\", \"text\", \"2.4\")",
