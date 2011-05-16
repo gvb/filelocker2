@@ -226,6 +226,9 @@
 <div id="wrapper_col2">
     <div class="text_col2">
         <a href="$fl.orgURL" target="_blank" title="Take me to the $fl.orgName home page"><img src="$fl.rootURL/static/images/logos/logo.gif" alt="$fl.orgName" class="orgLogo" /></a>
+        <form action="$fl.rootURL/admin_interface/change_logo" enctype="multipart/form-data" method="post" id="changeLogoForm">Customize this logo (GIF, 180px max):
+            <input type="file" name="newlogo" size="12" accept="image/*" onChange="javascript:document.forms['changeLogoForm'].submit();" />
+        </form>
         <img src="$fl.rootURL/static/images/page_elements/horizontal_rule.gif" alt="" class="horizontal_rule" />
         <p><span class="strong">Admin</span> <br/> This area allows you to edit the installed user directory, edit custom templates, edit dynamic attributes, configure the server, and view logs.</p>
         <img src="$fl.rootURL/static/images/page_elements/horizontal_rule.gif" alt="" class="horizontal_rule" />
