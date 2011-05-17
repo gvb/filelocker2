@@ -1990,26 +1990,12 @@ class Root:
         totalFileCount = fl.get_file_count(user)
         totalUserCount = fl.get_user_count(user)
         totalMessageCount = fl.get_message_count(user)
-        currentUsersList = []
+        currentUsersList, currentUserIds = get_current_web_users()
         currentUploads = len(cherrypy.file_transfers)
         logsFile = open(fl.logFile)
         logs = tail(logsFile, 50)
 
         attributes = fl.get_available_attributes_by_user(user)
-        currentUserIds = []
-        sessionCache = {}
-        if cherrypy.config['tools.sessions.storage_type'] == "db":
-            sessionCache = cherrypy.session.get_all_sessions()
-        else:
-            sessionCache = cherrypy.session.cache
-        for key in sessionCache.keys():
-            try:
-                if sessionCache[key][0].has_key('user') and sessionCache[key][0]['user'] is not None and sessionCache[key][0]['user'].userId not in currentUserIds:
-                    currentUser = sessionCache[key][0]['user']
-                    currentUsersList.append(currentUser)
-                    currentUserIds.append(currentUser.userId)
-            except Exception, e:
-                logging.error("[%s] [admin] [Unable to read user session: %s]" % (user.userId, str(e)))
         tpl = Template(file=fl.get_template_file('admin.tmpl'), searchList=[locals(),globals()])  
         return str(tpl)
 
@@ -2201,8 +2187,7 @@ class Root:
         #elif platform="ios":
             #return serve_file(os.path.join(fl.clientPath,"iosFilelocker.app"), "application/x-download", "attachment")
         #elif platform="android":
-            #return serve_file(os.path.join(fl.clientPath,"androidFilelocker.app"), "application/x-download", "attachment")
-      
+            #return serve_file(os.path.join(fl.clientPath,"androidFilelocker.app"), "application/x-download", "attachment")   
 
 def fl_response(sMessages, fMessages, format, data=None):
     if format=="json":
@@ -2218,7 +2203,24 @@ def fl_response(sMessages, fMessages, format, data=None):
         return str(tpl)
     else:
         return "Successes: %s, Failures: %s" % (str(sMessages), str(fMessages))
-        
+
+def get_current_web_users():
+    sessionCache = {}
+    currentUserIds, currentUsers = [], []
+    if cherrypy.config['tools.sessions.storage_type'] == "db":
+        sessionCache = cherrypy.session.get_all_sessions()
+    else:
+        sessionCache = cherrypy.session.cache
+    for key in sessionCache.keys():
+        try:
+            if sessionCache[key][0].has_key('user') and sessionCache[key][0]['user'] is not None and sessionCache[key][0]['user'].userId not in currentUserIds:
+                currentUser = sessionCache[key][0]['user']
+                currentUsers.append(currentUser)
+                currentUserIds.append(currentUser.userId)
+        except Exception, e:
+            logging.error("[%s] [admin] [Unable to read user session: %s]" % (user.userId, str(e)))
+    return currentUsers, currentUserIds
+
 def strip_tags(value):
     """Return the given HTML with all tags stripped."""
     return re.sub(r'[^a-zA-Z0-9\.@_+:;,\s\'/\\\[\]-]', '', value)
