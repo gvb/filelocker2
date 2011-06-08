@@ -1723,6 +1723,14 @@ class Filelocker:
         else:
             filePath = os.path.join(self.templatePath, fileName)
         return filePath
+    
+    def get_logo(self):
+        filePath = None
+        if os.path.exists(os.path.join(self.vault,"custom","logo.gif")):
+            filePath = os.path.join(self.vault,"custom","logo.gif")
+        else:
+            filePath = os.path.join(self.rootURL, "static","images","logos","logo.gif")
+        return filePath
 
     def check_expirations(self):
         expiredFiles = self.db.getExpiredFiles()

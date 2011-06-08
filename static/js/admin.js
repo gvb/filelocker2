@@ -95,6 +95,32 @@ function initAdmin(tabIndex)
     $("#adminBackLink").html("<div class='back'><a href='javascript:dismissStatusMessage();javascript:loadMyFiles();' title='Take me back to \"My Files\"'>Back</a></div>");
     loadTemplateForEditing();
     updateVaultUsage();
+    
+    if($("#newLogoButton")[0])
+    {
+        newLogoUploader = new qq.FileUploader({
+            element: $("#newLogoButton")[0],
+            action: FILELOCKER_ROOT+'/admin_interface/upload_logo?format=json',
+            multiple: false,
+            params: {},
+            onSubmit: function(id, fileName){
+                newLogoUploader.setParams({
+                    'fileName': fileName
+                });
+            },
+            onComplete: function(id, fileName, response){
+                var serverMsg = checkServerMessages("uploading new logo");
+                if(!serverMsg)
+                    showMessages(response, "uploading new logo");
+                loadAdminInterface(0);
+            },
+            template: '<div class="qq-uploader">' + 
+                '<div class="qq-upload-drop-area"><span>Drop Files Here to Upload</span></div>' +
+                '<div class="qq-upload-button"><span>Change Logo</span></div>' +
+                '<ul class="qq-upload-list"></ul>' + 
+             '</div>'
+        });
+    }
 }
 function loadAdminInterface(tabIndex)
 {
@@ -124,7 +150,7 @@ function loadUsers(length)
     if(length === undefined || length === null)
         var length = 50;
     $("#userSorterLoading").show();
-    var currentRowsLoaded = $("#userTable tr").length;
+    var currentRowsLoaded = $("#userTable tr").lenloadMyFilesgth;
     $.post(FILELOCKER_ROOT+'/admin_interface/get_all_users?format=json', 
     {
         start: currentRowsLoaded,

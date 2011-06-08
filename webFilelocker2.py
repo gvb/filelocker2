@@ -509,6 +509,123 @@ class HTTP_Admin:
             fMessages.append("Unable to save template text: %s" % str(e))
         return fl_response(sMessages, fMessages, format, data=templateText)
         
+    @cherrypy.expose
+    @cherrypy.tools.requires_login()
+    @cherrypy.tools.before_upload()
+    def upload_logo(self, format="json", **kwargs):
+        uploadTicket, newFile, uploadKey, uploadIndex, uploadTicket, createdFile = None, None, None, None, None, None
+        user, fl, sMessages, fMessages = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [])
+        ##print cherrypy.request.rfile
+        try:
+            if fl.check_admin(user):
+                lcHDRS = {}
+                for key, val in cherrypy.request.headers.iteritems():
+                    lcHDRS[key.lower()] = val
+                #Get the file name
+                fileName, tempFileName, fileUploadComplete = None,None,True
+                if fileName is None and lcHDRS.has_key('x-file-name'):
+                    fileName = lcHDRS['x-file-name']
+                if kwargs.has_key("fileName"):
+                    fileName = kwargs['fileName']
+                if fileName is not None and fileName.split("\\")[-1] is not None:
+                    fileName = fileName.split("\\")[-1]
+                if fileName is None: #This is to accomodate a poorly behaving browser that's not sending the file name
+                    fileName = "Unknown"
+                fileName = "logo"
+                
+                #Set upload index if it's found in the arguments 
+                if kwargs.has_key('uploadIndex'):
+                    uploadIndex = kwargs['uploadIndex']
+
+                fileSizeBytes = int(lcHDRS['content-length'])
+                if lcHDRS['content-type'] == "application/octet-stream":
+                    #Create the temp file to store the uploaded file 
+                    file_object = get_temp_file()
+                    tempFileName = file_object.name.split(os.path.sep)[-1]
+                    #Read the file from the client 
+                    #Create the progress file object and drop it into the transfer dictionary
+                    upFile = ProgressFile(8192, fileName, file_object, uploadIndex)
+                    if cherrypy.file_transfers.has_key(uploadKey): #Drop the transfer into the global transfer list
+                        cherrypy.file_transfers[uploadKey].append(upFile)
+                    else:
+                        cherrypy.file_transfers[uploadKey] = [upFile,]
+                    bytesRemaining = fileSizeBytes
+                    while True:
+                        if bytesRemaining >= 8192:
+                            block = cherrypy.request.rfile.read(8192)
+                        else:
+                            block = cherrypy.request.rfile.read(bytesRemaining)
+                        upFile.write(block)
+                        bytesRemaining -= 8192
+                        if bytesRemaining <= 0: break
+                    upFile.seek(0)
+                    #If the file didn't get all the way there
+                    if long(os.path.getsize(upFile.file_object.name)) != long(fileSizeBytes): #The file transfer stopped prematurely, take out of transfers and queue partial file for deletion
+                        fileUploadComplete = False
+                        logging.debug("[system] [upload] [File upload was prematurely stopped, rejected]")
+                        fl.queue_for_deletion(tempFileName)
+                        fMessages.append("The file %s did not upload completely before the transfer ended" % fileName)
+                        if cherrypy.file_transfers.has_key(uploadKey):
+                            for fileTransfer in cherrypy.file_transfers[uploadKey]:
+                                if fileTransfer.file_object.name == upFile.file_object.name:
+                                    cherrypy.file_transfers[uploadKey].remove(fileTransfer)
+                            if len(cherrypy.file_transfers[uploadKey]) == 0:
+                                del cherrypy.file_transfers[uploadKey]
+                else:
+                    cherrypy.request.headers['uploadindex'] = uploadIndex
+                    formFields = myFieldStorage(fp=cherrypy.request.rfile,
+                                                headers=lcHDRS,
+                                                environ={'REQUEST_METHOD':'POST'},
+                                                keep_blank_values=True)
+                    upFile = formFields['fileName']
+                    if fileName == "Unknown":
+                        fileName = upFile.filename
+                    addToUploads = True
+                    if str(type(upFile.file)) == '<type \'cStringIO.StringO\'>' or isinstance(upFile.file, StringIO.StringIO): 
+                        newTempFile = get_temp_file()
+                        newTempFile.write(str(upFile.file.getvalue()))
+                        newTempFile.seek(0)
+                        upFile = ProgressFile(8192, fileName, newTempFile)
+                        if cherrypy.file_transfers.has_key(uploadKey): #Drop the transfer into the global transfer list
+                            cherrypy.file_transfers[uploadKey].append(upFile)
+                        else:
+                            cherrypy.file_transfers[uploadKey] = [upFile,]
+                    else:
+                        upFile = upFile.file
+                    tempFileName = upFile.file_object.name.split(os.path.sep)[-1]
+                #print newLogo.filename
+                #print type(newLogo)
+                #lcHDRS = {}
+                #for key, val in cherrypy.request.headers.iteritems():
+                    #lcHDRS[key.lower()] = val
+                #bytesRemaining = int(lcHDRS['content-length'])
+                #f = open(os.path.join(fl.vault, "custom", "logo.gif"), "wb")
+                #while True:
+                    #data = newLogo.file_object.read(8192)
+                    #if not data:
+                        #break
+                    #f.write(data)
+                    ##if bytesRemaining >= 8192:
+                        ##print "more than 8192 bytes remaining"
+                        ##block = nf.read(8192)
+                    ##else:
+                        ##print "less than 8192 bytes remaining"
+                        ##block = nf.read(bytesRemaining)
+                    ##f.write(block)
+                    ##bytesRemaining -= 8192
+                    ##print bytesRemaining
+                    ##if bytesRemaining <= 0: break
+                #f.seek(0)
+                #f.close()
+            else:
+                raise FLError(False, ["You do not have permission to upload a new logo."])
+        except FLError, fle:
+            sMessages.extend(fle.successMessages)
+            fMessages.extend(fle.failureMessages)
+        except Exception, e:
+            fMessages.append("Unable to upload new logo: %s" % str(e))
+        return fl_response(sMessages, fMessages, format, None)
+        
 class HTTP_Groups:
     @cherrypy.expose
     @cherrypy.tools.requires_login()
@@ -2055,6 +2172,7 @@ class Root:
         userShareableAttributes = fl.get_available_attributes_by_user(user)
         attributeFilesDict = fl.get_attribute_shares_by_user(user, user.userId)
         sharedFiles = self.file_interface.get_files_shared_with_user_list(format="list")
+        logoPath = fl.get_logo()
         tpl = Template(file=fl.get_template_file('files.tmpl'), searchList=[locals(),globals()])
         return str(tpl)
         
