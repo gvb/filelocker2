@@ -115,7 +115,7 @@ def requires_login(**kwargs):
                         currentUser = fl.get_user(userId, True)
                     if currentUser.authorized == False:
                         raise cherrypy.HTTPError(403, "Your user account does not have access to this system.")
-                    cherrypy.session["user"], cherrypy.session['original_user'], cherrypy.session['sMessages'], cherrypy.session['fMessages'] = currentUser, currentUser, [], []
+                    setup_session()
                     fl.record_login(cherrypy.session.get("user"), cherrypy.request.remote.ip)
                     if currentUser.userTosAcceptDatetime is None:
                         raise cherrypy.HTTPRedirect(fl.rootURL+"/sign_tos") 
@@ -1131,9 +1131,9 @@ class HTTP_File:
             if kwargs.has_key("fileName"):
                 flFile.fileName = strip_tags(kwargs['fileName'])
             if kwargs.has_key('notifyOnDownload'):
-                if kwargs['notifyOnDownload'] == "true":
+                if kwargs['notifyOnDownload'].lower() == "true":
                     flFile.fileNotifyOnDownload = True
-                elif kwargs['notifyOnDownload'] == "false":
+                elif kwargs['notifyOnDownload'].lower() == "false":
                     flFile.fileNotifyOnDownload = False
             if kwargs.has_key('fileNotes'):
                 flFile.fileNotes = strip_tags(kwargs['fileNotes'])
@@ -1163,8 +1163,11 @@ class HTTP_File:
         fileName, tempFileName, fileUploadComplete = None,None,True
         if fileName is None and lcHDRS.has_key('x-file-name'):
             fileName = lcHDRS['x-file-name']
+            print "X-file-name was there, filename set"
         if kwargs.has_key("fileName"):
             fileName = kwargs['fileName']
+        if kwargs.has_key("filename"):
+            fileName = kwargs["filenames"]
         if fileName is not None and fileName.split("\\")[-1] is not None:
             fileName = fileName.split("\\")[-1]
         if fileName is None: #This is to accomodate a poorly behaving browser that's not sending the file name
@@ -1173,6 +1176,8 @@ class HTTP_File:
         #Set upload index if it's found in the arguments 
         if kwargs.has_key('uploadIndex'):
             uploadIndex = kwargs['uploadIndex']
+        print "Kwargs: %s" % str(kwargs)
+        print "headers: %s" % str(lcHDRS)
 
         fileSizeBytes = int(lcHDRS['content-length'])
         if lcHDRS['content-type'] == "application/octet-stream":
@@ -1284,6 +1289,7 @@ class HTTP_File:
                     notifyOnDownload = False
                     
                 #Build the Filelocker File objects and check them in to Filelocker
+                print "File name before creation: %s" % str(fileName)
                 if uploadTicket is not None:
                     newFile = File(fileName, None, fileNotes, fileSizeBytes, datetime.datetime.now(), user.userId, expiration, False, None, None, "Processing File", "local", notifyOnDownload, uploadTicket.ticketId)
                 else:
@@ -1553,7 +1559,7 @@ class HTTP_File:
 class HTTP_Message:
     @cherrypy.expose
     @cherrypy.tools.requires_login()
-    def send_message(self, subject, body, recipientIds, expiration, format="json", **kwargs):
+    def send_message(self, subject, body, recipientIds, expiration=None, format="json", **kwargs):
         fl, user, sMessages, fMessages = cherrypy.thread_data.flDict['app'], cherrypy.session.get("user"), [], []
         try:
             recipientIdList = split_list_sanitized(recipientIds)
@@ -1595,28 +1601,32 @@ class HTTP_Message:
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def get_messages(self, format="json", **kwargs):
-        fl, user, sMessages, fMessages = cherrypy.thread_data.flDict['app'], cherrypy.session.get("user"), [], []
+        fl, user, sMessages, fMessages, responseData = cherrypy.thread_data.flDict['app'], cherrypy.session.get("user"), [], [], None
         messagesList, recvMessagesList, sentMessagesList, messageIdList = [], [], [], None
         try:
             if kwargs.has_key("messageIds"):
                 messageIdList = split_list_sanitized(kwargs['messageIds'])
             recvMessages = fl.get_received_messages(user, user.userId, messageIdList)
             sentMessages = fl.get_sent_messages(user, user.userId, messageIdList)
-            for message in recvMessages:
-                messageDict = message.get_dict()
-                messageDict['body'] = str(Template("$messageDict['body']", searchList=[locals()], filter=WebSafe))
-                recvMessagesList.append(messageDict)
-                
-            for message in sentMessages:
-                messageDict = message.get_dict()
-                messageDict['body'] = str(Template("$messageDict['body']", searchList=[locals()], filter=WebSafe))
-                sentMessagesList.append(messageDict)
-            messagesList.append(recvMessagesList)
-            messagesList.append(sentMessagesList)
+            if format == "cli":
+                responseData = str(Template(file=fl.get_template_file('messages_xml.tmpl'), searchList=[locals(),globals()]))
+            else:
+                for message in recvMessages:
+                    messageDict = message.get_dict()
+                    messageDict['body'] = str(Template("$messageDict['body']", searchList=[locals()], filter=WebSafe))
+                    recvMessagesList.append(messageDict)
+                    
+                for message in sentMessages:
+                    messageDict = message.get_dict()
+                    messageDict['body'] = str(Template("$messageDict['body']", searchList=[locals()], filter=WebSafe))
+                    sentMessagesList.append(messageDict)
+                messagesList.append(recvMessagesList)
+                messagesList.append(sentMessagesList)
+                responseData = messagesList
         except FLError, fle:
             sMessages.extend(fle.successMessages)
             fMessages.extend(fle.failureMessages)
-        return fl_response(sMessages, fMessages, format, data=messagesList)
+        return fl_response(sMessages, fMessages, format, data=responseData)
         
     @cherrypy.expose
     @cherrypy.tools.requires_login()
@@ -2012,7 +2022,7 @@ class Root:
                         currentUser.isLocal = True #Tags a user if they used a local login, in case we want to use this later
                     if currentUser.authorized == False:
                         raise cherrypy.HTTPError(403, "You do not have permission to access this system")
-                    cherrypy.session['user'], cherrypy.session['original_user'], cherrypy.session['sMessages'], cherrypy.session['fMessages'] = currentUser, currentUser, [], []
+                    setup_session()
                     fl.record_login(cherrypy.session.get("user"), cherrypy.request.remote.ip)
                     raise cherrypy.HTTPRedirect(fl.rootURL)
                 else: #This should only happen in the case of a user existing in the external directory, but having never logged in before
@@ -2021,7 +2031,7 @@ class Root:
                         fl.install_user(newUser)
                         currentUser = fl.get_user(username, True)
                         if currentUser is not None and currentUser.authorized != False:
-                            cherrypy.session['user'], cherrypy.session['original_user'], cherrypy.session['sMessages'], cherrypy.session['fMessages'] = currentUser, currentUser, [], []
+                            setup_session()
                             raise cherrypy.HTTPRedirect(fl.rootURL)
                         else:
                             raise cherrypy.HTTPError(403, "You do not have permission to access this system")
@@ -2162,19 +2172,34 @@ class Root:
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def files(self, **kwargs):
-        user, fl, systemFiles = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [])
+        sMessages, fMessages, user, fl, systemFiles = ([], [], cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [])
         if fl.check_admin(user):
             systemFiles = self.file_interface.get_user_file_list(format="list", userId="system")
-        groups = fl.get_user_groups(user, user.userId)
-        defaultExpiration = datetime.date.today() + (datetime.timedelta(days=fl.maxFileLifeDays))
-        uploadTickets = fl.get_upload_tickets_by_user(user, user.userId)
         userFiles = self.file_interface.get_user_file_list(format="list")
-        userShareableAttributes = fl.get_available_attributes_by_user(user)
         attributeFilesDict = fl.get_attribute_shares_by_user(user, user.userId)
         sharedFiles = self.file_interface.get_files_shared_with_user_list(format="list")
         logoPath = fl.get_logo()
-        tpl = Template(file=fl.get_template_file('files.tmpl'), searchList=[locals(),globals()])
-        return str(tpl)
+        response = ""
+        groups = fl.get_user_groups(user, user.userId)
+        if kwargs.has_key("format"):
+            if kwargs['format'] == "cli":
+                groupShares = fl.get_private_group_shares_by_user(user, user.userId)
+                groupFileShareDict = {}
+                for groupShare in groupShares:
+                    if groupFileShareDict.has_key(groupShare.fileId):
+                        groupFileShareDict[groupShare.targetId].append(groupShare.fileId)
+                    else:
+                        groupFileShareDict[groupShare.targetId] = []
+                xml = str(Template(file=fl.get_template_file('files_xml.tmpl'), searchList=[locals(),globals()]))
+                sMessages.append("Successfully got the xml of the files")
+                response =  fl_response(sMessages, fMessages, "cli", data=xml)
+        else:
+            
+            defaultExpiration = datetime.date.today() + (datetime.timedelta(days=fl.maxFileLifeDays))
+            uploadTickets = fl.get_upload_tickets_by_user(user, user.userId)
+            userShareableAttributes = fl.get_available_attributes_by_user(user)
+            response = Template(file=fl.get_template_file('files.tmpl'), searchList=[locals(),globals()])
+        return str(response)
         
     @cherrypy.expose
     def help(self, **kwargs):
@@ -2306,6 +2331,9 @@ class Root:
             #return serve_file(os.path.join(fl.clientPath,"iosFilelocker.app"), "application/x-download", "attachment")
         #elif platform="android":
             #return serve_file(os.path.join(fl.clientPath,"androidFilelocker.app"), "application/x-download", "attachment")   
+
+def setup_session():
+    cherrypy.session['user'], cherrypy.session['original_user'], cherrypy.session['sMessages'], cherrypy.session['fMessages'], cherrypy.session['uploads'] = currentUser, currentUser, [], [], []
 
 def fl_response(sMessages, fMessages, format, data=None):
     if format=="json":
@@ -2491,6 +2519,7 @@ class ProgressFile(object):
         self.uploadIndex = uploadIndex
         self._start = time.time()
         self.status = "Uploading"
+        
     def write(self, data):
         now = time.time()
         self.transferred += len(data)

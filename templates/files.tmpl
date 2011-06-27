@@ -76,8 +76,8 @@
                                     #end if
                                 </li>
                                 #end if
-                                #set $userCount = len($f.shares)
-                                #set $groupCount = len($f.groupShares)
+                                #set $userCount = $len($f.shares)
+                                #set $groupCount = $len($f.groupShares)
                                 #if $userCount > 0 or $groupCount > 0
                                 <li>
                                     #set $userPlural = "s"
@@ -124,7 +124,7 @@
                     </td>
                     <td onClick="fileRowClick($rowId)">
                         <a class="$f.documentType" title="$f.fileName">
-                            #if len($f.fileName) > 60
+                            #if $len($str($f.fileName)) > 60
                                 $f.fileName[0:45]...$f.fileName[-10:]
                             #else
                                 $f.fileName
@@ -329,7 +329,7 @@
                         </td>
                         <td onClick="fileRowClick($rowId)">
                             <a class="document_person" title="$f.fileName">
-                                #if len($f.fileName) > 60
+                                #if len(str($f.fileName)) > 60
                                     $f.fileName[0:45]...$f.fileName[-10:]
                                 #else
                                     $f.fileName
@@ -348,7 +348,7 @@
                     </tbody>
                 </table>
             </div>
-            #if $len($attributeFilesDict) > 0:
+            #if len($attributeFilesDict) > 0:
                 #for $attributeName in $attributeFilesDict:
                     #if $len($attributeFilesDict[$attributeName]) > 0:
                     <h3 tabindex="0" aria-expanded="false" role="tab" class="head ui-accordion-header ui-helper-reset ui-state-default ui-corner-all"><a tabindex="0" href="#">Files Shared with $attributeName ($len($attributeFilesDict[$attributeName]))</a></h3>
@@ -417,7 +417,7 @@
                                 </td>
                                 <td onClick="fileRowClick($rowId)">
                                     <a href="#" class="document_attribute" title="$f.fileName">
-                                    #if len($f.fileName) > 50
+                                    #if $len($f.fileName) > 50
                                         $f.fileName[0:28]...$f.fileName[-15:]
                                     #else
                                         $f.fileName

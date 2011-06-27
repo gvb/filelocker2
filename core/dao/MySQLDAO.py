@@ -699,13 +699,18 @@ class MySQLDAO(DAO):
         
 #CLI Key Management
     def verifyCLILogin(self, userId, hostIPv4, hostIPv6, CLIKey):
-        sql = "SELECT * FROM cli_key WHERE cli_key_user_id=%s and cli_key_host_ipv4=%s and cli_key_host_ipv6=%s and cli_key_value=%s"
-        sql_args = [userId, hostIPv4, hostIPv6, CLIKey]
-        results = self.execute(sql, sql_args)
+        sql = "SELECT * FROM cli_key WHERE cli_key_user_id=%s AND cli_key_host_ipv4=%s AND cli_key_host_ipv6=%s AND cli_key_value=%s"
+        sql1_args = [userId, "", "", CLIKey] #Try generic non-ip restricted CLI key first
+        sql2_args = [userId, hostIPv4, hostIPv6, CLIKey] #If no results, try one that has to match the IP
+        results = self.execute(sql, sql1_args)
         if(len(results) > 0):
             return True
         else:
-            return False
+            results = self.execute(sql, sql2_args)
+            if len(results) >0:
+                return True
+            else:
+                return False
         
     def createCLIKey(self, userId, hostIPv4, hostIPv6, CLIKey):
         sql = "SELECT * FROM cli_key WHERE cli_key_user_id=%s AND cli_key_host_ipv4=%s AND cli_key_host_ipv6=%s"
@@ -1183,8 +1188,6 @@ class MySQLDAO(DAO):
 
         #Apply cumulative updates to the database to bring it up to the latest version
         dbUpdates.extend(["""
-            DELETE FROM config WHERE config_parameter_name = %s
-            """ % "db_version", """
             CREATE TABLE IF NOT EXISTS `cluster_node` (
             `cluster_node_id` MEDIUMINT NOT NULL DEFAULT 0,
             `cluster_node_url` TEXT NOT NULL,
@@ -1215,9 +1218,7 @@ class MySQLDAO(DAO):
             INSERT IGNORE INTO config VALUES("user_inactivity_expiration", "Max number of days of inactivity permitted on a user account before the account is deleted from the system.", "number", "90")
             """, """
             INSERT IGNORE INTO config VALUES("geotagging", "Should users be allowed to geotag Filelocker uploads?", "boolean", "No")
-            """, """
-            INSERT IGNORE INTO config VALUES("db_version", "Running version of the Filelocker Database", "text", "%s")
-            """ % FLVersion, """
+            """,  """
             INSERT IGNORE INTO config VALUES("ldap_bind_user", "Account to use when binding to LDAP for searching (anonymous if blank)?", "text", "")
             """, """
             INSERT IGNORE INTO config VALUES("ldap_bind_pass", "Password to use when binding to LDAP for searching (anonymous if blank)?", "text", "")
@@ -1607,8 +1608,7 @@ CREATE TABLE `cluster_node` (
   PRIMARY KEY (`cluster_node_id`) )
 """]
   
-INIT_DATA_SQL = ["INSERT INTO config VALUES(\"db_version\", \"Running version of the Filelocker Database\", \"text\", \"2.4\")",
-"INSERT INTO config VALUES(\"org_name\", \"Name of your organization.\", \"text\", \"My Company\")",
+INIT_DATA_SQL = ["INSERT INTO config VALUES(\"org_name\", \"Name of your organization.\", \"text\", \"My Company\")",
 "INSERT INTO config VALUES(\"org_url\", \"Home page of your organization.\", \"text\", \"http://www.mycompany.com\")",
 "INSERT INTO config VALUES(\"admin_email\", \"Public email address of the Filelocker Administrator.\", \"text\", \"admin@mycompany.com\")",
 "INSERT INTO config VALUES(\"max_file_life_days\", \"Max number of days a file can exist on the system. After this time, the file will be securely erased along with any shares it was associated with.\", \"number\", \"7\")",
