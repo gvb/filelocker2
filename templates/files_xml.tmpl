@@ -1,0 +1,87 @@
+<files_and_groups>
+<file_list>
+    <section title = "Uploaded Files">
+    #for $userFile in $userFiles    
+            <file> 
+                <fileId>$userFile.fileId</fileId> 
+                <fileType>$userFile.fileType</fileType> 
+                <fileName>$userFile.fileName</fileName> 
+                <fileSizeBytes>$userFile.fileSizeBytes</fileSizeBytes> 
+                <fileOwnerId>$userFile.fileOwnerId</fileOwnerId> 
+                <filePassedAvScan>$bool($userFile.filePassedAvScan)</filePassedAvScan> 
+                <fileStatus>$userFile.fileStatus</fileStatus>
+                <fileNotifyOnDownload>$bool($userFile.fileNotifyOnDownload)</fileNotifyOnDownload>
+                <fileUploadedDatetime>$userFile.fileUploadedDatetime</fileUploadedDatetime>
+                <fileExpirationDatetime>$userFile.fileExpirationDatetime</fileExpirationDatetime>
+                <fileNotes>$userFile.fileNotes</fileNotes>
+                <fileShares>
+                    #for $share in $userFile.shares
+                    <user>
+                        <userId>$share.targetId</userId>
+                        <userDisplayName>$share.user.userDisplayName</userDisplayName>
+                    </user>
+                    #end for
+                </fileShares>
+            </file>
+    #end for
+    </section>
+    <section title = "Files Shared with Me">
+    #for $sharedFile in $sharedFiles    
+            <file> 
+                <fileId>$sharedFile.fileId</fileId> 
+                <fileType>$sharedFile.fileType</fileType> 
+                <fileName>$sharedFile.fileName</fileName> 
+                <fileSizeBytes>$sharedFile.fileSizeBytes</fileSizeBytes> 
+                <fileOwnerId>$sharedFile.fileOwnerId</fileOwnerId> 
+                <filePassedAvScan>$bool($sharedFile.filePassedAvScan)</filePassedAvScan> 
+                <fileStatus>$sharedFile.fileStatus</fileStatus>
+                <fileNotifyOnDownload>$bool($sharedFile.fileNotifyOnDownload)</fileNotifyOnDownload>
+                <fileUploadedDatetime>$sharedFile.fileUploadedDatetime</fileUploadedDatetime>
+                <fileExpirationDatetime>$sharedFile.fileExpirationDatetime</fileExpirationDatetime>
+                <fileNotes>$sharedFile.fileNotes</fileNotes>
+            </file>
+    #end for
+    </section>
+
+    #for $section in $attributeFilesDict
+    <section title = "$section">
+        #for $attrSharedFile in $attributeFilesDict[$section]
+        <file> 
+                <fileId>$attrSharedFile.fileId</fileId> 
+                <fileType>$attrSharedFile.fileType</fileType> 
+                <fileName>$attrSharedFile.fileName</fileName> 
+                <fileSizeBytes>$attrSharedFile.fileSizeBytes</fileSizeBytes> 
+                <fileOwnerId>$attrSharedFile.fileOwnerId</fileOwnerId> 
+                <filePassedAvScan>$bool($attrSharedFile.filePassedAvScan)</filePassedAvScan> 
+                <fileStatus>$attrSharedFile.fileStatus</fileStatus>
+                <fileNotifyOnDownload>$bool($attrSharedFile.fileNotifyOnDownload)</fileNotifyOnDownload>
+                <fileUploadedDatetime>$attrSharedFile.fileUploadedDatetime</fileUploadedDatetime>
+                <fileExpirationDatetime>$attrSharedFile.fileExpirationDatetime</fileExpirationDatetime>
+                <fileNotes>$attrSharedFile.fileNotes</fileNotes>
+        </file>
+        #end for
+    </section>
+    #end for
+</file_list>
+<groups_list>
+#for $group in $groups
+<group name="$group.groupName" id="$group.groupId">
+    <group_members>
+    #for $groupMember in $group.groupMembers
+        <group_member>
+            <userDisplayName>$groupMember.userDisplayName</userDisplayName>
+            <userId>$groupMember.userId</userId>
+        </group_member>
+    #end for
+    </group_members>
+    <shared_file_ids>
+    #if $groupFileShareDict.has_key($str($group.groupId))
+        #for $fileId in $groupFileShareDict[$str($group.groupId)]
+        <fileId>$fileId</fileId>
+        #end for
+    #end if
+    </shared_file_ids>
+</group>
+#end for
+</groups_list>
+</files_and_groups>

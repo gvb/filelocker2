@@ -115,7 +115,7 @@ def requires_login(**kwargs):
                         currentUser = fl.get_user(userId, True)
                     if currentUser.authorized == False:
                         raise cherrypy.HTTPError(403, "Your user account does not have access to this system.")
-                    setup_session()
+                    cherrypy.session["user"], cherrypy.session['original_user'], cherrypy.session['sMessages'], cherrypy.session['fMessages'] = currentUser, currentUser, [], []
                     fl.record_login(cherrypy.session.get("user"), cherrypy.request.remote.ip)
                     if currentUser.userTosAcceptDatetime is None:
                         raise cherrypy.HTTPRedirect(fl.rootURL+"/sign_tos") 
@@ -737,7 +737,7 @@ class HTTP_Groups:
 class HTTP_Share:
     @cherrypy.expose
     @cherrypy.tools.requires_login()
-    def create_private_share(self, fileIds, targetId=None, groupId=None, notify="yes", format="json", **kwargs):
+    def create_private_share(self, fileIds, targetId=None, groupId=None, notify="no", format="json", **kwargs):
         user, fl, sMessages, fMessages  = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [])
         fileIds = split_list_sanitized(fileIds)
         if targetId == "":
@@ -752,17 +752,22 @@ class HTTP_Share:
             notify = False
         else:
             notify = True
+        targetUser = None
+        data = None
         try:
             if targetId is not None:
                 fl.private_share_files_user(user, fileIds, targetId, notify)
                 sMessages.append("Shared file(s) successfully")
+                targetUser = fl.directory.lookup_user(targetId)
             if groupId is not None:
                 fl.private_share_files_group(user, fileIds, groupId, notify)
                 sMessages.append("Shared file(s) successfully")
+            if format=="cli":
+                data = str(Template(file=fl.get_template_file('user_xml.tmpl'), searchList=[locals(),globals()])) 
         except FLError, fle:
             sMessages.extend(fle.successMessages)
             fMessages.extend(fle.failureMessages)
-        return fl_response(sMessages, fMessages, format)
+        return fl_response(sMessages, fMessages, format, data=data)
     
     @cherrypy.expose
     @cherrypy.tools.requires_login()
@@ -2022,7 +2027,7 @@ class Root:
                         currentUser.isLocal = True #Tags a user if they used a local login, in case we want to use this later
                     if currentUser.authorized == False:
                         raise cherrypy.HTTPError(403, "You do not have permission to access this system")
-                    setup_session()
+                    cherrypy.session['user'], cherrypy.session['original_user'], cherrypy.session['sMessages'], cherrypy.session['fMessages'] = currentUser, currentUser, [], []
                     fl.record_login(cherrypy.session.get("user"), cherrypy.request.remote.ip)
                     raise cherrypy.HTTPRedirect(fl.rootURL)
                 else: #This should only happen in the case of a user existing in the external directory, but having never logged in before
@@ -2031,7 +2036,7 @@ class Root:
                         fl.install_user(newUser)
                         currentUser = fl.get_user(username, True)
                         if currentUser is not None and currentUser.authorized != False:
-                            setup_session()
+                            cherrypy.session['user'], cherrypy.session['original_user'], cherrypy.session['sMessages'], cherrypy.session['fMessages'] = currentUser, currentUser, [], []
                             raise cherrypy.HTTPRedirect(fl.rootURL)
                         else:
                             raise cherrypy.HTTPError(403, "You do not have permission to access this system")
@@ -2186,10 +2191,9 @@ class Root:
                 groupShares = fl.get_private_group_shares_by_user(user, user.userId)
                 groupFileShareDict = {}
                 for groupShare in groupShares:
-                    if groupFileShareDict.has_key(groupShare.fileId):
-                        groupFileShareDict[groupShare.targetId].append(groupShare.fileId)
-                    else:
-                        groupFileShareDict[groupShare.targetId] = []
+                    if groupFileShareDict.has_key(str(groupShare.targetId)) == False:
+                        groupFileShareDict[str(groupShare.targetId)] = []
+                    groupFileShareDict[str(groupShare.targetId)].append(groupShare.fileId)
                 xml = str(Template(file=fl.get_template_file('files_xml.tmpl'), searchList=[locals(),globals()]))
                 sMessages.append("Successfully got the xml of the files")
                 response =  fl_response(sMessages, fMessages, "cli", data=xml)
@@ -2331,9 +2335,6 @@ class Root:
             #return serve_file(os.path.join(fl.clientPath,"iosFilelocker.app"), "application/x-download", "attachment")
         #elif platform="android":
             #return serve_file(os.path.join(fl.clientPath,"androidFilelocker.app"), "application/x-download", "attachment")   
-
-def setup_session():
-    cherrypy.session['user'], cherrypy.session['original_user'], cherrypy.session['sMessages'], cherrypy.session['fMessages'], cherrypy.session['uploads'] = currentUser, currentUser, [], [], []
 
 def fl_response(sMessages, fMessages, format, data=None):
     if format=="json":
@@ -2519,7 +2520,6 @@ class ProgressFile(object):
         self.uploadIndex = uploadIndex
         self._start = time.time()
         self.status = "Uploading"
-        
     def write(self, data):
         now = time.time()
         self.transferred += len(data)

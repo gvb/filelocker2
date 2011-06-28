@@ -16,6 +16,9 @@ class File:
         self.fileLocation = fileLocation
         self.fileNotifyOnDownload = fileNotifyOnDownload
         self.fileUploadTicketId = fileUploadTicketId 
+        self.shares = []
+        self.groupShares = []
+        self.publicShare = None
         if fileId is not None:
             self.fileId = fileId
 
