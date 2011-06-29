@@ -1,0 +1,188 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="3.5" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">iPhoneSimulator</Platform>
+    <ProductVersion>9.0.21022</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{61336407-B9EC-4883-BBA2-0C4879754AFA}</ProjectGuid>
+    <ProjectTypeGuids>{E613F3A2-FE9C-494F-B74E-F63BCB86FEA6};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>Filelocker</RootNamespace>
+    <MainNibFile>MainWindow.xib</MainNibFile>
+    <AssemblyName>Filelocker</AssemblyName>
+    <MtouchMinimumOS>3.0</MtouchMinimumOS>
+    <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
+    <BundleIcon>App.png</BundleIcon>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|iPhoneSimulator' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\iPhoneSimulator\Debug</OutputPath>
+    <DefineConstants>DEBUG</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <MtouchLink>None</MtouchLink>
+    <MtouchDebug>True</MtouchDebug>
+    <MtouchUseLlvm>false</MtouchUseLlvm>
+    <ConsolePause>false</ConsolePause>
+    <MtouchUseSGen>false</MtouchUseSGen>
+    <MtouchUseThumb>false</MtouchUseThumb>
+    <MtouchArch>ARMv6</MtouchArch>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|iPhoneSimulator' ">
+    <DebugType>none</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\iPhoneSimulator\Release</OutputPath>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <MtouchLink>None</MtouchLink>
+    <MtouchDebug>False</MtouchDebug>
+    <MtouchUseSGen>false</MtouchUseSGen>
+    <ConsolePause>false</ConsolePause>
+    <MtouchUseLlvm>false</MtouchUseLlvm>
+    <MtouchUseThumb>false</MtouchUseThumb>
+    <MtouchArch>ARMv6</MtouchArch>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|iPhone' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\iPhone\Debug</OutputPath>
+    <DefineConstants>DEBUG</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <MtouchUseSGen>false</MtouchUseSGen>
+    <MtouchDebug>True</MtouchDebug>
+    <CodesignKey>iPhone Developer</CodesignKey>
+    <ConsolePause>false</ConsolePause>
+    <MtouchUseThumb>false</MtouchUseThumb>
+    <MtouchArch>ARMv6</MtouchArch>
+    <MtouchUseLlvm>false</MtouchUseLlvm>
+    <CodesignProvision>B0C4A72F-4538-46F8-B650-BD29DB3CC4EE</CodesignProvision>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|iPhone' ">
+    <DebugType>none</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\iPhone\Release</OutputPath>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <MtouchUseSGen>false</MtouchUseSGen>
+    <MtouchDebug>False</MtouchDebug>
+    <MtouchUseThumb>false</MtouchUseThumb>
+    <ConsolePause>false</ConsolePause>
+    <CodesignKey>iPhone Distribution: West Monroe Partners</CodesignKey>
+    <MtouchArch>ARMv6</MtouchArch>
+    <MtouchUseLlvm>false</MtouchUseLlvm>
+    <MtouchI18n />
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Xml" />
+    <Reference Include="System.Core" />
+    <Reference Include="monotouch" />
+    <Reference Include="System.Web.Services" />
+    <Reference Include="System.Data.Services.Client" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Info.plist" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="MainWindow.xib.designer.cs">
+      <DependentUpon>MainWindow.xib</DependentUpon>
+    </Compile>
+    <Compile Include="Main.cs" />
+    <Compile Include="Code\FilelockerConnection.cs" />
+    <Compile Include="MessagesScreen.xib.cs">
+      <DependentUpon>MessagesScreen.xib</DependentUpon>
+    </Compile>
+    <Compile Include="MessagesScreen.xib.designer.cs">
+      <DependentUpon>MessagesScreen.xib</DependentUpon>
+    </Compile>
+    <Compile Include="Code\FLFile.cs" />
+    <Compile Include="ViewControllers\FilesViewController.cs" />
+    <Compile Include="ViewControllers\SettingsViewController.cs" />
+    <Compile Include="FileInfoView.xib.cs">
+      <DependentUpon>FileInfoView.xib</DependentUpon>
+    </Compile>
+    <Compile Include="FileInfoView.xib.designer.cs">
+      <DependentUpon>FileInfoView.xib</DependentUpon>
+    </Compile>
+    <Compile Include="ViewControllers\MessagesViewController.cs" />
+    <Compile Include="Code\FLMessage.cs" />
+    <Compile Include="Code\User.cs" />
+    <Compile Include="MessageInfoView.xib.cs">
+      <DependentUpon>MessageInfoView.xib</DependentUpon>
+    </Compile>
+    <Compile Include="MessageInfoView.xib.designer.cs">
+      <DependentUpon>MessageInfoView.xib</DependentUpon>
+    </Compile>
+    <Compile Include="ViewControllers\UserSearchController.cs" />
+    <Compile Include="ViewControllers\GroupSearchController.cs" />
+    <Compile Include="MessageComposer.xib.cs">
+      <DependentUpon>MessageComposer.xib</DependentUpon>
+    </Compile>
+    <Compile Include="MessageComposer.xib.designer.cs">
+      <DependentUpon>MessageComposer.xib</DependentUpon>
+    </Compile>
+    <Compile Include="FileViewer.xib.cs">
+      <DependentUpon>FileViewer.xib</DependentUpon>
+    </Compile>
+    <Compile Include="FileViewer.xib.designer.cs">
+      <DependentUpon>FileViewer.xib</DependentUpon>
+    </Compile>
+    <Compile Include="FileShare.xib.cs">
+      <DependentUpon>FileShare.xib</DependentUpon>
+    </Compile>
+    <Compile Include="FileShare.xib.designer.cs">
+      <DependentUpon>FileShare.xib</DependentUpon>
+    </Compile>
+    <Compile Include="Code\Group.cs" />
+    <Compile Include="ViewControllers\ServerPickerDataModel.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Page Include="MainWindow.xib" />
+    <Page Include="MessagesScreen.xib" />
+    <Page Include="FileInfoView.xib" />
+    <Page Include="MessageInfoView.xib" />
+    <Page Include="MessageComposer.xib" />
+    <Page Include="FileViewer.xib" />
+    <Page Include="FileShare.xib" />
+  </ItemGroup>
+  <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
+  <ProjectExtensions>
+    <MonoDevelop>
+      <Properties InternalTargetFrameworkVersion="IPhone" />
+    </MonoDevelop>
+  </ProjectExtensions>
+  <ItemGroup>
+    <Folder Include="Code\" />
+    <Folder Include="Settings.bundle\" />
+    <Folder Include="Images\" />
+    <Folder Include="ViewControllers\" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Settings.bundle\Root.plist">
+      <DeployService-Deploy>true</DeployService-Deploy>
+    </Content>
+    <Content Include="Images\18-envelope.png" />
+    <Content Include="Images\33-cabinet.png" />
+    <Content Include="Images\157-wrench.png" />
+    <Content Include="Images\page_white_text.png" />
+    <Content Include="Images\page_white_acrobat.png" />
+    <Content Include="Images\page_green.png" />
+    <Content Include="Images\application_xp_terminal.png" />
+    <Content Include="Images\email.png" />
+    <Content Include="Images\email_go.png" />
+    <Content Include="Images\email_open.png" />
+    <Content Include="Images\111-user.png" />
+    <Content Include="Images\112-group.png" />
+    <Content Include="Default.png" />
+    <Content Include="Images\tick.png" />
+    <Content Include="Images\group_add.png" />
+    <Content Include="Images\group_delete.png" />
+    <Content Include="Images\user_gray.png" />
+    <Content Include="App.png" />
+  </ItemGroup>
+</Project>
