@@ -201,6 +201,16 @@
                     <td>$param.parameterDescription</td>
                     <td>$param.value</td>
                 </tr>
+                #elif $param.parameterName.endswith("pass")
+                <tr>    
+                    <td>$param.parameterName</td>
+                    <td>$param.parameterDescription<input type="text" name="config_desc_$param.parameterName" style="display: none"/></td>
+                    #if $param.value is not None and $param.value != ""
+                    <td>Set <a href="javascript:showUpdatePassword('$param.parameterName')">Reset</a></td>
+                    #else
+                    <td>Not Set <a href="javascript:showUpdatePassword('$param.parameterName')">Set Password</a></td>
+                    #end if
+                </tr>
                 #else
                 <tr>    
                     <td>$param.parameterName</td>

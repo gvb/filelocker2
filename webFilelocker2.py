@@ -404,7 +404,10 @@ class HTTP_Admin:
                 if key.startswith("config_name_"):
                     parameterName = key[12:]
                     description = kwargs['config_desc_%s' % parameterName]
-                    value = kwargs[key]
+                    if parameterName.endswith("pass"): #Don't strip characters from passwords
+                        value = kwargs[key]
+                    else:
+                        value = strip_tags(kwargs[key])
                     parameter = Parameter(parameterName, description, None, value) #Type won't change, don't need to store or set
                     configParameterList.append(parameter)
             fl.update_config(user, configParameterList)
@@ -417,7 +420,23 @@ class HTTP_Admin:
         except Exception, e:
             fMessages.append("Unable to update config: %s" % str(e))
         return fl_response(sMessages, fMessages, format)
-
+        
+    @cherrypy.expose
+    @cherrypy.tools.requires_login()
+    def update_config_password(self, parameter, password, format="json", **kwargs):
+        user, fl, sMessages, fMessages = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [])
+        parameterName = parameter
+        try:
+            configParameterList = [Parameter(parameterName,None, "text", password),]
+            fl.update_config(user, configParameterList)
+            sMessages.append("Password parameter %s updated." % parameterName)
+        except FLError, fle:
+            sMessages.extend(fle.successMessages)
+            fMessages.extend(fle.failureMessages)
+        except Exception, e:
+            fMessages.append("Unable to update config: %s" % str(e))
+        return fl_response(sMessages, fMessages, format)
+        
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def create_attribute(self, attributeName, attributeId, format="json", **kwargs):
@@ -2221,7 +2240,7 @@ def fl_response(sMessages, fMessages, format, data=None):
         
 def strip_tags(value):
     """Return the given HTML with all tags stripped."""
-    return re.sub(r'[^a-zA-Z0-9\.@_+:;,\s\'/\\\[\]-]', '', value)
+    return re.sub(r'[^a-zA-Z0-9\.@_+:;=,\s\'/\\\[\]-]', '', value)
 
 def tail( f, window=20 ):
     try:

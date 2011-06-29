@@ -698,13 +698,19 @@ class MySQLDAO(DAO):
         
 #CLI Key Management
     def verifyCLILogin(self, userId, hostIPv4, hostIPv6, CLIKey):
-        sql = "SELECT * FROM cli_key WHERE cli_key_user_id=%s and cli_key_host_ipv4=%s and cli_key_host_ipv6=%s and cli_key_value=%s"
-        sql_args = [userId, hostIPv4, hostIPv6, CLIKey]
-        results = self.execute(sql, sql_args)
+        logging.error("Verifying: user %s hostIpv4 %s hostIPv6 %s cliKey %s" % (userId, hostIPv4, hostIPv6, CLIKey))
+        sql = "SELECT * FROM cli_key WHERE cli_key_user_id=%s AND cli_key_host_ipv4=%s AND cli_key_host_ipv6=%s AND cli_key_value=%s"
+        sql1_args = [userId, "", "", CLIKey] #Try generic non-ip restricted CLI key first
+        sql2_args = [userId, hostIPv4, hostIPv6, CLIKey] #If no results, try one that has to match the IP
+        results = self.execute(sql, sql1_args)
         if(len(results) > 0):
             return True
         else:
-            return False
+            results = self.execute(sql, sql2_args)
+            if len(results) >0:
+                return True
+            else:
+                return False
         
     def createCLIKey(self, userId, hostIPv4, hostIPv6, CLIKey):
         sql = "SELECT * FROM cli_key WHERE cli_key_user_id=%s AND cli_key_host_ipv4=%s AND cli_key_host_ipv6=%s"
