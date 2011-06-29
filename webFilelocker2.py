@@ -1506,12 +1506,14 @@ class HTTP_Message:
             sentMessages = fl.get_sent_messages(user, user.userId, messageIdList)
             for message in recvMessages:
                 messageDict = message.get_dict()
-                messageDict['body'] = str(Template("$messageDict['body']", searchList=[locals()], filter=WebSafe))
+                messageBody = strip_tags(cgi.escape(messageDict['body']), True)
+                messageDict['body'] = str(Template("$messageBody", searchList=[locals()], filter=WebSafe))
                 recvMessagesList.append(messageDict)
                 
             for message in sentMessages:
                 messageDict = message.get_dict()
-                messageDict['body'] = str(Template("$messageDict['body']", searchList=[locals()], filter=WebSafe))
+                messageBody = strip_tags(cgi.escape(messageDict['body']), True)
+                messageDict['body'] = str(Template("$messageBody", searchList=[locals()], filter=WebSafe))
                 sentMessagesList.append(messageDict)
             messagesList.append(recvMessagesList)
             messagesList.append(sentMessagesList)
@@ -2238,9 +2240,13 @@ def fl_response(sMessages, fMessages, format, data=None):
     else:
         return "Successes: %s, Failures: %s" % (str(sMessages), str(fMessages))
         
-def strip_tags(value):
+def strip_tags(value, message=False):
     """Return the given HTML with all tags stripped."""
-    return re.sub(r'[^a-zA-Z0-9\.@_+:;=,\s\'/\\\[\]-]', '', value)
+    if message:
+        p = re.compile(r'<.*?>')
+        return p.sub('',value)
+    else:
+        return re.sub(r'[^a-zA-Z0-9\.@_+:;=,\s\'/\\\[\]-]', '', value)
 
 def tail( f, window=20 ):
     try:
