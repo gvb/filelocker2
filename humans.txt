@@ -1,0 +1,19 @@
+/* TEAM */
+  Brett Davis
+  Project Role: Backend Developer, Database Developer
+  Contact: hctv19 [at] gmail.com
+  From: Chicago, Illinois, United States
+
+  Christopher Miller
+  Project Role: Backend Developer, UI/Interaction Developer
+  Contact: chris [at] christophermiller.me
+  Twitter: @cmiller0189
+  Website: christophermiller.me
+  From: Chicago, Illinois, United States
+
+/* SITE */
+  Language: English
+  Tools: Cherrypy Webserver, Cheetah Templates, jQuery, jQuery UI
+  Environment: Ubuntu
+  Source Hosting: SourceForge
+  Twitter: @filelocker
