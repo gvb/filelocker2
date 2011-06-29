@@ -3,7 +3,29 @@
     </div><!--End Wrapper 2 col - Content Area -->
     
 <!-- Begin Lightboxen -->
-
+#if $fl.check_admin($user)
+<div id="updatePasswordBox" class="hidden">
+    <div class="popup_wrapper">
+        <div class="popup_small">
+            <form action="" name="form" id="updatePasswordParameter">
+            <input type="hidden" id="updatePasswordName"/>
+            <div>
+                <label for="updatePassword">Password</label>
+                <input type="password" name="updatePassword" id="updatePassword" />
+            </div>
+            <div>
+                <label for="confirmUpdatePassword">Password</label>
+                <input type="password" name="confirmUpdatePassword" id="confirmUpdatePassword" />
+            </div>
+             <div>
+                <div class="button"><a href="javascript:updateConfigPassword();" title="Update a configuration password" class="acceptButton"><span>Set Password</span></a></div>
+            </div>
+            <div class="clear"></div>
+            </form>
+        </div>
+    </div>
+</div>
+#end if
 <div id="uploadBox" class="hidden">
     <div class="popup_wrapper">
         <div class="popup_small">
@@ -618,7 +640,7 @@
 <div id="bannerBox" class="hidden">
     <div class="popup_wrapper">
         <div class="popup_small">
-            <div class="notes_box">$fl.banner</div>
+            <div class="notes_box">$strip_tags($fl.banner)</div>
             <div class="clear"></div>
         </div>
     </div>

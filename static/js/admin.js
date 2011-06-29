@@ -47,6 +47,10 @@ function initAdmin(tabIndex)
         title: "<span class='statistics'>View System Usage Statistics</span>",
         width: popup_large_width
     }));
+    $("#updatePasswordBox").dialog($.extend({}, modalDefaults, {
+        title: "<span class='statistics'>Update Password</span>",
+        width: popup_small_width
+    }));
     $("#adminLink").removeClass("loading");
     $("#adminLink").addClass("settings");
     if($("#userTable tr").length>0)
@@ -381,6 +385,31 @@ function permissionChecked(userId, permissionId, rowId)
         {
             showMessages(returnData, "revoking permissions");
             promptUpdatePermissions(userId);
+        }, 
+        'json');
+    }
+}
+function showUpdatePassword(parameterName) 
+{ 
+    $("#updatePasswordParameter").val(parameterName);
+    $("#updatePasswordBox").dialog("open"); 
+
+}
+function updateConfigPassword()
+{
+    if ($("#updatePassword").val() == $("#confirmUpdatePassword").val())
+    {
+       var configName = 
+        $.post(FILELOCKER_ROOT+'/admin_interface/update_config_password?format=json', 
+        {
+            parameter: $("#updatePasswordParameter").val(),
+            password: $("#updatePassword").val()
+        }, 
+        function(returnData) 
+        {
+            showMessages(returnData, "updating user");
+            $("#updatePasswordBox").dialog("close");
+            loadAdminInterface(3);
         }, 
         'json');
     }
