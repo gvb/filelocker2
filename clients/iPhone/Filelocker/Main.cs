@@ -22,7 +22,6 @@ namespace Filelocker
 	public partial class AppDelegate : UIApplicationDelegate
 	{
 		UITabBarController primaryViewController;
-		UIAlertView loadingView;
 		// This method is invoked when the application has loaded its UI and its ready to run
 		public override bool FinishedLaunching (UIApplication app, NSDictionary options)
 		{
@@ -77,24 +76,56 @@ namespace Filelocker
 			}
 		}
 		
-		public void startLoading(string title, string message)
+		public void Loading(bool show)
 		{
-			InvokeOnMainThread( delegate {
-				loadingView = new UIAlertView(title, message, null, null, null);
-				loadingView.Show();
-				UIActivityIndicatorView indicator = new UIActivityIndicatorView(UIActivityIndicatorViewStyle.WhiteLarge);
-				indicator.Center = new System.Drawing.PointF(loadingView.Bounds.Size.Width/2, loadingView.Bounds.Size.Height-50);
-				indicator.StartAnimating();
-				loadingView.AddSubview(indicator);	
-			});
+			if (show) 
+			{
+				UIView view = window;
+				if (window.Subviews.Length == 0) 
+				{
+					view = window;
+				} 
+				else 
+				{
+					view = window.Subviews[0];
+					Console.WriteLine("Subview count for window {0}", window.Subviews.Length);
+				}
+				Console.Write("Window bounds {0} {1}", view.Bounds.Width, view.Bounds.Height);
+				//loadingView.View.Frame = new RectangleF(0, 0, view.Bounds.Width, view.Bounds.Height);
+				//loadingView.StartAnimating();
+				//view.AddSubview (loadingView.View);
+			}
+			else 
+			{
+				//loadingView.StopAnimating();
+				//loadingView.View.RemoveFromSuperview();
+			}
 			
 		}
 		
-		public void stopLoading()
+		public string getFilePathByFileId(string fileId)
 		{
-			InvokeOnMainThread(delegate {
-				loadingView.DismissWithClickedButtonIndex(0, true);
-			});
+			string docsPath = Environment.GetFolderPath(Environment.SpecialFolder.Personal);
+			string strFilePath = "";
+			foreach (string filePath in System.IO.Directory.GetFiles(docsPath).ToList())
+			{
+				string fileName = System.IO.Path.GetFileName(filePath);
+				try
+				{
+					string fileExtension = System.IO.Path.GetExtension(fileName);
+					string foundFileId = fileName.Replace(fileExtension, "");
+					if (foundFileId == fileId)
+					{
+						strFilePath = filePath;
+						break;
+					}
+				}
+				catch (Exception e)
+				{
+					Console.WriteLine("Filename {0} failed to remove extension: {1}", fileName, e.Message);
+				}
+			}
+			return strFilePath;
 		}
 
 		

@@ -220,7 +220,6 @@ namespace Filelocker
 				this.DetailTextLabel.Text = details;
 				this.ImageView.Image = UIImage.FromFile(imagePath);
 				GroupShareButton shareButton = new GroupShareButton(new RectangleF (0, 15, 120, 30), sourceGroup, shareFileId);
-				Console.WriteLine("Did I find it in the list? {0}", string.Join(",", sourceGroup.filesSharedWithGroup));
 				shareButton.SetShared(sourceGroup.filesSharedWithGroup.Contains(shareFileId) ? true : false);
 				AccessoryView = shareButton;
 				

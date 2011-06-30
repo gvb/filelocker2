@@ -2,6 +2,7 @@ using System;
 using MonoTouch.UIKit;
 using System.Collections.Generic;
 using MonoTouch.Foundation;
+using System.Threading;
 using System.Drawing;
 namespace Filelocker
 {
@@ -9,6 +10,8 @@ namespace Filelocker
 	{	
 		List<KeyValuePair<string, string>> servers;
 		UIPickerView uipv;
+		UIAlertView _alert;
+		UIActivityIndicatorView _ai;
 		public SettingsViewController (IntPtr handle) : base(handle)
 		{
 			Initialize ();
@@ -32,7 +35,7 @@ namespace Filelocker
 		public override void ViewDidLoad() 
 		{
 			base.ViewDidLoad();
-			Console.WriteLine("View did load for settings");
+			servers = new List<KeyValuePair<string, string>>();
 			tblLogin.Source = new LoginTableSource(new LoginTableEntryFieldDelegate(this));
 			btnVerify.TouchUpInside += delegate {
 				string password = ((LoginTableSource)tblLogin.Source).PasswordEntry.Text;
@@ -54,8 +57,12 @@ namespace Filelocker
 					lblStatus.Text = fe.Message;
 				}
 			};
-			Console.WriteLine("Initializaing view elements");
-			servers = new List<KeyValuePair<string, string>>();
+			btnRefresh.TouchUpInside += delegate {
+				var thread = new Thread(UpdateServers as ThreadStart);
+				ShowAlert("Refreshing Servers List");
+				thread.Start();
+			};
+			
 			UITextField serverEntry = ((LoginTableSource)tblLogin.Source).ServerEntry;
 			UIView keyboardView = serverEntry.InputView;
 
@@ -100,7 +107,6 @@ namespace Filelocker
 			kaBarButtonItems[0] = pickerButton;
 			kaBarButtonItems[1] = closeButton2;
 			kaBar.SetItems(kaBarButtonItems, true);
-			Console.WriteLine("View elements set up, building delegates");
 			//Set up delegates
 			pickerButton.Clicked += delegate {
 				serverEntry.InputView = pickerView;
@@ -114,14 +120,39 @@ namespace Filelocker
 				serverEntry.ResignFirstResponder();
 				serverEntry.BecomeFirstResponder();
 			};
-			Console.WriteLine("Views being set");
 			//Start with picker view
 			serverEntry.InputView = pickerView;
 			serverEntry.InputAccessoryView = paBar;
-			Console.WriteLine("Derp");
 			
 		}
-		
+		[Export("UpdateServers")]
+		void UpdateServers()
+		{
+			using(var pool = new NSAutoreleasePool())
+			{
+				FilelockerConnection.Instance.updateKnownServers();
+				HideAlert();
+			}
+		}
+		public void ShowAlert(string message)
+		{
+			_alert = new UIAlertView("Refreshing Servers List", String.Empty, null, null, null);
+	        _ai = new UIActivityIndicatorView();
+	        _ai.Frame = new System.Drawing.RectangleF(125,50,40,40);
+	        _ai.ActivityIndicatorViewStyle = UIActivityIndicatorViewStyle.WhiteLarge;
+	        _alert.AddSubview(_ai);
+	        _ai.StartAnimating();
+	        _alert.Show();
+		}
+		public void HideAlert()
+		{
+			InvokeOnMainThread(delegate {
+				servers = FilelockerConnection.Instance.readServersFile();
+				ServerPickerDataModel spm = new ServerPickerDataModel(((LoginTableSource)tblLogin.Source).ServerEntry, servers);
+				uipv.Model = spm;
+				_alert.DismissWithClickedButtonIndex(0, true);
+				});
+		}
 		public override void ViewWillAppear (bool animated)
 		{
 			base.ViewWillAppear (animated);
@@ -131,21 +162,21 @@ namespace Filelocker
 			base.ViewDidAppear (animated);
 			try
 			{
-				((AppDelegate) UIApplication.SharedApplication.Delegate).startLoading("Loading stuff", "");
-				servers = FilelockerConnection.Instance.getKnownServers();	
-				ServerPickerDataModel spm = new ServerPickerDataModel(((LoginTableSource)tblLogin.Source).ServerEntry, servers);
-				uipv.Model = spm;
-				((AppDelegate) UIApplication.SharedApplication.Delegate).stopLoading();
+				
+				var documents = Environment.GetFolderPath(Environment.SpecialFolder.Personal);
+				if (!System.IO.File.Exists(System.IO.Path.Combine(documents, "known_servers.xml")))
+				{
+					var thread = new Thread(UpdateServers as ThreadStart);
+					ShowAlert("Getting Servers List");
+					thread.Start();
+				}
 			}
 			catch (FilelockerException fle)
 			{
 				Console.WriteLine("Unable to get the most recent list of servers");
 			}
 		}
-		void HandleLoadingViewCancel (object sender, EventArgs e)
-		{
-			Console.WriteLine("This will work better once everything is asynchronous");
-		}
+		
 		#region Login Table Entry Field Delegate
 		
 		private class LoginTableEntryFieldDelegate : UITextFieldDelegate

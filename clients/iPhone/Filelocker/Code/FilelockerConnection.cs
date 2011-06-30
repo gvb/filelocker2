@@ -13,6 +13,7 @@ namespace Filelocker
 	public class FilelockerConnection
 	{
 		private CookieContainer FLCOOKIE;
+		public Dictionary<string, float>FILE_DOWNLOADS;
 		public string USERID;
 		private string FL_SERVER;
 		private string CLI_KEY;
@@ -26,6 +27,7 @@ namespace Filelocker
 		{
 			FLCOOKIE = new CookieContainer();
 			USER_GROUPS = new List<Group>();
+			FILE_DOWNLOADS = new Dictionary<string, float>();
 			connected = false;
 		}
 		public static FilelockerConnection Instance
@@ -45,13 +47,13 @@ namespace Filelocker
 		{
 			FL_SERVER = server;
 			CLI_KEY = clikey;
+			USERID = username;
 			Dictionary<string, string> postParameters = new Dictionary<string, string>();
             postParameters.Add("userId", username);
             postParameters.Add("CLIkey", CLI_KEY);
             Dictionary<string, string> response = this.postDataToServer(server + "/cli_interface/CLI_login", postParameters, false);
 			if (response["fMessages"].Equals(""))
 			{
-				USERID = username;
 				connected = true;
 				return true;
 			}
@@ -500,7 +502,8 @@ namespace Filelocker
 		
         public Dictionary<string, string> postDataToServer(string server, Dictionary<string, string> postParameters, bool fileDownload) 
         {
-            string responseText = "";
+			
+			string responseText = "";
             // Determine proper handler and get the response.
 			StreamReader reader = null;
 			Stream responseStream = null;
@@ -535,6 +538,7 @@ namespace Filelocker
 	            }
 	            using (response = request.GetResponse())
 	            {			
+					
 					HttpStatusCode statusCode = ((HttpWebResponse)response).StatusCode;
 					if (true) //Check https status code TODO
 					{
@@ -558,9 +562,11 @@ namespace Filelocker
 							}
 							else
 							{
+								long fileSizeBytes = response.ContentLength;
 								var documents = Environment.GetFolderPath(Environment.SpecialFolder.Personal);
-								int bytesProcessed = 0;
+								long bytesProcessed = 0;
 								string fileId = postParameters["fileId"];
+								FILE_DOWNLOADS[fileId] = 0f;
 								string fileExtension = "";
 								for (int i=0;i<response.Headers.Count;++i)
 								{
@@ -597,8 +603,10 @@ namespace Filelocker
 									
 									// Increment total bytes processed
 									bytesProcessed += bytesRead;
+									FILE_DOWNLOADS[fileId] = (((float)bytesProcessed/(float)fileSizeBytes));
 							    } 
 								while (bytesRead > 0);
+								FILE_DOWNLOADS[fileId] = 1f;
 								responseText = "Downloaded";
 								return new Dictionary<string, string>(){{"sMessages",responseText},{"fMessages",""}};
 							}
@@ -737,6 +745,7 @@ namespace Filelocker
 			Dictionary<string, string> postParameters = new Dictionary<string, string>();
             postParameters.Add("fileId", fileId);
             postParameters.Add("format", "cli");
+			FILE_DOWNLOADS[fileId] = 0; //Percentage complete
 			try
 			{
 				this.postDataToServer(FL_SERVER + "/file_interface/download", postParameters, true);
@@ -760,52 +769,77 @@ namespace Filelocker
 			this.HttpUploadFile(FL_SERVER+"/file_interface/upload?format=cli", imageBytes, fileName, postParameters);
 		}
 		
-		public List<KeyValuePair<string, string>> getKnownServers()
+		public List<KeyValuePair<string, string>> readServersFile()
 		{
+			var documents = Environment.GetFolderPath(Environment.SpecialFolder.Personal);
+			string filename = "known_servers.xml";
+			StringBuilder serversXML = new StringBuilder("");
+			using (StreamReader sr = new StreamReader(Path.Combine(documents, filename)))
+            {
+                String line;
+                // Read and display lines from the file until the end of
+                // the file is reached.
+                while ((line = sr.ReadLine()) != null)
+                {
+                    serversXML.Append(line);
+                }
+            }
+			
+			XmlDocument doc = new XmlDocument();
+            doc.LoadXml(serversXML.ToString());
 			List<KeyValuePair<string, string>> knownServers = new List<KeyValuePair<string, string>>();
+            foreach (XmlNode node in doc.ChildNodes)
+            {
+                if (node.Name == "filelocker_servers")
+				{
+					foreach (XmlNode filelockerServer in node)
+					{
+						string serverName = "";
+						string serverURL = "";
+						foreach (XmlNode filelockerServerAttribute in filelockerServer)
+						{
+							if (filelockerServerAttribute.Name.Equals("server_name"))
+							{
+								serverName = filelockerServerAttribute.InnerText;
+							}
+							else if (filelockerServerAttribute.Name.Equals("server_url"))
+							{
+								serverURL = filelockerServerAttribute.InnerText;
+							}
+						}
+						knownServers.Add(new KeyValuePair<string, string>(serverName, serverURL));
+					}
+				}
+            }
+			return knownServers;
+		}
+		public void updateKnownServers()
+		{
 			WebResponse resp=null;
-			Stream stream = null;
-			StreamReader reader = null;
-			string responseText;
+			Stream localStream = null;
+			StringBuilder serversXML = new StringBuilder("");
 			try
 			{
 				HttpWebRequest wr = (HttpWebRequest)WebRequest.Create("https://downloads.sourceforge.net/project/filelocker2/known_servers.xml?r=&ts=1309291508&use_mirror=master");
 				wr.Timeout = 10000;
 				resp = wr.GetResponse();
-				stream = resp.GetResponseStream();
-				using (reader = new StreamReader(stream))
+				var documents = Environment.GetFolderPath(Environment.SpecialFolder.Personal);
+				using (Stream responseStream = resp.GetResponseStream())
             	{
-					responseText = reader.ReadToEnd();
+					int bytesProcessed = 0;
+					string filename = "known_servers.xml";
+					localStream = File.Create(Path.Combine(documents, filename));
+					
+					byte[] buffer = new byte[1024];
+					int bytesRead;
+				    do
+				    {
+						bytesRead = responseStream.Read(buffer, 0, buffer.Length);						
+						localStream.Write(buffer, 0, bytesRead);
+						bytesProcessed += bytesRead;
+				    } 
+					while (bytesRead > 0);
 				}
-				XmlDocument doc = new XmlDocument();
-                doc.LoadXml(responseText);
-                foreach (XmlNode node in doc.ChildNodes)
-                {
-					Console.WriteLine("reading xml document");
-                    if (node.Name == "filelocker_servers")
-					{
-						Console.WriteLine("Found the filelockerserver element");
-						foreach (XmlNode filelockerServer in node)
-						{
-							string serverName = "";
-							string serverURL = "";
-							foreach (XmlNode filelockerServerAttribute in filelockerServer)
-							{
-								if (filelockerServerAttribute.Name.Equals("server_name"))
-								{
-									serverName = filelockerServerAttribute.InnerText;
-									Console.WriteLine("found the servername: "+serverName);
-								}
-								else if (filelockerServerAttribute.Name.Equals("server_url"))
-								{
-									serverURL = filelockerServerAttribute.InnerText;
-								}
-							}
-							knownServers.Add(new KeyValuePair<string, string>(serverName, serverURL));
-						}
-					}
-                }
-				return knownServers;
 			}
 			catch(Exception e)
 			{
@@ -815,8 +849,7 @@ namespace Filelocker
 			finally
 			{
 				if (resp != null) resp.Close();
-				if (reader != null) reader.Close();
-				if (stream != null) stream.Close();
+				if (localStream != null) localStream.Close();
 			}
 		}
 	}

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.IO;
 using MonoTouch.Foundation;
 using MonoTouch.UIKit;
@@ -13,6 +14,7 @@ namespace Filelocker
 		#region Constructors
 		FLFile sourceFile;
 		FilesViewController controller;
+		UIProgressView fileProgress;
 		// The IntPtr and initWithCoder constructors are required for items that need 
 		// to be able to be created from a xib rather than from managed code
 
@@ -59,6 +61,8 @@ namespace Filelocker
 				else
 				{
 					btnDelete.Clicked += delegate {
+						string filePath = ((AppDelegate)UIApplication.SharedApplication.Delegate).getFilePathByFileId(sourceFile.fileId);
+						System.IO.File.Delete(filePath);
 						FilelockerConnection.Instance.deleteFile(sourceFile.fileId);
 						controller.refreshFileList();
 						UIView.BeginAnimations(null,IntPtr.Zero);
@@ -72,8 +76,10 @@ namespace Filelocker
 				this.NavigationItem.SetRightBarButtonItem(btnDelete, true);
 				this.NavigationItem.Title = sourceFile.fileName;
 			}
+			
+			
 		}
-
+		
 	 	class DataSource : UITableViewSource
 		{
 			FileInfoView controller;
@@ -234,11 +240,18 @@ namespace Filelocker
 								}
 								else
 								{
-									((AppDelegate) UIApplication.SharedApplication.Delegate).startLoading("Downloading File", "");
-									FilelockerConnection.Instance.downloadFile(controller.sourceFile.fileId);
-									((AppDelegate) UIApplication.SharedApplication.Delegate).stopLoading();
-									controller.tblFileInfo.CellAt(indexPath).TextLabel.Text = "Open";		
-									controller.sourceFile.downloaded = true;
+									UITableViewCell cell = controller.tblFileInfo.CellAt(indexPath);
+									controller.fileProgress = new UIProgressView(new Rectangle(0,0,100, 40));
+									controller.fileProgress.Progress = 0f;
+									UIView progressView = new UIView(controller.fileProgress.Bounds);
+							
+									progressView.AddSubview(controller.fileProgress);
+									cell.AccessoryView = progressView;
+									var downloadThread = new Thread(DownloadFile as ThreadStart);
+									var updaterThread = new Thread(ProgressUpdater as ThreadStart);
+									cell.TextLabel.Text = "Downloading";
+									downloadThread.Start();
+									updaterThread.Start();
 									tableView.DeselectRow(indexPath, true);
 								}
 								controller.controller.refreshFileList();
@@ -252,6 +265,41 @@ namespace Filelocker
 			{
 				if (editingStyle == UITableViewCellEditingStyle.Delete)
 				{
+				}
+			}
+			
+			[Export("DownloadFile")]
+			public void DownloadFile()
+			{
+				using(var pool = new NSAutoreleasePool())
+				{
+					FilelockerConnection.Instance.downloadFile(controller.sourceFile.fileId);
+					controller.sourceFile.downloaded = true;
+					controller.tblFileInfo.ReloadData();
+				}
+			}
+			[Export("ProgressUpdater")]
+			public void ProgressUpdater()
+			{
+				using(var pool = new NSAutoreleasePool())
+				{
+					float fileProgress = 0f;
+					while (fileProgress < 1f)
+					{
+						try
+						{
+							fileProgress  = FilelockerConnection.Instance.FILE_DOWNLOADS[controller.sourceFile.fileId];
+						}
+						catch (Exception e)
+						{
+							Console.WriteLine("There was a problem updating the status {0}", e.Message);
+						}
+						InvokeOnMainThread(delegate {
+							controller.fileProgress.Progress = fileProgress;
+						});
+						Thread.Sleep(200);
+					}
+					
 				}
 			}
 			

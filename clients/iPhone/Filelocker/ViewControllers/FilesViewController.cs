@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.IO;
 using System.Drawing;
+using System.Threading;
 using System.Runtime.InteropServices;
 using MonoTouch.Foundation;
 using MonoTouch.UIKit;
@@ -15,6 +16,8 @@ namespace Filelocker
 		// The IntPtr and initWithCoder constructors are required for items that need 
 		// to be able to be created from a xib rather than from managed code
 		public bool initialLoadFinished;
+		List<string> validfileIdList;
+		List<string> downloadedFileIds;
 		List<KeyValuePair<string, List<FLFile>>> fileSectionKVPList;
 		public FilesViewController (IntPtr handle) : base(handle)
 		{
@@ -38,6 +41,7 @@ namespace Filelocker
 		public UIImagePickerController picker;
 		public override void ViewDidLoad() 
 		{
+			validfileIdList = new List<string>();
 			base.ViewDidLoad();
 			initialLoadFinished = false;
 			
@@ -97,10 +101,10 @@ namespace Filelocker
 		{
 			if (initialLoadFinished)
 			{
-				((AppDelegate) UIApplication.SharedApplication.Delegate).startLoading("Refreshing Files", "");
+				((AppDelegate) UIApplication.SharedApplication.Delegate).Loading(true);
 			}
 			string docsPath = Environment.GetFolderPath(Environment.SpecialFolder.Personal);
-			List<string> downloadedFileIds = new List<string>();
+			downloadedFileIds = new List<string>();
 			foreach (string filePath in System.IO.Directory.GetFiles(docsPath).ToList())
 			{
 				string fileName = System.IO.Path.GetFileName(filePath);
@@ -116,13 +120,45 @@ namespace Filelocker
 				}
 			}
 			Console.WriteLine("Getting files");
-			fileSectionKVPList = FilelockerConnection.Instance.populatFileList(downloadedFileIds);
-			tblFiles.Source = new DataSource(this);
-			tblFiles.ReloadData();
-			if (initialLoadFinished)
+			try
 			{
-				((AppDelegate) UIApplication.SharedApplication.Delegate).stopLoading();
-			}	
+				fileSectionKVPList = FilelockerConnection.Instance.populatFileList(downloadedFileIds);
+				tblFiles.Source = new DataSource(this);
+				tblFiles.ReloadData();
+				var validFileIds = from flFile in fileSectionKVPList.SelectMany(i=>i.Value) select flFile.fileId;
+				validfileIdList = validFileIds.ToList();
+				var cleanupThread = new Thread(CleanupFiles as ThreadStart); 
+				cleanupThread.Start();
+			}
+			catch (FilelockerException fle)
+			{
+				((AppDelegate) UIApplication.SharedApplication.Delegate).alert("Failed to Refresh Files", fle.Message);
+			}
+			finally
+			{
+				if (initialLoadFinished)
+				{
+					((AppDelegate) UIApplication.SharedApplication.Delegate).Loading(false);
+				}
+			}
+		}
+		
+		[Export("CleanupFiles")]
+		public void CleanupFiles()
+		{
+			using(var pool = new NSAutoreleasePool())
+			{
+				string filePath="";
+				foreach (string fileId in downloadedFileIds)
+				{
+					if (!validfileIdList.Contains(fileId) && !fileId.Contains("known_servers"))
+					{
+						filePath = ((AppDelegate)UIApplication.SharedApplication.Delegate).getFilePathByFileId(fileId);
+						Console.WriteLine("Deleting {0}", filePath);
+						System.IO.File.Delete(filePath);
+					}
+				}
+			}
 		}
 		
 		private class pickerDelegate : UIImagePickerControllerDelegate
@@ -144,9 +180,9 @@ namespace Filelocker
 					byte[] imageBytes = new byte[imageData.Length];
 					int length = (int)imageData.Length;
 					Marshal.Copy(imageData.Bytes, imageBytes, 0, length);
-					((AppDelegate) UIApplication.SharedApplication.Delegate).startLoading("Uploading File", "");
+					((AppDelegate) UIApplication.SharedApplication.Delegate).Loading(true);
 					FilelockerConnection.Instance.upload(imageBytes, fileName, "Uploaded via Filelocker for iPhone");
-					((AppDelegate) UIApplication.SharedApplication.Delegate).stopLoading();
+					((AppDelegate) UIApplication.SharedApplication.Delegate).Loading(false);
 					controller.refreshFileList();
 					picker.DismissModalViewControllerAnimated(true);
 				}
@@ -209,9 +245,7 @@ namespace Filelocker
 					FLFile editFile = controller.fileSectionKVPList[indexPath.Section].Value[indexPath.Row];
 					try
 					{
-						((AppDelegate) UIApplication.SharedApplication.Delegate).startLoading("Deleting File", "");
 						FilelockerConnection.Instance.deleteFile(editFile.fileId);
-						((AppDelegate) UIApplication.SharedApplication.Delegate).stopLoading();
 						controller.fileSectionKVPList[indexPath.Section].Value.Remove(editFile);
 						tableView.DeleteRows(new [] {indexPath}, UITableViewRowAnimation.Fade);
 					}
@@ -222,23 +256,7 @@ namespace Filelocker
 				}
 			}
 		}
-		
-		public class DownloadAlertHandler : UIAlertViewDelegate
-		{
-			//private AppDelegate _appDelegate;
-			public DownloadAlertHandler (FilesViewController controller, string fileId )
-			{
-			}
-		
-			public override void Clicked (UIAlertView alertview, int buttonIndex)
-			{
-//				string fPA = this._appDelegate.FILE_PENDING_APPROVAL;
-//				if (fPA != null && !string.IsNullOrEmpty(fPA))
-//				{
-//					this._appDelegate.FILES_PENDING_DOWNLOAD.Add(fPA);
-//				}
-			}
-		}
+
 		
 		public partial class FileCell : UITableViewCell
 		{

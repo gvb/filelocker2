@@ -161,6 +161,7 @@
     <Folder Include="Settings.bundle\" />
     <Folder Include="Images\" />
     <Folder Include="ViewControllers\" />
+    <Folder Include="bin\" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="Settings.bundle\Root.plist">

@@ -57,6 +57,8 @@ namespace Filelocker {
 		
 		private MonoTouch.UIKit.UILabel __mt_lblStatus;
 		
+		private MonoTouch.UIKit.UIButton __mt_btnRefresh;
+		
 		#pragma warning disable 0169
 		[MonoTouch.Foundation.Connect("tblLogin")]
 		private MonoTouch.UIKit.UITableView tblLogin {
@@ -103,6 +105,18 @@ namespace Filelocker {
 			set {
 				this.__mt_lblStatus = value;
 				this.SetNativeField("lblStatus", value);
+			}
+		}
+		
+		[MonoTouch.Foundation.Connect("btnRefresh")]
+		private MonoTouch.UIKit.UIButton btnRefresh {
+			get {
+				this.__mt_btnRefresh = ((MonoTouch.UIKit.UIButton)(this.GetNativeField("btnRefresh")));
+				return this.__mt_btnRefresh;
+			}
+			set {
+				this.__mt_btnRefresh = value;
+				this.SetNativeField("btnRefresh", value);
 			}
 		}
 	}
