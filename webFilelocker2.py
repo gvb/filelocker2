@@ -54,11 +54,11 @@ def before_upload(**kwargs):
     if cherrypy.session.has_key("uploadTicket") and cherrypy.session.get("uploadTicket") is not None:
         uploadTicket = cherrypy.session.get("uploadTicket")
         #fl = Filelocker(cherrypy.request.app.config)
-        fl = get_app()
+        fl = cherrypy.thread_data.flDict['app']
         user = fl.get_user(uploadTicket.ownerId)
     else:
         requires_login()
-        user, fl, sMessages, fMessages = cherrypy.session.get("user"), get_app(), cherrypy.session.get("sMessages"), cherrypy.session.get("fMessages")
+        user, fl, sMessages, fMessages = cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], cherrypy.session.get("sMessages"), cherrypy.session.get("fMessages")
     vaultSpaceFreeMB, vaultCapacityMB = fl.get_vault_usage()
     cherrypy.response.timeout = 86400
     lcHDRS = {}
@@ -89,7 +89,7 @@ def requires_login(**kwargs):
     cherrypy.response.headers['Pragma']="no-cache"
     cherrypy.response.headers['Cache-Control']="no-cache" 
     format = None
-    fl = get_app()
+    fl = cherrypy.thread_data.flDict['app']
     if cherrypy.request.params.has_key("format"):
         format = cherrypy.request.params['format']
     if cherrypy.session.has_key("user") and cherrypy.session.get('user') is not None:
@@ -144,7 +144,7 @@ class HTTP_Admin:
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def get_all_users(self, start=0, length=50, format="json", **kwargs):
-        user, fl, flUserList, sMessages, fMessages = cherrypy.session.get("user"), get_app(), None, [], []
+        user, fl, flUserList, sMessages, fMessages = cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], None, [], []
         try:
             start, length = int(strip_tags(start)), int(strip_tags(length)) 
             flUsers = fl.get_all_users(user, start, length)
@@ -161,7 +161,7 @@ class HTTP_Admin:
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def get_user_permissions(self, userId, format="json", **kwargs):
-        user, fl, sMessages, fMessages, permissionData = (cherrypy.session.get("user"), get_app(), [], [], [])
+        user, fl, sMessages, fMessages, permissionData = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [], [])
         try:
             if user.userId == userId or fl.check_admin(user): #To prevent user enumeration attacks
                 userPermissions, groupPermissions = fl.get_user_permissions(userId)
@@ -187,7 +187,7 @@ class HTTP_Admin:
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def create_user(self, userId, firstName, lastName, email, quota, isRole, format="json", **kwargs):
-        user, fl, sMessages, fMessages = (cherrypy.session.get("user"), get_app(), [], [])
+        user, fl, sMessages, fMessages = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [])
         try:
             try:
                 quota = int(quota)
@@ -211,7 +211,7 @@ class HTTP_Admin:
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def bulk_create_user(self, quota, password, permissions, format="json", **kwargs):
-        user, fl, sMessages, fMessages = (cherrypy.session.get("user"), get_app(), [], [])
+        user, fl, sMessages, fMessages = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [])
         try:
             permissions = split_list_sanitized(permissions)
             line = cherrypy.request.body.readline()
@@ -239,7 +239,7 @@ class HTTP_Admin:
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def download_user_data(self):
-        user, fl, sMessages, fMessages = (cherrypy.session.get("user"), get_app(), [], [])
+        user, fl, sMessages, fMessages = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [])
         try:
             userList = fl.get_all_users(user, None, None)
             mycsv = ""
@@ -262,7 +262,7 @@ class HTTP_Admin:
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def make_user_role(self, roleUserId, format="json", **kwargs):
-        user, fl, sMessages, fMessages = (cherrypy.session.get("user"), get_app(), [], [])
+        user, fl, sMessages, fMessages = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [])
         try:
             fl.make_role(user, roleUserId)
             sMessages.append("Successfully created a role for user %s. Other users who are granted the permission to assume this role may act on behalf of this user now." % str(roleUserId))
@@ -274,7 +274,7 @@ class HTTP_Admin:
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def delete_user_role(self, roleUserId, format="json", **kwargs):
-        user, fl, sMessages, fMessages = (cherrypy.session.get("user"), get_app(), [], [])
+        user, fl, sMessages, fMessages = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [])
         try:
             fl.delete_role(user, roleUserId)
             sMessages.append("Successfully deleted the role aspect for user %s." % str(roleUserId))
@@ -286,7 +286,7 @@ class HTTP_Admin:
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def grant_user_permission(self, userId, permissionId, format="json", **kwargs):
-        user, fl, sMessages, fMessages = (cherrypy.session.get("user"), get_app(), [], [])
+        user, fl, sMessages, fMessages = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [])
         try:
             fl.grant_user_permission(user, userId, permissionId)
             sMessages.append("User %s granted permission %s" % (userId, permissionId))
@@ -298,7 +298,7 @@ class HTTP_Admin:
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def revoke_user_permission(self, userId, permissionId, format="json", **kwargs):
-        user, fl, sMessages, fMessages = (cherrypy.session.get("user"), get_app(), [], [])
+        user, fl, sMessages, fMessages = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [])
         try:
             fl.revoke_user_permission(user, userId, permissionId)
             sMessages.append("User permission revoked")
@@ -310,7 +310,7 @@ class HTTP_Admin:
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def update_filelocker_user(self, userId, quota, email, firstName, lastName, password, confirmPassword, isRole, format="json", **kwargs):
-        user, fl, sMessages, fMessages = (cherrypy.session.get("user"), get_app(), [], [])
+        user, fl, sMessages, fMessages = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [])
         try:
             userId = strip_tags(userId)
             updateUser = fl.get_user(userId)
@@ -345,7 +345,7 @@ class HTTP_Admin:
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def get_vault_usage(self, format="json", **kwargs):
-        user, fl, sMessages, fMessages, vaultUsedMB, vaultCapacityMB = (cherrypy.session.get("user"), get_app(), [], [], 0, 0)
+        user, fl, sMessages, fMessages, vaultUsedMB, vaultCapacityMB = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [], 0, 0)
         try:
             vaultSpaceFreeMB, vaultCapacityMB = fl.get_vault_usage()
             vaultUsedMB = vaultCapacityMB - vaultSpaceFreeMB
@@ -358,7 +358,7 @@ class HTTP_Admin:
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def delete_users(self, userIds, format="json", **kwargs):
-        user, fl, sMessages, fMessages = (cherrypy.session.get("user"), get_app(), [], [])
+        user, fl, sMessages, fMessages = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [])
         userIds = split_list_sanitized(userIds)
         try:
             for userId in userIds:
@@ -378,7 +378,7 @@ class HTTP_Admin:
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def update_local_directory_user(self, userId, firstName, lastName, email, format="json", **kwargs):
-        user, fl, sMessages, fMessages = (cherrypy.session.get("user"), get_app(), [], [])
+        user, fl, sMessages, fMessages = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [])
         password = None
         if kwargs.has_key("password"):
             password = kwargs['password']
@@ -397,7 +397,7 @@ class HTTP_Admin:
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def update_server_config(self, format="json", **kwargs):
-        user, fl, sMessages, fMessages = (cherrypy.session.get("user"), get_app(), [], [])
+        user, fl, sMessages, fMessages = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [])
         configParameterList = []
         try:
             for key in kwargs:
@@ -424,7 +424,7 @@ class HTTP_Admin:
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def update_config_password(self, parameter, password, format="json", **kwargs):
-        user, fl, sMessages, fMessages = (cherrypy.session.get("user"), get_app(), [], [])
+        user, fl, sMessages, fMessages = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [])
         parameterName = parameter
         try:
             configParameterList = [Parameter(parameterName,None, "text", password),]
@@ -440,7 +440,7 @@ class HTTP_Admin:
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def create_attribute(self, attributeName, attributeId, format="json", **kwargs):
-        user, fl, sMessages, fMessages = (cherrypy.session.get("user"), get_app(), [], [])
+        user, fl, sMessages, fMessages = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [])
         try:
             attributeName = strip_tags(attributeName)
             attributeId = strip_tags(attributeId)
@@ -462,7 +462,7 @@ class HTTP_Admin:
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def delete_attributes(self, attributeIds, format="json", **kwargs):
-        user, fl, sMessages, fMessages = (cherrypy.session.get("user"), get_app(), [], [])
+        user, fl, sMessages, fMessages = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [])
         try:
             attributeIdList = split_list_sanitized(attributeIds)
             for attributeId in attributeIdList:
@@ -478,7 +478,7 @@ class HTTP_Admin:
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def get_template_text(self, templateName, format="json", **kwargs):
-        user, fl, sMessages, fMessages, templateText = (cherrypy.session.get("user"), get_app(), [], [], "")
+        user, fl, sMessages, fMessages, templateText = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [], "")
         try:
             if fl.check_admin(user):
                 templateName = strip_tags(templateName)
@@ -497,7 +497,7 @@ class HTTP_Admin:
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def save_template(self, templateName, templateText, format="json", **kwargs):
-        user, fl, sMessages, fMessages = (cherrypy.session.get("user"), get_app(), [], [])
+        user, fl, sMessages, fMessages = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [])
         try:
             templateName = strip_tags(templateName)
             fl.save_custom_template(user, templateName, templateText)
@@ -514,7 +514,7 @@ class HTTP_Admin:
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def revert_template(self, templateName, format="json", **kwargs):
-        user, fl, sMessages, fMessages, templateText = (cherrypy.session.get("user"), get_app(), [], [], "")
+        user, fl, sMessages, fMessages, templateText = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [], "")
         try:
             templateName = strip_tags(templateName)
             fl.delete_custom_template(user, templateName)
@@ -532,7 +532,7 @@ class HTTP_Groups:
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def create_group(self, groupName, groupMemberIds=None, groupScope=None, format="json", **kwargs):
-        user, fl, sMessages, fMessages = (cherrypy.session.get("user"), get_app(), [], [])
+        user, fl, sMessages, fMessages = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [])
         if groupMemberIds is not None:
             groupMemberIds = split_list_sanitized(groupMemberIds)
         else:
@@ -556,7 +556,7 @@ class HTTP_Groups:
     @cherrypy.tools.requires_login()
     @cherrypy.expose
     def delete_group(self, groupId, format="json", **kwargs):
-        user, fl, sMessages, fMessages  = (cherrypy.session.get("user"), get_app(), [], [])
+        user, fl, sMessages, fMessages  = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [])
         groupIdList = split_list_sanitized(groupId)
         for groupId in groupIdList:
             try:
@@ -570,7 +570,7 @@ class HTTP_Groups:
     @cherrypy.tools.requires_login()
     @cherrypy.expose
     def update_group(self, groupId, users=None, groupName=None, groupScope="private", format="json", **kwargs):
-        user, fl, sMessages, fMessages  = (cherrypy.session.get("user"), get_app(), [], [])
+        user, fl, sMessages, fMessages  = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [])
         try:
             userIds = split_list_sanitized(users)
             groupName = strip_tags(groupName)
@@ -585,7 +585,7 @@ class HTTP_Groups:
     @cherrypy.tools.requires_login()
     @cherrypy.expose
     def remove_user_from_group(self, userId, groupId, format="json", **kwargs):
-        user, fl, sMessages, fMessages = (cherrypy.session.get("user"), get_app(), [], [])
+        user, fl, sMessages, fMessages = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [])
         userIds = split_list_sanitized(userId)
         for memberId in userIds:
             try:
@@ -599,7 +599,7 @@ class HTTP_Groups:
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def add_user_to_group(self, userId, groupId, format="json", **kwargs):
-        user, fl, sMessages, fMessages  = (cherrypy.session.get("user"), get_app(), [], [])
+        user, fl, sMessages, fMessages  = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [])
         groupIdList = split_list_sanitized(groupId)
         for groupIdFromList in groupIdList:
             try:
@@ -612,7 +612,7 @@ class HTTP_Groups:
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def get_group_members(self, groupId, format="searchbox_html", **kwargs):
-        user, fl = (cherrypy.session.get("user"), get_app())
+        user, fl = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'])
         group = fl.get_group(user, groupId)
         searchWidget = HTTP_User.get_search_widget(HTTP_User(), "manage_groups")
         templateFile = fl.get_template_file('view_group.tmpl')
@@ -622,7 +622,7 @@ class HTTP_Groups:
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def get_groups(self, format="json"):
-        user, fl, sMessages, fMessages = (cherrypy.session.get("user"), get_app(), [], [])
+        user, fl, sMessages, fMessages = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [])
         try:
             groups = fl.get_user_groups(user, user.userId)
             groups = sorted(groups, key=lambda k: k.groupId)
@@ -640,7 +640,7 @@ class HTTP_Share:
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def create_private_share(self, fileIds, targetId=None, groupId=None, notify="yes", format="json", **kwargs):
-        user, fl, sMessages, fMessages  = (cherrypy.session.get("user"), get_app(), [], [])
+        user, fl, sMessages, fMessages  = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [])
         fileIds = split_list_sanitized(fileIds)
         if targetId == "":
             targetId = None
@@ -669,7 +669,7 @@ class HTTP_Share:
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def create_private_attribute_shares(self, fileIds, attributeId, format="json", **kwargs):
-        user, fl, sMessages, fMessages  = (cherrypy.session.get("user"), get_app(), [], [])
+        user, fl, sMessages, fMessages  = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [])
         try:
             fileIds = split_list_sanitized(fileIds)
             for fileId in fileIds:
@@ -683,7 +683,7 @@ class HTTP_Share:
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def delete_private_attribute_shares(self, fileIds, attributeId, format="json", **kwargs):
-        user, fl, sMessages, fMessages  = (cherrypy.session.get("user"), get_app(), [], [])
+        user, fl, sMessages, fMessages  = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [])
         try:
             fileIdList = split_list_sanitized(fileIds)
             for fileId in fileIdList:
@@ -697,7 +697,7 @@ class HTTP_Share:
     @cherrypy.expose    
     @cherrypy.tools.requires_login()
     def create_public_share(self, fileId, expiration, shareType, notifyEmails, format="json", **kwargs):
-        user, fl, sMessages, fMessages, shareId = (cherrypy.session.get("user"), get_app(), [], [], None)
+        user, fl, sMessages, fMessages, shareId = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [], None)
         fileId = strip_tags(fileId)
         try:
             expiration = datetime.datetime(*(time.strptime(strip_tags(expiration), "%m/%d/%Y")[0:6]))
@@ -724,7 +724,7 @@ class HTTP_Share:
     @cherrypy.expose    
     @cherrypy.tools.requires_login()
     def delete_public_share(self, fileId, format="json", **kwargs):
-        user, fl, sMessages, fMessages = (cherrypy.session.get("user"), get_app(), [], [])
+        user, fl, sMessages, fMessages = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [])
         fileId = strip_tags(fileId)
         try:
             fl.delete_public_share(user, fileId)
@@ -737,7 +737,7 @@ class HTTP_Share:
     @cherrypy.expose     
     @cherrypy.tools.requires_login()
     def delete_share(self, fileIds, targetId=None, shareType="private", format="json"):
-        user, fl, sMessages, fMessages = (cherrypy.session.get("user"), get_app(), [], [])
+        user, fl, sMessages, fMessages = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [])
         shareType = strip_tags(shareType.lower())
         fileIds = split_list_sanitized(fileIds)
         for fileId in fileIds:
@@ -778,7 +778,7 @@ class HTTP_Share:
     @cherrypy.expose     
     @cherrypy.tools.requires_login()
     def unhide_all_shares(self, format="json"):
-        user, fl, sMessages, fMessages = (cherrypy.session.get("user"), get_app(), [], [])
+        user, fl, sMessages, fMessages = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [])
         try:
             fl.unhide_all_private_shares(user)
             sMessages.append("Successfully unhid shares")
@@ -790,7 +790,7 @@ class HTTP_Share:
     @cherrypy.expose     
     @cherrypy.tools.requires_login()
     def hide_share(self, fileIds, format="json"):
-        user, fl, sMessages, fMessages = (cherrypy.session.get("user"), get_app(), [], [])
+        user, fl, sMessages, fMessages = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [])
         fileIds = split_list_sanitized(fileIds)
         for fileId in fileIds:
             try:
@@ -805,7 +805,7 @@ class HTTP_File:
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def get_quota_usage(self, format="json", **kwargs):
-        user, fl, sMessages, fMessages, quotaMB, quotaUsed = (cherrypy.session.get("user"), get_app(), [], [], 0, 0)
+        user, fl, sMessages, fMessages, quotaMB, quotaUsed = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [], 0, 0)
         try:
             quotaMB = user.userQuota
             quotaUsedMB = fl.get_user_quota_usage(user, user.userId) / 1024 / 1024
@@ -817,7 +817,7 @@ class HTTP_File:
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def get_download_statistics(self, fileId, startDate=None, endDate=None, format="json", **kwargs):
-        user, fl, sMessages, fMessages, stats = (cherrypy.session.get("user"), get_app(), [], [], None)
+        user, fl, sMessages, fMessages, stats = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [], None)
         try:
             startDateFormatted, endDateFormatted = None, None
             thirtyDays = datetime.timedelta(days=30)
@@ -840,7 +840,7 @@ class HTTP_File:
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def get_hourly_statistics(self, format="json", **kwargs):
-        user, fl, sMessages, fMessages, stats = (cherrypy.session.get("user"), get_app(), [], [], None)
+        user, fl, sMessages, fMessages, stats = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [], None)
         try:
             stats = fl.get_hourly_statistics(user)
         except FLError, fle:
@@ -851,7 +851,7 @@ class HTTP_File:
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def get_daily_statistics(self, format="json", **kwargs):
-        user, fl, sMessages, fMessages, stats = (cherrypy.session.get("user"), get_app(), [], [], None)
+        user, fl, sMessages, fMessages, stats = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [], None)
         try:
             stats = fl.get_daily_statistics(user)
         except FLError, fle:
@@ -862,7 +862,7 @@ class HTTP_File:
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def get_monthly_statistics(self, format="json", **kwargs):
-        user, fl, sMessages, fMessages, stats = (cherrypy.session.get("user"), get_app(), [], [], None)
+        user, fl, sMessages, fMessages, stats = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [], None)
         try:
             stats = fl.get_monthly_statistics(user)
         except FLError, fle:
@@ -877,7 +877,7 @@ class HTTP_File:
         
         Oh god this function makes so many database calls, there may be a more efficient way to do this as the scope
         of this function kept getting bigger and bigger. Please someone rewrite this!!!"""
-        user, fl, sMessages, fMessages = (cherrypy.session.get("user"), get_app(), [], [])
+        user, fl, sMessages, fMessages = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [])
         userId = user.userId
         if kwargs.has_key("userId"):
             userId = kwargs['userId']
@@ -975,7 +975,7 @@ class HTTP_File:
     @cherrypy.tools.requires_login()
     def get_files_shared_with_user_list(self, fileIdList=None, format="json", **kwargs):
         #Determine which files are shared with the user
-        user, fl, sMessages, fMessages = (cherrypy.session.get("user"), get_app(), [], [])
+        user, fl, sMessages, fMessages = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [])
         sharedFilesList = []
         for sharedFile in fl.get_files_shared_with_user(user, user.userId):
             sharedFile.documentType = "document_shared_in"
@@ -994,7 +994,7 @@ class HTTP_File:
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def take_file(self, fileId, format="json", **kwargs):
-        user, fl, sMessages, fMessages = (cherrypy.session.get("user"), get_app(), [], [])
+        user, fl, sMessages, fMessages = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [])
         try:
             fl.duplicate_and_take_file(user, fileId)
             flFile = fl.get_file(user, fileId)
@@ -1007,7 +1007,7 @@ class HTTP_File:
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def delete_files(self, fileIds=None, format="json", **kwargs):
-        user, fl, sMessages, fMessages = (cherrypy.session.get("user"), get_app(), [], [])
+        user, fl, sMessages, fMessages = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [])
         fileIds = split_list_sanitized(fileIds)
         for fileId in fileIds:
             try:
@@ -1026,7 +1026,7 @@ class HTTP_File:
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def update_file(self, fileId, format="json", **kwargs):
-        user, fl, sMessages, fMessages = (cherrypy.session.get("user"), get_app(), [], [])
+        user, fl, sMessages, fMessages = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [])
         fileId = strip_tags(fileId)
         try:
             flFile = fl.get_file(user, fileId)
@@ -1049,7 +1049,7 @@ class HTTP_File:
     @cherrypy.expose
     @cherrypy.tools.before_upload()
     def upload(self, format="json", **kwargs):
-        fl, user, sMessages, fMessages, uploadTicket, newFile, uploadKey, uploadIndex, uploadTicket, createdFile = get_app(), None, [], [], None, None, None, None, None, None
+        fl, user, sMessages, fMessages, uploadTicket, newFile, uploadKey, uploadIndex, uploadTicket, createdFile = cherrypy.thread_data.flDict['app'], None, [], [], None, None, None, None, None, None
         if cherrypy.session.has_key("uploadTicket") and cherrypy.session.get("uploadTicket") is not None:
             uploadTicket = cherrypy.session.get("uploadTicket")
             user = fl.get_user(uploadTicket.ownerId)
@@ -1242,7 +1242,7 @@ class HTTP_File:
     @cherrypy.tools.requires_login()
     def download(self, fileId, **kwargs):
         cherrypy.response.timeout = 36000
-        user, fl, sMessages, fMessages = (cherrypy.session.get("user"), get_app(), [], [])
+        user, fl, sMessages, fMessages = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [])
         cherrypy.session.release_lock()
         try:
             flFile = fl.get_file(user, fileId)
@@ -1259,7 +1259,7 @@ class HTTP_File:
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def generate_upload_ticket(self, password, expiration, scanFile, requestType, maxFileSize=None, emailAddresses=None, personalMessage=None, format="json", **kwargs):
-        fl, user, uploadURL, sMessages, fMessages = get_app(), cherrypy.session.get("user"), "", [], []
+        fl, user, uploadURL, sMessages, fMessages = cherrypy.thread_data.flDict['app'], cherrypy.session.get("user"), "", [], []
         try:
             expiration = datetime.datetime(*time.strptime(strip_tags(expiration), "%m/%d/%Y")[0:5])
             if expiration < datetime.datetime.now():
@@ -1309,7 +1309,7 @@ class HTTP_File:
     @cherrypy.expose 
     @cherrypy.tools.requires_login()
     def delete_upload_ticket(self, ticketId, format="json"):
-        fl, user, uploadURL, sMessages, fMessages = get_app(), cherrypy.session.get("user"), "", [], []
+        fl, user, uploadURL, sMessages, fMessages = cherrypy.thread_data.flDict['app'], cherrypy.session.get("user"), "", [], []
         try:
             ticketId = strip_tags(ticketId)
             fl.delete_upload_ticket(user, ticketId)
@@ -1337,7 +1337,7 @@ class HTTP_File:
         """
         success, message = (True, "")
         if fl is None:
-            fl = get_app()
+            fl = cherrypy.thread_data.flDict['app']
         if user is None:
             user = cherrypy.session.get("user")
         disposition = "attachment"
@@ -1382,7 +1382,7 @@ class HTTP_File:
             raise he
             
     def enc_file_generator(self, user, decrypter, dFile, fileId=None, publicShareId=None):
-        fl = get_app()
+        fl = cherrypy.thread_data.flDict['app']
         endOfFile = False
         readData = dFile.read(1024*8)
         data = decrypter.decrypt(readData)
@@ -1456,7 +1456,7 @@ class HTTP_Message:
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def send_message(self, subject, body, recipientIds, expiration, format="json", **kwargs):
-        fl, user, sMessages, fMessages = get_app(), cherrypy.session.get("user"), [], []
+        fl, user, sMessages, fMessages = cherrypy.thread_data.flDict['app'], cherrypy.session.get("user"), [], []
         try:
             recipientIdList = split_list_sanitized(recipientIds)
             subject= strip_tags(subject)
@@ -1486,7 +1486,7 @@ class HTTP_Message:
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def get_new_message_count(self, format="json", **kwargs):
-        fl, user, sMessages, fMessages, newMessageCount = get_app(), cherrypy.session.get("user"), [], [], []
+        fl, user, sMessages, fMessages, newMessageCount = cherrypy.thread_data.flDict['app'], cherrypy.session.get("user"), [], [], []
         try:
             newMessageCount = fl.get_new_message_count(user)
         except FLError, fle:
@@ -1497,7 +1497,7 @@ class HTTP_Message:
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def get_messages(self, format="json", **kwargs):
-        fl, user, sMessages, fMessages = get_app(), cherrypy.session.get("user"), [], []
+        fl, user, sMessages, fMessages = cherrypy.thread_data.flDict['app'], cherrypy.session.get("user"), [], []
         messagesList, recvMessagesList, sentMessagesList, messageIdList = [], [], [], None
         try:
             if kwargs.has_key("messageIds"):
@@ -1525,7 +1525,7 @@ class HTTP_Message:
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def read_message(self, messageId, format="json", **kwargs):
-        fl, user, sMessages, fMessages = get_app(), cherrypy.session.get("user"), [], []
+        fl, user, sMessages, fMessages = cherrypy.thread_data.flDict['app'], cherrypy.session.get("user"), [], []
         try:
             fl.read_message(user, messageId)
         except FLError, fle:
@@ -1536,7 +1536,7 @@ class HTTP_Message:
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def delete_messages(self, messageIds, format="json", **kwargs):
-        fl, user, sMessages, fMessages = get_app(), cherrypy.session.get("user"), [], []
+        fl, user, sMessages, fMessages = cherrypy.thread_data.flDict['app'], cherrypy.session.get("user"), [], []
         try:
             messageIdList = split_list_sanitized(messageIds)
             for messageId in messageIdList:
@@ -1551,7 +1551,7 @@ class HTTP_User:
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def update_user(self, emailAddress, format="json", **kwargs):
-        fl, user, sMessages, fMessages = get_app(), cherrypy.session.get("user"), [], []
+        fl, user, sMessages, fMessages = cherrypy.thread_data.flDict['app'], cherrypy.session.get("user"), [], []
         updatedUserObject = User(user.userFirstName, user.userLastName, emailAddress, user.userQuota, user.userLastLogin, user.userTosAcceptDatetime, user.userId)
         try:
             if kwargs.has_key("password") and kwargs.has_key("confirmPassword"):
@@ -1572,7 +1572,7 @@ class HTTP_User:
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def switch_roles(self, roleUserId=None, format="json", **kwargs):
-        user, fl= (cherrypy.session.get("user"), get_app())
+        user, fl= (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'])
         try:
             if roleUserId is None:
                 cherrypy.session['user'] = fl.get_user(cherrypy.session.get("original_user").userId, True)
@@ -1590,7 +1590,7 @@ class HTTP_User:
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def get_search_widget(self, context, **kwargs):
-        user, fl, sMessages, fMessages = (cherrypy.session.get("user"), get_app(), [], [])
+        user, fl, sMessages, fMessages = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [])
         groups = fl.get_user_groups(user, user.userId)
         userShareableAttributes = fl.get_available_attributes_by_user(user)
         tpl = Template(file=fl.get_template_file('search_widget.tmpl'), searchList=[locals(),globals()])  
@@ -1599,7 +1599,7 @@ class HTTP_User:
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def search_users(self, firstName=None, lastName=None, userId=None, format="json", external=False, **kwargs):
-        user, fl, foundUsersJSON, sMessages, fMessages = (cherrypy.session.get("user"), get_app(), [], [], [])
+        user, fl, foundUsersJSON, sMessages, fMessages = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [], [])
         tooManyResults = False
         if external == "true":
             external = True
@@ -1650,7 +1650,7 @@ class HTTP_CLI:
     
     @cherrypy.expose
     def register_client(self, username, password, hostIPv4="", hostIPv6="", **kwargs):
-        fl, authType, authenticated, sMessages, fMessages, cliKey = get_app(), None, False, [], [], None
+        fl, authType, authenticated, sMessages, fMessages, cliKey = cherrypy.thread_data.flDict['app'], None, False, [], [], None
         if kwargs.has_key("authType"):
             authType = kwargs['authType']
         else:
@@ -1699,7 +1699,7 @@ class HTTP_CLI:
         
     @cherrypy.expose
     def CLI_login(self, CLIkey, userId):
-        fl, sMessages, fMessages = (get_app(), [], [])
+        fl, sMessages, fMessages = (cherrypy.thread_data.flDict['app'], [], [])
         hostIP = cherrypy.request.remote.ip
         if(self.validIPv4.match(hostIP)):
             hostIPv4 = hostIP
@@ -1723,7 +1723,7 @@ class HTTP_CLI:
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def create_CLIkey(self, hostIPv4, hostIPv6, format="json", **kwargs):
-        user, fl, sMessages, fMessages = (cherrypy.session.get("user"), get_app(), [], [])
+        user, fl, sMessages, fMessages = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [])
         hostIPv4 = strip_tags(hostIPv4)
         if hostIPv6 != "":
             hostIPv6 = self.expand_IPv6(strip_tags(hostIPv6))
@@ -1741,7 +1741,7 @@ class HTTP_CLI:
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def get_CLIkey_list(self, format="json", **kwargs):
-        user, fl, sMessages, fMessages, CLIKeysList = (cherrypy.session.get("user"), get_app(), [], [], [])
+        user, fl, sMessages, fMessages, CLIKeysList = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [], [])
         try:
             CLIKeys = fl.get_CLIkey_list(user.userId)
             for CLIKey in CLIKeys:
@@ -1754,7 +1754,7 @@ class HTTP_CLI:
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def delete_CLIkey(self, hostIPv4, hostIPv6, format="json", **kwargs):
-        user, fl, sMessages, fMessages = (cherrypy.session.get("user"), get_app(), [], [])
+        user, fl, sMessages, fMessages = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [])
         hostIPv4 = strip_tags(hostIPv4)
         if hostIPv6 != "":
             hostIPv6 = self.expand_IPv6(strip_tags(hostIPv6))
@@ -1772,7 +1772,7 @@ class HTTP_CLI:
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def download_CLIconf(self, CLIKey, **kwargs):
-        fl = get_app()
+        fl = cherrypy.thread_data.flDict['app']
         try:
             response = cherrypy.response
             response.headers['Cache-Control'] = "no-cache"
@@ -1837,7 +1837,7 @@ class Root:
 
     @cherrypy.expose
     def login(self, **kwargs):
-        fl, msg, errorMessage, authType = (get_app(), None, None, None)
+        fl, msg, errorMessage, authType = (cherrypy.thread_data.flDict['app'], None, None, None)
         if kwargs.has_key("msg"):
             msg = kwargs['msg']
         if kwargs.has_key("authType"):
@@ -1869,14 +1869,14 @@ class Root:
         
     @cherrypy.expose
     def expired_text(self, **kwargs):
-        fl = get_app()
+        fl = cherrypy.thread_data.flDict['app']
         tpl = Template(file=fl.get_template_file('expired.tmpl'), searchList=[locals(), globals()])
         return str(tpl)
 
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def logout(self):
-        fl = get_app()
+        fl = cherrypy.thread_data.flDict['app']
         if fl.authType == "cas":
             casLogoutUrl =  fl.CAS.logout_url()+"?redirectUrl="+fl.rootURL+"/logout_cas"
             currentYear = datetime.date.today().year
@@ -1890,7 +1890,7 @@ class Root:
         
     @cherrypy.expose
     def logout_cas(self):
-        fl = get_app()
+        fl = cherrypy.thread_data.flDict['app']
         currentYear = datetime.date.today().year
         footerText = str(Template(file=fl.get_template_file('footer_text.tmpl'), searchList=[locals(),globals()]))
         tpl = Template(file=fl.get_template_file('cas_logout_confirmation.tmpl'), searchList=[locals(), globals()])
@@ -1898,7 +1898,7 @@ class Root:
         
     @cherrypy.expose
     def process_login(self, username, password, **kwargs):
-        fl, authType = get_app(), None
+        fl, authType = cherrypy.thread_data.flDict['app'], None
         if kwargs.has_key("authType"):
             authType = kwargs['authType']
         else:
@@ -1936,7 +1936,7 @@ class Root:
     
     @cherrypy.expose
     def css(self, style):
-        fl = get_app()
+        fl = cherrypy.thread_data.flDict['app']
         cherrypy.response.headers['Content-Type'] = 'text/css'
         staticDir = os.path.join(fl.rootURL,"static")
         tplPath = None
@@ -1951,7 +1951,7 @@ class Root:
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def index(self, **kwargs):
-        user, fl, originalUser = (cherrypy.session.get("user"), get_app(), cherrypy.session.get("original_user"))
+        user, fl, originalUser = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], cherrypy.session.get("original_user"))
         roles = fl.get_user_roles(user)
         defaultExpiration = datetime.date.today() + (datetime.timedelta(days=fl.maxFileLifeDays))
         currentYear = datetime.date.today().year
@@ -1981,7 +1981,7 @@ class Root:
     
     @cherrypy.expose
     def sign_tos(self, **kwargs):
-        fl = get_app()
+        fl = cherrypy.thread_data.flDict['app']
         if cherrypy.session.has_key("user") and cherrypy.session.get("user") is not None:
             user = cherrypy.session.get("user")
             roles = fl.get_user_roles(user)
@@ -2003,7 +2003,7 @@ class Root:
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def admin(self, **kwargs):
-        user, fl = (cherrypy.session.get("user"), get_app())
+        user, fl = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'])
         userFiles = self.file_interface.get_user_file_list(format="list")
         templateFiles = os.listdir(fl.templatePath)
         configParameters = fl.get_config(user)
@@ -2037,7 +2037,7 @@ class Root:
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def history(self, userId=None, startDate=None, endDate=None, logAction=None, format="html", **kwargs):
-        sMessages, fMessages, user, fl = ([],[],cherrypy.session.get("user"), get_app())
+        sMessages, fMessages, user, fl = ([],[],cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'])
         actionList, actionLogList = ([], [])
         try:
             startDateFormatted, endDateFormatted = None, None
@@ -2080,7 +2080,7 @@ class Root:
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def files(self, **kwargs):
-        user, fl, systemFiles = (cherrypy.session.get("user"), get_app(), [])
+        user, fl, systemFiles = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [])
         if fl.check_admin(user):
             systemFiles = self.file_interface.get_user_file_list(format="list", userId="system")
         groups = fl.get_user_groups(user, user.userId)
@@ -2095,14 +2095,14 @@ class Root:
         
     @cherrypy.expose
     def help(self, **kwargs):
-        fl = get_app()
+        fl = cherrypy.thread_data.flDict['app']
         tpl = Template(file=fl.get_template_file('halp.tmpl'), searchList=[locals(),globals()])  
         return str(tpl)
         
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def manage_groups(self, **kwargs):
-        user, fl = (cherrypy.session.get("user"), get_app())
+        user, fl = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'])
         groups = fl.get_user_groups(user, user.userId)
         tpl = Template(file=fl.get_template_file('manageGroups.tmpl'), searchList=[locals(),globals()])  
         return str(tpl)
@@ -2114,7 +2114,7 @@ class Root:
     @cherrypy.expose
     def public_upload(self, ticketId=None, password=None, **kwargs):
         #TODO: This logic I know can be cleaned up somehow
-        ticketOwner, uploadTicket, tpl, fl, messages  = (None, None, None, get_app(), [])
+        ticketOwner, uploadTicket, tpl, fl, messages  = (None, None, None, cherrypy.thread_data.flDict['app'], [])
         defaultExpiration = datetime.date.today() + (datetime.timedelta(days=fl.maxFileLifeDays))
         ticketFiles = []
         if ticketId is not None and ticketId != "":
@@ -2171,7 +2171,7 @@ class Root:
         cherrypy.response.timeout = 36000
         shareId = strip_tags(shareId)
         try:
-            fl = get_app()
+            fl = cherrypy.thread_data.flDict['app']
             password = None
             if kwargs.has_key("password"):
                password = kwargs['password']
@@ -2212,7 +2212,7 @@ class Root:
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def download_filelocker_client(self, platform, **kwargs):
-        fl = get_app()
+        fl = cherrypy.thread_data.flDict['app']
         if platform=="cli":
             return serve_file(os.path.join(fl.clientPath,"cliFilelocker.py"), "application/x-download", "attachment")
         #elif platform="windows":
@@ -2234,7 +2234,7 @@ def fl_response(sMessages, fMessages, format, data=None):
     elif format=="autocomplete":
         pass
     elif format=="cli":
-        fl = get_app()
+        fl = cherrypy.thread_data.flDict['app']
         tpl = str(Template(file=fl.get_template_file('cli_response.tmpl'), searchList=[locals(),globals()]))
         return str(tpl)
     else:
@@ -2300,7 +2300,7 @@ def tail( f, window=20 ):
     #cherrypy.response.cookie["filelocker"] = cherrypy.session.id
 
 def error(status, message, traceback, version):
-    fl = get_app()
+    fl = cherrypy.thread_data.flDict['app']
     currentYear = datetime.date.today().year
     footerText = str(Template(file=fl.get_template_file('footer_text.tmpl'), searchList=[locals(),globals()]))
     tpl = str(Template(file=fl.get_template_file('error.tmpl'), searchList=[locals(),globals()]))
@@ -2315,7 +2315,7 @@ def split_list_sanitized(cs_list):
     return cleanList 
 
 def get_temp_file():
-    fl = get_app()
+    fl = cherrypy.thread_data.flDict['app']
     fileList, filePrefix, fileSuffix = os.listdir(fl.vault), "[%s]fltmp" % str(fl.clusterMemberId), ".tmp"
     randomNumber = random.randint(1, 1000000)
     tempFileName = os.path.join(fl.vault, filePrefix + str(randomNumber) + fileSuffix)
@@ -2341,7 +2341,7 @@ class myFieldStorage(cherrypy._cpcgifs.FieldStorage):
                 if len(cherrypy.file_transfers[uploadKey]) == 0:
                     del cherrypy.file_transfers[uploadKey]
             if os.path.isfile(self.file_location):
-                fl = get_app()
+                fl = cherrypy.thread_data.flDict['app']
                 tempFileName = self.file_location.split(os.path.sep)[-1]
                 fl.queue_for_deletion(tempFileName)
         except KeyError:
@@ -2437,16 +2437,6 @@ def fl_connect(threadIndex):
     cherrypy.thread_data.flDict = flDict
     cherrypy.FLThreads.append(cherrypy.thread_data.flDict)
     cherrypy.thread_data.db = cherrypy.thread_data.flDict['app'].db.get_db()
-
-def get_app():
-    fl = None
-    try:
-        fl = cherrypy.thread_data.flDict['app']
-    except AttributeError, ae:
-        flDict = {'app': Filelocker(cherrypy.request.app.config)} #This is silly, but necessary
-        cherrypy.thread_data.flDict = flDict
-        fl = cherrypy.thread_data.flDict['app']
-    return fl
         
 
 def check_updates():
