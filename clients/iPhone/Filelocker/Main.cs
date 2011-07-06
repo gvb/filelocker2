@@ -21,10 +21,11 @@ namespace Filelocker
 	// The name AppDelegate is referenced in the MainWindow.xib file.
 	public partial class AppDelegate : UIApplicationDelegate
 	{
-		UITabBarController primaryViewController;
 		// This method is invoked when the application has loaded its UI and its ready to run
 		public override bool FinishedLaunching (UIApplication app, NSDictionary options)
 		{
+			if (!Directory.Exists(FilelockerConnection.Instance.FILES_PATH))
+				Directory.CreateDirectory(FilelockerConnection.Instance.FILES_PATH);
 			string server = NSUserDefaults.StandardUserDefaults.StringForKey("server");
 			string cliKey = NSUserDefaults.StandardUserDefaults.StringForKey("clikey");
 			string username = NSUserDefaults.StandardUserDefaults.StringForKey("username");
@@ -53,8 +54,6 @@ namespace Filelocker
 				}
 			}
 			window.MakeKeyAndVisible ();
-			//var thread = new Thread(StartDownload as ThreadStart);
-			//thread.Start();
 			
 			return true;
 		}
@@ -62,10 +61,11 @@ namespace Filelocker
 		public bool login()
 		{
 			string server = NSUserDefaults.StandardUserDefaults.StringForKey("server");
+			Console.WriteLine("Server saved string: {0}", server);
 			string cliKey = NSUserDefaults.StandardUserDefaults.StringForKey("clikey");
 			string username = NSUserDefaults.StandardUserDefaults.StringForKey("username");
 			FilelockerConnection.Instance.login(server, username.Trim(), cliKey.Trim());
-			return FilelockerConnection.Instance.connected;
+			return FilelockerConnection.Instance.CONNECTED;
 		}
 		
 		public void alert(string title, string message)
@@ -105,9 +105,9 @@ namespace Filelocker
 		
 		public string getFilePathByFileId(string fileId)
 		{
-			string docsPath = Environment.GetFolderPath(Environment.SpecialFolder.Personal);
+			string filesPath = FilelockerConnection.Instance.FILES_PATH;
 			string strFilePath = "";
-			foreach (string filePath in System.IO.Directory.GetFiles(docsPath).ToList())
+			foreach (string filePath in System.IO.Directory.GetFiles(filesPath).ToList())
 			{
 				string fileName = System.IO.Path.GetFileName(filePath);
 				try

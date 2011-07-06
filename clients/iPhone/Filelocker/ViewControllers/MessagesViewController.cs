@@ -37,7 +37,7 @@ namespace Filelocker
 				refreshMessageList();
 			};
 			
-			if (FilelockerConnection.Instance.connected)
+			if (FilelockerConnection.Instance.CONNECTED)
 			{
 				refreshMessageList();
 			}	
@@ -62,7 +62,7 @@ namespace Filelocker
 		}
 		public override void ViewWillAppear(bool animated)
 		{
-			if (FilelockerConnection.Instance.connected)
+			if (FilelockerConnection.Instance.CONNECTED)
 			{
 				refreshMessageList();
 			}
@@ -123,10 +123,8 @@ namespace Filelocker
 					{
 						List<string> messageIds = new List<string>();
 						messageIds.Add(messageId);
-						if (FilelockerConnection.Instance.deleteMessages(messageIds))
-						{
-							tableView.DeleteRows(new [] {indexPath}, UITableViewRowAnimation.Fade);
-						}
+						FilelockerConnection.Instance.deleteMessages(messageIds);
+						tableView.DeleteRows(new [] {indexPath}, UITableViewRowAnimation.Fade);
 					}
 					catch (FilelockerException fe)
 					{

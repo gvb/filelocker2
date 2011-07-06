@@ -7,6 +7,7 @@ using System.Xml;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Reflection;
+using MonoTouch.Foundation;
 
 namespace Filelocker
 {
@@ -17,8 +18,12 @@ namespace Filelocker
 		public string USERID;
 		private string FL_SERVER;
 		private string CLI_KEY;
-		public bool connected;
+		public bool CONNECTED;
 		public List<Group> USER_GROUPS;
+		public string FILES_PATH = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Personal), "files");
+		public string SERVERS_FILE = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Personal), "known_servers.xml");
+		public string FILES_CACHE = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Personal), "files.xml");
+		public string MESSAGES_CACHE = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Personal), "messages.xml");
 		
 
 		//This stuff makes the class a singleton
@@ -28,7 +33,7 @@ namespace Filelocker
 			FLCOOKIE = new CookieContainer();
 			USER_GROUPS = new List<Group>();
 			FILE_DOWNLOADS = new Dictionary<string, float>();
-			connected = false;
+			CONNECTED = false;
 		}
 		public static FilelockerConnection Instance
 		{
@@ -51,15 +56,15 @@ namespace Filelocker
 			Dictionary<string, string> postParameters = new Dictionary<string, string>();
             postParameters.Add("userId", username);
             postParameters.Add("CLIkey", CLI_KEY);
-            Dictionary<string, string> response = this.postDataToServer(server + "/cli_interface/CLI_login", postParameters, false);
-			if (response["fMessages"].Equals(""))
-			{
-				connected = true;
-				return true;
+			Dictionary<string, string> response = new Dictionary<string, string>();
+       		response = this.postDataToServer(server + "/cli_interface/CLI_login", postParameters, false);
+			if (!response["fMessages"].Equals("")) {
+				CONNECTED = false;
+				throw new FilelockerException(response["fMessages"]);
 			}
-			else
-			{
-				throw new FilelockerException("Unable to log in: "+response["fMessages"]);
+			else {
+				CONNECTED = true;
+				return CONNECTED;
 			}
 		}
 		
@@ -73,7 +78,7 @@ namespace Filelocker
 			try
 			{
 				Dictionary<string, string> response = this.postDataToServer(server + "/cli_interface/register_client", postParameters, false);
-				if (response["fMessages"].Equals(""))
+				if (string.IsNullOrEmpty(response["fMessages"]))
 					return response["data"].Trim();
 				else
 					throw new FilelockerException(response["fMessages"]);
@@ -90,15 +95,9 @@ namespace Filelocker
 			Dictionary<string, string> postParameters = new Dictionary<string, string>();
             postParameters.Add("fileIds", fileId);
 			postParameters.Add("format", "cli");
-			try
-			{
-				Dictionary<string, string> response = this.postDataToServer(FL_SERVER + "/file_interface/delete_files", postParameters, false);
-				if (!response["fMessages"].Equals(""))
-					throw new FilelockerException(response["fMessages"]);					
-			}
-			catch (Exception e)
-			{
-				throw new FilelockerException(e.Message);
+			Dictionary<string, string> response = this.postDataToServer(FL_SERVER + "/file_interface/delete_files", postParameters, false);
+			if (!response["fMessages"].Equals("")) {
+				throw new FilelockerException(response["fMessages"]);
 			}
 		}
 		
@@ -108,15 +107,9 @@ namespace Filelocker
             postParameters.Add("fileId", fileId);
 			postParameters.Add("notifyOnDownload", notify.ToString().ToLower());
 			postParameters.Add("format", "cli");
-			try
-			{
-				Dictionary<string, string> response = this.postDataToServer(FL_SERVER + "/file_interface/update_file", postParameters, false);
-				if (!response["fMessages"].Equals(""))
-					throw new FilelockerException(response["fMessages"]);					
-			}
-			catch (Exception e)
-			{
-				throw new FilelockerException(e.Message);
+			Dictionary<string, string> response = this.postDataToServer(FL_SERVER + "/file_interface/update_file", postParameters, false);
+			if (!response["fMessages"].Equals("")) {
+				throw new FilelockerException(response["fMessages"]);
 			}
 		}
 		
@@ -127,17 +120,12 @@ namespace Filelocker
             postParameters.Add("fileIds", fileIdCSV);
 			postParameters.Add("groupId", groupId);
 			postParameters.Add("format", "cli");
-			try
-			{
-				Dictionary<string, string> response = this.postDataToServer(FL_SERVER + "/share_interface/create_private_share", postParameters, false);
-				if (!response["fMessages"].Equals(""))
-					throw new FilelockerException(response["fMessages"]);
-			}
-			catch (Exception e)
-			{
-				throw new FilelockerException(e.Message);
+			Dictionary<string, string> response = this.postDataToServer(FL_SERVER + "/share_interface/create_private_share", postParameters, false);
+			if (!response["fMessages"].Equals("")) {
+				throw new FilelockerException(response["fMessages"]);
 			}
 		}
+		
 		public User shareFilesWithUser(List<string> fileIds, string userId)
 		{
 			Dictionary<string, string> postParameters = new Dictionary<string, string>();
@@ -145,28 +133,27 @@ namespace Filelocker
             postParameters.Add("fileIds", fileIdCSV);
 			postParameters.Add("targetId", userId);
 			postParameters.Add("format", "cli");
+			Dictionary<string, string> response = this.postDataToServer(FL_SERVER + "/share_interface/create_private_share", postParameters, false);
+			if (!response["fMessages"].Equals("")) {
+				throw new FilelockerException(response["fMessages"]);
+			}
+			
 			try
 			{
-				Dictionary<string, string> response = this.postDataToServer(FL_SERVER + "/share_interface/create_private_share", postParameters, false);
-				if (!response["fMessages"].Equals(""))
-					throw new FilelockerException(response["fMessages"]);
-				else
-				{
-					User shareUser = new User();
-					XmlDocument doc = new XmlDocument();
-					string userXML = response["data"];
-					doc.LoadXml(userXML);
-		            foreach (XmlNode user in doc.ChildNodes)
-		            {
-						Dictionary<string, string> userDictionary = new Dictionary<string, string>();
-						foreach (XmlNode userAttribute in user)
-						{
-							userDictionary[userAttribute.Name] = userAttribute.InnerText;
-						}
-						shareUser = CreateObjectFromValues<User>(userDictionary);	
+				User shareUser = new User();
+				XmlDocument doc = new XmlDocument();
+				string userXML = response["data"];
+				doc.LoadXml(userXML);
+	            foreach (XmlNode user in doc.ChildNodes)
+	            {
+					Dictionary<string, string> userDictionary = new Dictionary<string, string>();
+					foreach (XmlNode userAttribute in user)
+					{
+						userDictionary[userAttribute.Name] = userAttribute.InnerText;
 					}
-					return shareUser;
+					shareUser = CreateObjectFromValues<User>(userDictionary);	
 				}
+				return shareUser;
 			}
 			catch (Exception e)
 			{
@@ -181,15 +168,9 @@ namespace Filelocker
 			postParameters.Add("targetId", userId);
 			postParameters.Add("shareType", "private");
 			postParameters.Add("format", "cli");
-			try
-			{
-				Dictionary<string, string> response = this.postDataToServer(FL_SERVER + "/share_interface/delete_share", postParameters, false);
-				if (!response["fMessages"].Equals(""))
-					throw new FilelockerException(response["fMessages"]);
-			}
-			catch (Exception e)
-			{
-				throw new FilelockerException(e.Message);
+			Dictionary<string, string> response = this.postDataToServer(FL_SERVER + "/share_interface/delete_share", postParameters, false);
+			if (!response["fMessages"].Equals("")) {
+				throw new FilelockerException(response["fMessages"]);
 			}
 		}
 		public void unshareFilesWithGroup(List<string> fileIds, string groupId)
@@ -200,33 +181,19 @@ namespace Filelocker
 			postParameters.Add("targetId", groupId);
 			postParameters.Add("shareType", "private_group");
 			postParameters.Add("format", "cli");
-			try
-			{
-				Dictionary<string, string> response = this.postDataToServer(FL_SERVER + "/share_interface/delete_share", postParameters, false);
-				if (!response["fMessages"].Equals(""))
-					throw new FilelockerException(response["fMessages"]);
-			}
-			catch (Exception e)
-			{
-				throw new FilelockerException(e.Message);
+			Dictionary<string, string> response = this.postDataToServer(FL_SERVER + "/share_interface/delete_share", postParameters, false);
+			if (!response["fMessages"].Equals("")) {
+				throw new FilelockerException(response["fMessages"]);
 			}
 		}
-		public bool hideShare(string fileId)
+		public void hideShare(string fileId)
 		{
 			Dictionary<string, string> postParameters = new Dictionary<string, string>();
             postParameters.Add("fileIds", fileId);
 			postParameters.Add("format", "cli");
-			try
-			{
-				Dictionary<string, string> response = this.postDataToServer(FL_SERVER + "/file_interface/hide_share", postParameters, false);
-				if (response["fMessages"].Equals(""))
-					return true;
-				else
-					throw new FilelockerException(response["fMessages"]);
-			}
-			catch (Exception e)
-			{
-				throw new FilelockerException(e.Message);
+			Dictionary<string, string> response = this.postDataToServer(FL_SERVER + "/file_interface/hide_share", postParameters, false);
+			if (!response["fMessages"].Equals("")) {
+				throw new FilelockerException(response["fMessages"]);
 			}
 		}
 		
@@ -238,19 +205,13 @@ namespace Filelocker
 			postParameters.Add("subject", subject);
 			postParameters.Add("body", body);
 			postParameters.Add("format", "cli");
-			try
-			{
-				Dictionary<string, string> response = this.postDataToServer(FL_SERVER + "/message_interface/send_message", postParameters, false);
-				if (!response["fMessages"].Equals(""))
-					throw new FilelockerException(response["fMessages"]);
-			}
-			catch (Exception e)
-			{
-				throw new FilelockerException(e.Message);
+			Dictionary<string, string> response = this.postDataToServer(FL_SERVER + "/message_interface/send_message", postParameters, false);
+			if (!response["fMessages"].Equals("")) {
+				throw new FilelockerException(response["fMessages"]);
 			}
 		}
 		
-		public bool deleteMessages(List<string> messageIds)
+		public void deleteMessages(List<string> messageIds)
 		{
 			Dictionary<string, string> postParameters = new Dictionary<string, string>();
 			StringBuilder messageIdCSV = new StringBuilder("");
@@ -261,35 +222,19 @@ namespace Filelocker
 			}
             postParameters.Add("messageIds", messageIdCSV.ToString());
 			postParameters.Add("format", "cli");
-			try
-			{
-				Dictionary<string, string> response = this.postDataToServer(FL_SERVER + "/message_interface/delete_messages", postParameters, false);
-				if (response["fMessages"].Equals(""))
-					return true;
-				else
-					throw new FilelockerException(response["fMessages"]);
-			}
-			catch (Exception e)
-			{
-				throw new FilelockerException(e.Message);
+			Dictionary<string, string> response = this.postDataToServer(FL_SERVER + "/message_interface/delete_messages", postParameters, false);
+			if (!response["fMessages"].Equals("")) {
+				throw new FilelockerException(response["fMessages"]);
 			}
 		}
-		public bool markMessageAsRead(string messageId)
+		public void markMessageAsRead(string messageId)
 		{
 			Dictionary<string, string> postParameters = new Dictionary<string, string>();
             postParameters.Add("messageId", messageId);
 			postParameters.Add("format", "cli");
-			try
-			{
-				Dictionary<string, string> response = this.postDataToServer(FL_SERVER + "/message_interface/read_message", postParameters, false);
-				if (response["fMessages"].Equals(""))
-					return true;
-				else
-					throw new FilelockerException(response["fMessages"]);
-			}
-			catch (Exception e)
-			{
-				throw new FilelockerException(e.Message);
+			Dictionary<string, string> response = this.postDataToServer(FL_SERVER + "/message_interface/read_message", postParameters, false);
+			if (!response["fMessages"].Equals("")) {
+				throw new FilelockerException(response["fMessages"]);
 			}
 		}
 			
@@ -299,76 +244,97 @@ namespace Filelocker
 			Dictionary<string, List<FLMessage>> flMessages = new Dictionary<string, List<FLMessage>>();
 			postParameters.Add("format", "cli");
 			Dictionary<string, string> response = this.postDataToServer(FL_SERVER + "/message_interface/get_messages", postParameters, false);
-			
-			try
+			if (string.IsNullOrEmpty(response["fMessages"]))
 			{
-				XmlDocument doc = new XmlDocument();
-				string messageListXML = response["data"];
-				doc.LoadXml(messageListXML);
-	            foreach (XmlNode messages in doc.ChildNodes)
-	            {
-					//2 boxes, inbox and outbox
-					foreach (XmlNode messageBox in messages.ChildNodes)
-					{
-						string sectionName = "";
-						if (messageBox.Attributes != null)
+				try
+				{
+					XmlDocument doc = new XmlDocument();
+					string messageListXML = response["data"];
+					doc.LoadXml(messageListXML);
+		            foreach (XmlNode messages in doc.ChildNodes)
+		            {
+						//2 boxes, inbox and outbox
+						foreach (XmlNode messageBox in messages.ChildNodes)
 						{
-							foreach (XmlAttribute attr in messageBox.Attributes)
+							string sectionName = "";
+							if (messageBox.Attributes != null)
 							{
-								if (attr.Name == "title")
-									sectionName = attr.Value;
-								
+								foreach (XmlAttribute attr in messageBox.Attributes)
+								{
+									if (attr.Name == "title")
+										sectionName = attr.Value;
+									
+								}
+							}
+							else
+							{
+								throw new FilelockerException("The XML received from the server was poorly formatted.");
+							}
+							
+							flMessages[sectionName] = new List<FLMessage>();
+							foreach (XmlNode message in messageBox.ChildNodes)
+							{
+								Dictionary<string, string> messageDictionary = new Dictionary<string, string>();
+								foreach (XmlNode node in message.ChildNodes)
+								{
+									messageDictionary[node.Name] = node.InnerText;
+								}
+								FLMessage newMessage = CreateObjectFromValues<FLMessage> (messageDictionary);
+								flMessages[sectionName].Add(newMessage);
 							}
 						}
-						else
-						{
-							throw new FilelockerException("The XML received from the server was poorly formatted.");
-						}
-						
-						flMessages[sectionName] = new List<FLMessage>();
-						foreach (XmlNode message in messageBox.ChildNodes)
-						{
-							Dictionary<string, string> messageDictionary = new Dictionary<string, string>();
-							foreach (XmlNode node in message.ChildNodes)
-							{
-								messageDictionary[node.Name] = node.InnerText;
-							}
-							FLMessage newMessage = CreateObjectFromValues<FLMessage> (messageDictionary);
-							flMessages[sectionName].Add(newMessage);
-						}
-					}
-	            }	
-				return flMessages;
+		            }	
+					return flMessages;
+				}
+				catch(FilelockerException fe)
+				{
+					throw fe;
+				}
+				catch (System.Xml.XmlException xmle)
+				{
+					Console.WriteLine("Bad XML from server - {0}", xmle.Message);
+					throw new FilelockerException("XML from server was poorly formatted");
+				}
+				catch (Exception e)
+				{
+					Console.Write("{0}", e.Message);
+					throw new FilelockerException("Couldn't get message list");
+				}
 			}
-			catch(FilelockerException fe)
+			else
 			{
-				throw fe;
-			}
-			catch (System.Xml.XmlException xmle)
-			{
-				Console.WriteLine("Problem with the XML from the server: {0}", xmle.Message);
-				throw new FilelockerException("XML from server was poorly formatted");
-			}
-			catch (Exception e)
-			{
-				Console.Write("Problem populating message list: {0}", e.Message);
-				throw new FilelockerException("Couldn't get message list");
+				throw new FilelockerException(response["fMessages"]);
 			}
 		}
 		
-		public List<KeyValuePair<string, List<FLFile>>> populatFileList(List<string> downloadedFileIds)
+		public List<KeyValuePair<string, List<FLFile>>> populateFileList(List<string> downloadedFileIds, bool loadFromCache)
 		{
-			Dictionary<string, string> postParameters = new Dictionary<string, string>();
-			postParameters.Add("format", "cli");
-			Dictionary<string, string> response = this.postDataToServer(FL_SERVER + "/files", postParameters, false);
-			List<KeyValuePair<string, List<FLFile>>> fileSectionKVPList = new List<KeyValuePair<string, List<FLFile>>>();
 			XmlDocument doc = new XmlDocument();
-			string fileListXML = "";
+			List<KeyValuePair<string, List<FLFile>>> fileSectionKVPList = new List<KeyValuePair<string, List<FLFile>>>();
+			if (loadFromCache && File.Exists(FILES_CACHE))
+			{
+				Console.WriteLine("Existed");
+				doc.Load(FILES_CACHE);
+			}
+			else if (loadFromCache)
+			{
+				return fileSectionKVPList;
+			}
+			else
+			{
+				Dictionary<string, string> postParameters = new Dictionary<string, string>();
+				postParameters.Add("format", "cli");
+				verifyLoggedIn();
+				Dictionary<string, string> response = this.postDataToServer(FL_SERVER + "/files", postParameters, false);
+				if (!response["fMessages"].Equals("")) {
+					throw new FilelockerException(response["fMessages"]);
+				}
+				doc.LoadXml(response["data"]);
+				File.WriteAllText(FILES_CACHE, response["data"]); //Drop the current contents into cache
+			}
+
 			try
 			{
-				fileListXML += response["data"];
-				doc.LoadXml(fileListXML);
-				//FLFile(int fileId, string fileName, string fileOwnerId, long fileSizeBytes, string fileType, string fileNotes, DateTime fileUploadedDatetime, DateTime fileExpirationDatetime, bool filePasswdAvScan, string fileStatus, bool fileNotifyOnDownload)
 	            XmlNode filesAndGroups = doc.ChildNodes[0];
 				XmlNode fileList = filesAndGroups.ChildNodes[0];
 				foreach (XmlNode sectionNode in fileList.ChildNodes)
@@ -452,8 +418,8 @@ namespace Filelocker
 			}
 			catch (Exception e)
 			{
-				Console.Write("Problem populating file list: {0}", e.Message);
-				throw new FilelockerException("Couldn't get file list"+e.Message);
+				Console.Write("populateFileList: {0}",e.Message);
+				throw new FilelockerException(e.Message);
 			}
 		}
 		
@@ -500,6 +466,7 @@ namespace Filelocker
             return targetObject;
         }
 		
+		//TODO: Separate the download function to simplify logic
         public Dictionary<string, string> postDataToServer(string server, Dictionary<string, string> postParameters, bool fileDownload) 
         {
 			
@@ -509,7 +476,8 @@ namespace Filelocker
 			Stream responseStream = null;
 			Stream localStream = null;
 			WebResponse response = null;
-			HttpWebRequest request = null;
+			Console.Write("Server {0}", server);
+			var request = (HttpWebRequest) WebRequest.Create(server);
 			
 			try
 			{
@@ -519,7 +487,9 @@ namespace Filelocker
 	            {
 	                postData += key + "=" + postParameters[key] + "&";
 	            }
-	            request = (HttpWebRequest)WebRequest.Create(server);
+	            //request = (HttpWebRequest)WebRequest.Create(server);
+				
+				request.AutomaticDecompression = DecompressionMethods.GZip;
 				request.CookieContainer = FLCOOKIE;
 				
 	            // Set the Method property of the request to POST.
@@ -563,7 +533,6 @@ namespace Filelocker
 							else
 							{
 								long fileSizeBytes = response.ContentLength;
-								var documents = Environment.GetFolderPath(Environment.SpecialFolder.Personal);
 								long bytesProcessed = 0;
 								string fileId = postParameters["fileId"];
 								FILE_DOWNLOADS[fileId] = 0f;
@@ -585,7 +554,7 @@ namespace Filelocker
 								string filename = string.Format("{0}{1}", fileId, fileExtension);
 								
 								// Create the local file
-								localStream = File.Create(Path.Combine(documents, filename));
+								localStream = File.Create(Path.Combine(FILES_PATH, filename));
 								
 								// Allocate a 1k buffer
 								byte[] buffer = new byte[1024];
@@ -635,9 +604,6 @@ namespace Filelocker
 		
 		public Dictionary<string, string> HttpUploadFile(string url, byte[] mediaBytes, string fileName, Dictionary<string, string> postParameters) 
 		{
-	        string boundary = "---------------------------" + DateTime.Now.Ticks.ToString("x");
-	        byte[] boundarybytes = System.Text.Encoding.ASCII.GetBytes("\r\n--" + boundary + "\r\n");
-			string contentType = "application/octet-stream";
 			string response="";
 	        HttpWebRequest wr = (HttpWebRequest)WebRequest.Create(url);
 	        wr.ContentType = "application/octet-stream";// + boundary;
@@ -647,7 +613,9 @@ namespace Filelocker
 			wr.CookieContainer = FLCOOKIE;
 			MemoryStream fileDataStream = new MemoryStream(mediaBytes);
 	        Stream rs = wr.GetRequestStream();
-	
+//			string boundary = "---------------------------" + DateTime.Now.Ticks.ToString("x");
+//			string contentType = "application/octet-stream";
+//	        byte[] boundarybytes = System.Text.Encoding.ASCII.GetBytes("\r\n--" + boundary + "\r\n");
 //	        string formdataTemplate = "Content-Disposition: form-data; name=\"{0}\"\r\n\r\n{1}";
 //	        foreach (string key in postParameters.Keys)
 //	        {
@@ -671,8 +639,8 @@ namespace Filelocker
 	        }
 	        fileDataStream.Close();
 	
-	        byte[] trailer = System.Text.Encoding.ASCII.GetBytes("\r\n--" + boundary + "--\r\n");
-	        //rs.Write(trailer, 0, trailer.Length);
+//	        byte[] trailer = System.Text.Encoding.ASCII.GetBytes("\r\n--" + boundary + "--\r\n");
+//	        rs.Write(trailer, 0, trailer.Length);
 	        rs.Close();
 	
 	        WebResponse wresp = null;
@@ -740,21 +708,13 @@ namespace Filelocker
             return formattedResponse;
         }
 		
-		public bool downloadFile(string fileId)
+		public void downloadFile(string fileId)
 	    {
 			Dictionary<string, string> postParameters = new Dictionary<string, string>();
             postParameters.Add("fileId", fileId);
             postParameters.Add("format", "cli");
 			FILE_DOWNLOADS[fileId] = 0; //Percentage complete
-			try
-			{
-				this.postDataToServer(FL_SERVER + "/file_interface/download", postParameters, true);
-			}
-			catch (Exception e)
-			{
-				throw new FilelockerException(e.Message);
-			}
-			return true;
+			this.postDataToServer(FL_SERVER + "/file_interface/download", postParameters, true);
 	    }
 		
 		public void upload(byte[] imageBytes, string fileName, string fileNotes)
@@ -817,7 +777,6 @@ namespace Filelocker
 		{
 			WebResponse resp=null;
 			Stream localStream = null;
-			StringBuilder serversXML = new StringBuilder("");
 			try
 			{
 				HttpWebRequest wr = (HttpWebRequest)WebRequest.Create("https://downloads.sourceforge.net/project/filelocker2/known_servers.xml?r=&ts=1309291508&use_mirror=master");
@@ -852,8 +811,25 @@ namespace Filelocker
 				if (localStream != null) localStream.Close();
 			}
 		}
+		
+		private void verifyLoggedIn()
+		{
+			if (string.IsNullOrEmpty(FL_SERVER) || !CONNECTED)
+			{
+				string server = NSUserDefaults.StandardUserDefaults.StringForKey("server");
+				Console.WriteLine("Server saved string: {0}", server);
+				string cliKey = NSUserDefaults.StandardUserDefaults.StringForKey("clikey");
+				string username = NSUserDefaults.StandardUserDefaults.StringForKey("username");
+				login(server, username.Trim(), cliKey.Trim());
+				if (string.IsNullOrEmpty(FL_SERVER) || !CONNECTED)
+				{
+					throw new FilelockerException("Couldn't log in to server");
+				}
+			}
+		}
 	}
 	
+	 
 	public class FilelockerException : Exception
 	{
 		public FilelockerException(string message): base(message)

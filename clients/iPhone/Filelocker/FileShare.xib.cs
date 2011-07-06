@@ -144,8 +144,6 @@ namespace Filelocker
 								cell.TextLabel.Text = "Share with User";
 								cell.TextLabel.TextAlignment = UITextAlignment.Center;
 								cell.TextLabel.TextColor = UIColor.White;
-								//cell.TextLabel.BackgroundColor = UIColor.Blue;
-								//cell.ContentView.BackgroundColor = UIColor.Blue;
 								cell.BackgroundColor = UIColor.Blue;
 								break;
 						}
@@ -268,8 +266,8 @@ namespace Filelocker
 				Layer.BorderWidth = .3f;
 				Layer.BorderColor = UIColor.DarkGray.CGColor;
 				Layer.ShadowOffset = new System.Drawing.SizeF (0, -1);
-				BackgroundColor = UIColor.Blue;
-				SetTitle("Share with User", UIControlState.Normal);
+				BackgroundColor = UIColor.Cyan;
+				SetTitle("Share with User", UIControlState.Highlighted);
 			}
 		}
 		

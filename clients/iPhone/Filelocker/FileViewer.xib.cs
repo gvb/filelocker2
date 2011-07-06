@@ -47,6 +47,7 @@ namespace Filelocker
 		{
 			base.ViewDidLoad ();
 			NSUrl fileURL = NSUrl.FromFilename(filePath);
+			Console.WriteLine("Filepath: {0}", filePath);
 			NSUrlRequest fileRequest = new NSUrlRequest(fileURL);
 			webView.LoadFinished += delegate {
 				Console.WriteLine("Opened the file");

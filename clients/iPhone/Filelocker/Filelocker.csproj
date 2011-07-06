@@ -118,7 +118,6 @@
     <Compile Include="MessageInfoView.xib.designer.cs">
       <DependentUpon>MessageInfoView.xib</DependentUpon>
     </Compile>
-    <Compile Include="ViewControllers\UserSearchController.cs" />
     <Compile Include="ViewControllers\GroupSearchController.cs" />
     <Compile Include="MessageComposer.xib.cs">
       <DependentUpon>MessageComposer.xib</DependentUpon>
@@ -140,6 +139,8 @@
     </Compile>
     <Compile Include="Code\Group.cs" />
     <Compile Include="ViewControllers\ServerPickerDataModel.cs" />
+    <Compile Include="Code\ApplicationState.cs" />
+    <Compile Include="Code\Constants.cs" />
   </ItemGroup>
   <ItemGroup>
     <Page Include="MainWindow.xib" />

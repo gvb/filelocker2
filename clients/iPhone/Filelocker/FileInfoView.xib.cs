@@ -62,9 +62,28 @@ namespace Filelocker
 				{
 					btnDelete.Clicked += delegate {
 						string filePath = ((AppDelegate)UIApplication.SharedApplication.Delegate).getFilePathByFileId(sourceFile.fileId);
-						System.IO.File.Delete(filePath);
+						if (!string.IsNullOrEmpty(filePath))
+						{
+							try
+							{
+								System.IO.File.Delete(filePath);
+							}
+							catch (DirectoryNotFoundException){} //If not found, there's no file to delete
+							catch (IOException ioe)
+							{
+								Console.WriteLine("IO Exception: {0}", ioe.Message);
+								((AppDelegate)UIApplication.SharedApplication.Delegate).alert("Unable to delete file", "The file you are trying to delete is currently in use.");
+							}
+							catch (UnauthorizedAccessException uae)
+							{
+								Console.WriteLine("Unauthorized Exception: {0}", uae.Message);
+								((AppDelegate)UIApplication.SharedApplication.Delegate).alert("Unable to delete file", "Access Denied.");
+							}
+							
+						}
+						
 						FilelockerConnection.Instance.deleteFile(sourceFile.fileId);
-						controller.refreshFileList();
+						controller.startFileRefresh();
 						UIView.BeginAnimations(null,IntPtr.Zero);
 						UIView.SetAnimationDuration(1);
 						UIView.SetAnimationTransition(UIViewAnimationTransition.CurlUp,NavigationController.View,true);
@@ -188,6 +207,7 @@ namespace Filelocker
 								if (controller.sourceFile.downloaded)
 								{
 									cell.TextLabel.Text = "Open";
+									cell.AccessoryView = null; //Purge progress bar
 								}
 								else
 								{
@@ -215,9 +235,8 @@ namespace Filelocker
 							case 1:
 								if (controller.sourceFile.downloaded)
 								{
-									string docsPath = Environment.GetFolderPath(Environment.SpecialFolder.Personal);
 									string strFilePath = "";
-									foreach (string filePath in System.IO.Directory.GetFiles(docsPath).ToList())
+									foreach (string filePath in System.IO.Directory.GetFiles(FilelockerConnection.Instance.FILES_PATH).ToList())
 									{
 										string fileName = System.IO.Path.GetFileName(filePath);
 										try
@@ -254,7 +273,7 @@ namespace Filelocker
 									updaterThread.Start();
 									tableView.DeselectRow(indexPath, true);
 								}
-								controller.controller.refreshFileList();
+								controller.controller.startFileRefresh();
 								break;
 						}
 						break;

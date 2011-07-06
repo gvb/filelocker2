@@ -59,7 +59,9 @@ namespace Filelocker
 			};
 			btnRefresh.TouchUpInside += delegate {
 				var thread = new Thread(UpdateServers as ThreadStart);
-				ShowAlert("Refreshing Servers List");
+				btnRefresh.SetTitle("Updating Servers...", UIControlState.Normal);
+				UIActivityIndicatorView iv = new UIActivityIndicatorView(new RectangleF(0,0,40,40));
+				iv.ActivityIndicatorViewStyle = UIActivityIndicatorViewStyle.Gray;
 				thread.Start();
 			};
 			
@@ -130,13 +132,21 @@ namespace Filelocker
 		{
 			using(var pool = new NSAutoreleasePool())
 			{
-				FilelockerConnection.Instance.updateKnownServers();
-				HideAlert();
+				try
+				{
+					FilelockerConnection.Instance.updateKnownServers();
+					HideAlert();
+
+				}
+				catch (FilelockerException fle)
+				{
+					HideAlert();
+				}
 			}
 		}
 		public void ShowAlert(string message)
 		{
-			_alert = new UIAlertView("Refreshing Servers List", String.Empty, null, null, null);
+			_alert = new UIAlertView(message, String.Empty, null, "OK", null);
 	        _ai = new UIActivityIndicatorView();
 	        _ai.Frame = new System.Drawing.RectangleF(125,50,40,40);
 	        _ai.ActivityIndicatorViewStyle = UIActivityIndicatorViewStyle.WhiteLarge;
@@ -173,7 +183,7 @@ namespace Filelocker
 			}
 			catch (FilelockerException fle)
 			{
-				Console.WriteLine("Unable to get the most recent list of servers");
+				Console.WriteLine("Unable to get the most recent list of servers: {0}", fle.Message);
 			}
 		}
 		

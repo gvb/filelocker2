@@ -15,9 +15,10 @@ namespace Filelocker
 		
 		// The IntPtr and initWithCoder constructors are required for items that need 
 		// to be able to be created from a xib rather than from managed code
-		public bool initialLoadFinished;
 		List<string> validfileIdList;
 		List<string> downloadedFileIds;
+		//TODO: Extract cleanup functions, BL as much as possible
+		Thread refreshThread;
 		List<KeyValuePair<string, List<FLFile>>> fileSectionKVPList;
 		public FilesViewController (IntPtr handle) : base(handle)
 		{
@@ -41,17 +42,20 @@ namespace Filelocker
 		public UIImagePickerController picker;
 		public override void ViewDidLoad() 
 		{
-			validfileIdList = new List<string>();
 			base.ViewDidLoad();
-			initialLoadFinished = false;
-			
+			validfileIdList = new List<string>();
 			picker = new UIImagePickerController();
 			picker.Delegate = new pickerDelegate(this);
 			btnRefresh.Clicked += delegate {
-				refreshFileList();
+				if (refreshThread != null)
+					refreshThread.Abort();
+				refreshThread = new Thread(RefreshFiles as ThreadStart);
+				UIApplication.SharedApplication.NetworkActivityIndicatorVisible = true;
+				refreshThread.Start();
 			};
 			btnUpload.Clicked += delegate {
 				var actionSheet = new UIActionSheet("") {"Choose a Photo", "Take a Photo", "Cancel"};
+				actionSheet.CancelButtonIndex = 2;
 				actionSheet.Style = UIActionSheetStyle.BlackTranslucent;
 				actionSheet.ShowInView(View);
 				
@@ -71,6 +75,7 @@ namespace Filelocker
 						}
 						catch (Exception ex)
 						{
+							Console.WriteLine("Couldn't load camera stuff: {0}", ex.Message);
 							using(var alert = new UIAlertView("Camera Not Available", "The camera is not able to be used on this device.",null, "OK"))
 							{
 								alert.Show();  
@@ -87,25 +92,8 @@ namespace Filelocker
 		public override void ViewWillAppear (bool animated)
 		{
 			base.ViewWillAppear (animated);
-			if (FilelockerConnection.Instance.connected)
-			{
-				refreshFileList();
-				if (!initialLoadFinished)
-				{
-					initialLoadFinished = true;
-				}
-			}
-		}
-		
-		public void refreshFileList()
-		{
-			if (initialLoadFinished)
-			{
-				((AppDelegate) UIApplication.SharedApplication.Delegate).Loading(true);
-			}
-			string docsPath = Environment.GetFolderPath(Environment.SpecialFolder.Personal);
 			downloadedFileIds = new List<string>();
-			foreach (string filePath in System.IO.Directory.GetFiles(docsPath).ToList())
+			foreach (string filePath in System.IO.Directory.GetFiles(FilelockerConnection.Instance.FILES_PATH).ToList())
 			{
 				string fileName = System.IO.Path.GetFileName(filePath);
 				try
@@ -113,16 +101,31 @@ namespace Filelocker
 					string fileExtension = System.IO.Path.GetExtension(fileName);
 					string fileId = fileName.Replace(fileExtension, "");
 					downloadedFileIds.Add(fileId);
+					Console.WriteLine("Adding fileId: {0}", fileId);
 				}
 				catch (Exception e)
 				{
 					Console.WriteLine("Filename {0} failed to remove extension: {1}", fileName, e.Message);
 				}
 			}
-			Console.WriteLine("Getting files");
+			fileSectionKVPList = FilelockerConnection.Instance.populateFileList(downloadedFileIds, true);
+			buildFileList();
+			if (FilelockerConnection.Instance.CONNECTED)
+			{
+				Console.WriteLine("File refresh started for network load");
+				startFileRefresh();
+			}
+		}
+		public void startFileRefresh()
+		{
+			refreshThread = new Thread(RefreshFiles as ThreadStart);
+			UIApplication.SharedApplication.NetworkActivityIndicatorVisible = true;
+			refreshThread.Start();
+		}
+		public void buildFileList()
+		{
 			try
 			{
-				fileSectionKVPList = FilelockerConnection.Instance.populatFileList(downloadedFileIds);
 				tblFiles.Source = new DataSource(this);
 				tblFiles.ReloadData();
 				var validFileIds = from flFile in fileSectionKVPList.SelectMany(i=>i.Value) select flFile.fileId;
@@ -134,13 +137,6 @@ namespace Filelocker
 			{
 				((AppDelegate) UIApplication.SharedApplication.Delegate).alert("Failed to Refresh Files", fle.Message);
 			}
-			finally
-			{
-				if (initialLoadFinished)
-				{
-					((AppDelegate) UIApplication.SharedApplication.Delegate).Loading(false);
-				}
-			}
 		}
 		
 		[Export("CleanupFiles")]
@@ -149,9 +145,11 @@ namespace Filelocker
 			using(var pool = new NSAutoreleasePool())
 			{
 				string filePath="";
+				Console.WriteLine("The valid files are {0}", string.Join(",",validfileIdList));
+				Console.WriteLine("The downloaded files are {0}", string.Join(",",downloadedFileIds));
 				foreach (string fileId in downloadedFileIds)
 				{
-					if (!validfileIdList.Contains(fileId) && !fileId.Contains("known_servers"))
+					if (!validfileIdList.Contains(fileId))
 					{
 						filePath = ((AppDelegate)UIApplication.SharedApplication.Delegate).getFilePathByFileId(fileId);
 						Console.WriteLine("Deleting {0}", filePath);
@@ -159,6 +157,34 @@ namespace Filelocker
 					}
 				}
 			}
+		}
+		
+		[Export("RefreshFiles")]
+		public void RefreshFiles()
+		{
+			try{
+				using(var pool = new NSAutoreleasePool())
+				{
+					try
+					{
+						fileSectionKVPList = FilelockerConnection.Instance.populateFileList(downloadedFileIds, false);
+						InvokeOnMainThread(delegate {
+							Console.WriteLine("File refresh ended, rebuilding table");
+							buildFileList();	
+							UIApplication.SharedApplication.NetworkActivityIndicatorVisible = false;
+						});
+					}
+					catch (FilelockerException fle)
+					{
+						Console.WriteLine("derp {0}", fle.Message);
+					}
+				}
+			}
+			catch (ThreadAbortException tae)
+			{
+				UIApplication.SharedApplication.NetworkActivityIndicatorVisible = false;
+			}
+			
 		}
 		
 		private class pickerDelegate : UIImagePickerControllerDelegate
@@ -180,10 +206,8 @@ namespace Filelocker
 					byte[] imageBytes = new byte[imageData.Length];
 					int length = (int)imageData.Length;
 					Marshal.Copy(imageData.Bytes, imageBytes, 0, length);
-					((AppDelegate) UIApplication.SharedApplication.Delegate).Loading(true);
 					FilelockerConnection.Instance.upload(imageBytes, fileName, "Uploaded via Filelocker for iPhone");
-					((AppDelegate) UIApplication.SharedApplication.Delegate).Loading(false);
-					controller.refreshFileList();
+					controller.startFileRefresh();
 					picker.DismissModalViewControllerAnimated(true);
 				}
 				catch (Exception e)
@@ -193,6 +217,7 @@ namespace Filelocker
 			}
 		}
 		
+		//TODO: Pull out into separate data source classes, as well with FileCell
 		class DataSource : UITableViewSource
 		{
 			FilesViewController controller;
@@ -260,6 +285,7 @@ namespace Filelocker
 		
 		public partial class FileCell : UITableViewCell
 		{
+			//TODO: Drop in the constants
 			public static Dictionary<string, string> FILE_ICONS_BY_EXTENSION = new Dictionary<string, string>()
 			{
 				{"log", "Images/application_xp_terminal.png"},
