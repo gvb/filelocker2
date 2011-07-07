@@ -2083,7 +2083,6 @@ class Root:
         user, fl, systemFiles = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [])
         if fl.check_admin(user):
             systemFiles = self.file_interface.get_user_file_list(format="list", userId="system")
-        groups = fl.get_user_groups(user, user.userId)
         defaultExpiration = datetime.date.today() + (datetime.timedelta(days=fl.maxFileLifeDays))
         uploadTickets = fl.get_upload_tickets_by_user(user, user.userId)
         userFiles = self.file_interface.get_user_file_list(format="list")
