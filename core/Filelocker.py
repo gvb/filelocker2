@@ -1223,6 +1223,7 @@ class Filelocker:
                 #encryptionKey = flFile.fileEncryptionKey
                 #flFile.fileEncryptionKey = None
             flFile.fileId = self.db.createFile(flFile)
+            os.umask(077)
             newFile = open(filePath, "rb")
             f = open(os.path.join(self.vault, str(flFile.fileId)), "wb")
             encrypter, salt = encryption.new_encrypter(encryptionKey)
