@@ -45,7 +45,7 @@ namespace Filelocker
 			base.ViewDidLoad();
 			validfileIdList = new List<string>();
 			picker = new UIImagePickerController();
-			picker.Delegate = new pickerDelegate(this);
+			picker.Delegate = new PickerDelegate(this);
 			btnRefresh.Clicked += delegate {
 				if (refreshThread != null)
 					refreshThread.Abort();
@@ -93,7 +93,7 @@ namespace Filelocker
 		{
 			base.ViewWillAppear (animated);
 			downloadedFileIds = new List<string>();
-			foreach (string filePath in System.IO.Directory.GetFiles(FilelockerConnection.Instance.FILES_PATH).ToList())
+			foreach (string filePath in System.IO.Directory.GetFiles(ApplicationState.FILES_PATH).ToList())
 			{
 				string fileName = System.IO.Path.GetFileName(filePath);
 				try
@@ -108,25 +108,25 @@ namespace Filelocker
 					Console.WriteLine("Filename {0} failed to remove extension: {1}", fileName, e.Message);
 				}
 			}
-			fileSectionKVPList = FilelockerConnection.Instance.populateFileList(downloadedFileIds, true);
-			buildFileList();
+			fileSectionKVPList = FilelockerConnection.Instance.PopulateFileList(downloadedFileIds, true);
+			BuildFileList();
 			if (FilelockerConnection.Instance.CONNECTED)
 			{
 				Console.WriteLine("File refresh started for network load");
-				startFileRefresh();
+				StartFileRefresh();
 			}
 		}
-		public void startFileRefresh()
+		public void StartFileRefresh()
 		{
 			refreshThread = new Thread(RefreshFiles as ThreadStart);
 			UIApplication.SharedApplication.NetworkActivityIndicatorVisible = true;
 			refreshThread.Start();
 		}
-		public void buildFileList()
+		public void BuildFileList()
 		{
 			try
 			{
-				tblFiles.Source = new DataSource(this);
+				tblFiles.Source = new FilesDataSource(this.NavigationController, fileSectionKVPList);
 				tblFiles.ReloadData();
 				var validFileIds = from flFile in fileSectionKVPList.SelectMany(i=>i.Value) select flFile.fileId;
 				validfileIdList = validFileIds.ToList();
@@ -151,7 +151,7 @@ namespace Filelocker
 				{
 					if (!validfileIdList.Contains(fileId))
 					{
-						filePath = ((AppDelegate)UIApplication.SharedApplication.Delegate).getFilePathByFileId(fileId);
+						filePath = ((AppDelegate)UIApplication.SharedApplication.Delegate).GetFilePathByFileId(fileId);
 						Console.WriteLine("Deleting {0}", filePath);
 						System.IO.File.Delete(filePath);
 					}
@@ -167,10 +167,10 @@ namespace Filelocker
 				{
 					try
 					{
-						fileSectionKVPList = FilelockerConnection.Instance.populateFileList(downloadedFileIds, false);
+						fileSectionKVPList = FilelockerConnection.Instance.PopulateFileList(downloadedFileIds, false);
 						InvokeOnMainThread(delegate {
 							Console.WriteLine("File refresh ended, rebuilding table");
-							buildFileList();	
+							BuildFileList();	
 							UIApplication.SharedApplication.NetworkActivityIndicatorVisible = false;
 						});
 					}
@@ -180,18 +180,19 @@ namespace Filelocker
 					}
 				}
 			}
-			catch (ThreadAbortException tae)
+			catch (ThreadAbortException)
 			{
+				Console.WriteLine("Aborting RefreshFiles");
 				UIApplication.SharedApplication.NetworkActivityIndicatorVisible = false;
 			}
 			
 		}
 		
-		private class pickerDelegate : UIImagePickerControllerDelegate
+		private class PickerDelegate : UIImagePickerControllerDelegate
 		{
 			FilesViewController controller;
 			
-			public pickerDelegate(FilesViewController newController):base()
+			public PickerDelegate(FilesViewController newController):base()
 			{
 				this.controller = newController;
 			}
@@ -207,118 +208,12 @@ namespace Filelocker
 					int length = (int)imageData.Length;
 					Marshal.Copy(imageData.Bytes, imageBytes, 0, length);
 					FilelockerConnection.Instance.upload(imageBytes, fileName, "Uploaded via Filelocker for iPhone");
-					controller.startFileRefresh();
+					controller.StartFileRefresh();
 					picker.DismissModalViewControllerAnimated(true);
 				}
 				catch (Exception e)
 				{
 					((AppDelegate) UIApplication.SharedApplication.Delegate).alert("Failed to upload", e.Message);
-				}
-			}
-		}
-		
-		//TODO: Pull out into separate data source classes, as well with FileCell
-		class DataSource : UITableViewSource
-		{
-			FilesViewController controller;
- 			public DataSource (FilesViewController controller)
-			{
-				this.controller = controller;
-			}
-			
-			public override int NumberOfSections(UITableView tableView)
-			{
-				return controller.fileSectionKVPList.Count;
-			}
-			
-			public override string TitleForHeader (UITableView tableView, int section)
-			{
-				return controller.fileSectionKVPList[section].Key;
-			}
-			
-			public override int RowsInSection(UITableView tableview, int section)
-			{
-				return controller.fileSectionKVPList[section].Value.Count;
-			}
-			
-			public override UITableViewCell GetCell (UITableView tableView, MonoTouch.Foundation.NSIndexPath indexPath)
-			{
-				string cellidentifier = "Cell";
-				var cell = tableView.DequeueReusableCell(cellidentifier);
-				if (cell == null)
-				{
-					cell = new UITableViewCell(UITableViewCellStyle.Default, cellidentifier);
-				}
-				//indexPath.Section
-				FLFile rowFile = controller.fileSectionKVPList[indexPath.Section].Value[indexPath.Row];
-				cell = new FileCell(rowFile, FilelockerConnection.Instance.USERID);
-				
-				return cell;
-			} 
-			
-			public override void RowSelected (UITableView tableView, MonoTouch.Foundation.NSIndexPath indexPath)
-			{
-				FLFile rowFile = controller.fileSectionKVPList[indexPath.Section].Value[indexPath.Row];
-				FileInfoView fivc = new FileInfoView(rowFile, controller);
-				controller.NavigationController.PushViewController(fivc, true);
-			}
-			
-			public override void CommitEditingStyle(UITableView tableView, UITableViewCellEditingStyle editingStyle, NSIndexPath indexPath)
-			{
-				if (editingStyle == UITableViewCellEditingStyle.Delete)
-				{
-					FLFile editFile = controller.fileSectionKVPList[indexPath.Section].Value[indexPath.Row];
-					try
-					{
-						FilelockerConnection.Instance.deleteFile(editFile.fileId);
-						controller.fileSectionKVPList[indexPath.Section].Value.Remove(editFile);
-						tableView.DeleteRows(new [] {indexPath}, UITableViewRowAnimation.Fade);
-					}
-					catch (FilelockerException fe)
-					{
-						((AppDelegate) UIApplication.SharedApplication.Delegate).alert("Error Deleting File", fe.Message);
-					}
-				}
-			}
-		}
-
-		
-		public partial class FileCell : UITableViewCell
-		{
-			//TODO: Drop in the constants
-			public static Dictionary<string, string> FILE_ICONS_BY_EXTENSION = new Dictionary<string, string>()
-			{
-				{"log", "Images/application_xp_terminal.png"},
-				{"txt", "Images/page_white_text.png"},
-				{"pdf", "Images/page_white_acrobat.png"},
-				{"default", "Images/page_green.png"}
-			};
-	
-			public FileCell (FLFile sourceFile, string currentUserId) : base(UITableViewCellStyle.Subtitle, "FileCell")
-			{
-				string[] nameArray = sourceFile.fileName.Split('.');
-				string imagePath = "";
-				string extension = nameArray[nameArray.Length-1];
-				string details = "";
-				if (sourceFile.fileOwnerId == currentUserId)
-				{
-					details+=string.Format("Owner: {0} ", sourceFile.fileOwnerId);
-				}
-				details += sourceFile.getFormattedSize();
-				if (!FILE_ICONS_BY_EXTENSION.TryGetValue(extension, out imagePath))
-				{
-					imagePath = FILE_ICONS_BY_EXTENSION["default"];
-				}
-				this.TextLabel.Text = sourceFile.fileName;
-				this.DetailTextLabel.Text = details;
-				this.ImageView.Image = UIImage.FromFile(imagePath);
-				this.TextLabel.TextColor = UIColor.DarkGray;
-				if (sourceFile.downloaded)
-				{
-					this.TextLabel.TextColor = UIColor.Black;
-					UIImage downloadedImage = new UIImage("Images/tick.png");
-					UIImageView diView = new UIImageView(downloadedImage);
-					this.AccessoryView = diView;
 				}
 			}
 		}

@@ -24,13 +24,11 @@ namespace Filelocker
 		// This method is invoked when the application has loaded its UI and its ready to run
 		public override bool FinishedLaunching (UIApplication app, NSDictionary options)
 		{
-			if (!Directory.Exists(FilelockerConnection.Instance.FILES_PATH))
-				Directory.CreateDirectory(FilelockerConnection.Instance.FILES_PATH);
-			string server = NSUserDefaults.StandardUserDefaults.StringForKey("server");
-			string cliKey = NSUserDefaults.StandardUserDefaults.StringForKey("clikey");
-			string username = NSUserDefaults.StandardUserDefaults.StringForKey("username");
+			if (!Directory.Exists(ApplicationState.FILES_PATH))
+				Directory.CreateDirectory(ApplicationState.FILES_PATH);
+			
 			window.AddSubview(tabBarController.View);
-			if (string.IsNullOrEmpty(server) || string.IsNullOrEmpty(username) || string.IsNullOrEmpty(cliKey))
+			if (string.IsNullOrEmpty(ApplicationState.USERID) || string.IsNullOrEmpty(ApplicationState.CLIKEY) || string.IsNullOrEmpty(ApplicationState.SERVER))
 			{
 				tabBarController.SelectedIndex = 2;
 				Console.WriteLine("Need to register");
@@ -39,7 +37,7 @@ namespace Filelocker
 			{
 				try
 				{
-					if (!login())
+					if (!Login()) //Calling the Login function actually logs 
 					{
 						alert("Unable to Log In", "Your crendentials are no longer valid and you may need to re-register with the server");
 						tabBarController.SelectedIndex = 2;
@@ -58,13 +56,9 @@ namespace Filelocker
 			return true;
 		}
 		
-		public bool login()
+		public bool Login()
 		{
-			string server = NSUserDefaults.StandardUserDefaults.StringForKey("server");
-			Console.WriteLine("Server saved string: {0}", server);
-			string cliKey = NSUserDefaults.StandardUserDefaults.StringForKey("clikey");
-			string username = NSUserDefaults.StandardUserDefaults.StringForKey("username");
-			FilelockerConnection.Instance.login(server, username.Trim(), cliKey.Trim());
+			FilelockerConnection.Instance.login(ApplicationState.SERVER, ApplicationState.USERID, ApplicationState.CLIKEY);
 			return FilelockerConnection.Instance.CONNECTED;
 		}
 		
@@ -76,36 +70,9 @@ namespace Filelocker
 			}
 		}
 		
-		public void Loading(bool show)
+		public string GetFilePathByFileId(string fileId)
 		{
-			if (show) 
-			{
-				UIView view = window;
-				if (window.Subviews.Length == 0) 
-				{
-					view = window;
-				} 
-				else 
-				{
-					view = window.Subviews[0];
-					Console.WriteLine("Subview count for window {0}", window.Subviews.Length);
-				}
-				Console.Write("Window bounds {0} {1}", view.Bounds.Width, view.Bounds.Height);
-				//loadingView.View.Frame = new RectangleF(0, 0, view.Bounds.Width, view.Bounds.Height);
-				//loadingView.StartAnimating();
-				//view.AddSubview (loadingView.View);
-			}
-			else 
-			{
-				//loadingView.StopAnimating();
-				//loadingView.View.RemoveFromSuperview();
-			}
-			
-		}
-		
-		public string getFilePathByFileId(string fileId)
-		{
-			string filesPath = FilelockerConnection.Instance.FILES_PATH;
+			string filesPath = ApplicationState.FILES_PATH;
 			string strFilePath = "";
 			foreach (string filePath in System.IO.Directory.GetFiles(filesPath).ToList())
 			{

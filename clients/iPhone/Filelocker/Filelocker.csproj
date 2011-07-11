@@ -93,14 +93,12 @@
       <DependentUpon>MainWindow.xib</DependentUpon>
     </Compile>
     <Compile Include="Main.cs" />
-    <Compile Include="Code\FilelockerConnection.cs" />
     <Compile Include="MessagesScreen.xib.cs">
       <DependentUpon>MessagesScreen.xib</DependentUpon>
     </Compile>
     <Compile Include="MessagesScreen.xib.designer.cs">
       <DependentUpon>MessagesScreen.xib</DependentUpon>
     </Compile>
-    <Compile Include="Code\FLFile.cs" />
     <Compile Include="ViewControllers\FilesViewController.cs" />
     <Compile Include="ViewControllers\SettingsViewController.cs" />
     <Compile Include="FileInfoView.xib.cs">
@@ -110,15 +108,12 @@
       <DependentUpon>FileInfoView.xib</DependentUpon>
     </Compile>
     <Compile Include="ViewControllers\MessagesViewController.cs" />
-    <Compile Include="Code\FLMessage.cs" />
-    <Compile Include="Code\User.cs" />
     <Compile Include="MessageInfoView.xib.cs">
       <DependentUpon>MessageInfoView.xib</DependentUpon>
     </Compile>
     <Compile Include="MessageInfoView.xib.designer.cs">
       <DependentUpon>MessageInfoView.xib</DependentUpon>
     </Compile>
-    <Compile Include="ViewControllers\GroupSearchController.cs" />
     <Compile Include="MessageComposer.xib.cs">
       <DependentUpon>MessageComposer.xib</DependentUpon>
     </Compile>
@@ -137,10 +132,21 @@
     <Compile Include="FileShare.xib.designer.cs">
       <DependentUpon>FileShare.xib</DependentUpon>
     </Compile>
-    <Compile Include="Code\Group.cs" />
-    <Compile Include="ViewControllers\ServerPickerDataModel.cs" />
-    <Compile Include="Code\ApplicationState.cs" />
-    <Compile Include="Code\Constants.cs" />
+    <Compile Include="DataSources\FilesDataSource.cs" />
+    <Compile Include="Models\FilelockerConnection.cs" />
+    <Compile Include="Models\FLFile.cs" />
+    <Compile Include="Models\FLMessage.cs" />
+    <Compile Include="Models\User.cs" />
+    <Compile Include="Models\Group.cs" />
+    <Compile Include="Models\ApplicationState.cs" />
+    <Compile Include="Models\Constants.cs" />
+    <Compile Include="Models\FileCell.cs" />
+    <Compile Include="DataSources\MessagesDataSource.cs" />
+    <Compile Include="Models\MessageCell.cs" />
+    <Compile Include="DataSources\LoginTableDataSource.cs" />
+    <Compile Include="DataSources\FileInfoViewDataSource.cs" />
+    <Compile Include="Models\ServerPickerDataModel.cs" />
+    <Compile Include="ViewControllers\TableEntryFieldDelegate.cs" />
   </ItemGroup>
   <ItemGroup>
     <Page Include="MainWindow.xib" />
@@ -158,11 +164,12 @@
     </MonoDevelop>
   </ProjectExtensions>
   <ItemGroup>
-    <Folder Include="Code\" />
     <Folder Include="Settings.bundle\" />
     <Folder Include="Images\" />
     <Folder Include="ViewControllers\" />
     <Folder Include="bin\" />
+    <Folder Include="DataSources\" />
+    <Folder Include="Models\" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="Settings.bundle\Root.plist">

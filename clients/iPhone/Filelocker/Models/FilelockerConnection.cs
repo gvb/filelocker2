@@ -20,10 +20,7 @@ namespace Filelocker
 		private string CLI_KEY;
 		public bool CONNECTED;
 		public List<Group> USER_GROUPS;
-		public string FILES_PATH = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Personal), "files");
-		public string SERVERS_FILE = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Personal), "known_servers.xml");
-		public string FILES_CACHE = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Personal), "files.xml");
-		public string MESSAGES_CACHE = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Personal), "messages.xml");
+		
 		
 
 		//This stuff makes the class a singleton
@@ -307,14 +304,14 @@ namespace Filelocker
 			}
 		}
 		
-		public List<KeyValuePair<string, List<FLFile>>> populateFileList(List<string> downloadedFileIds, bool loadFromCache)
+		public List<KeyValuePair<string, List<FLFile>>> PopulateFileList(List<string> downloadedFileIds, bool loadFromCache)
 		{
 			XmlDocument doc = new XmlDocument();
 			List<KeyValuePair<string, List<FLFile>>> fileSectionKVPList = new List<KeyValuePair<string, List<FLFile>>>();
-			if (loadFromCache && File.Exists(FILES_CACHE))
+			if (loadFromCache && File.Exists(ApplicationState.FILES_CACHE))
 			{
 				Console.WriteLine("Existed");
-				doc.Load(FILES_CACHE);
+				doc.Load(ApplicationState.FILES_CACHE);
 			}
 			else if (loadFromCache)
 			{
@@ -330,7 +327,7 @@ namespace Filelocker
 					throw new FilelockerException(response["fMessages"]);
 				}
 				doc.LoadXml(response["data"]);
-				File.WriteAllText(FILES_CACHE, response["data"]); //Drop the current contents into cache
+				File.WriteAllText(ApplicationState.FILES_CACHE, response["data"]); //Drop the current contents into cache
 			}
 
 			try
@@ -510,7 +507,7 @@ namespace Filelocker
 	            {			
 					
 					HttpStatusCode statusCode = ((HttpWebResponse)response).StatusCode;
-					if (true) //Check https status code TODO
+					if (statusCode == HttpStatusCode.OK) //Check https status code TODO
 					{
 						foreach (Cookie cookie in ((HttpWebResponse)response).Cookies)
 						{
@@ -554,7 +551,7 @@ namespace Filelocker
 								string filename = string.Format("{0}{1}", fileId, fileExtension);
 								
 								// Create the local file
-								localStream = File.Create(Path.Combine(FILES_PATH, filename));
+								localStream = File.Create(Path.Combine(ApplicationState.FILES_PATH, filename));
 								
 								// Allocate a 1k buffer
 								byte[] buffer = new byte[1024];
@@ -694,6 +691,7 @@ namespace Filelocker
 				catch (Exception e)
 				{
 					data = "";
+					//TODO: extract strings, look into localization
 					Console.Write("Problem getting data node: {0}", e.Message);
 				}
 
