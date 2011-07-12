@@ -6,7 +6,7 @@ except ImportError, ie:
     from md5 import md5
 from Crypto.Cipher import XOR
 from Crypto.Cipher import AES
-import random
+from Crypto import Random
 import os
 import re
 import sys
@@ -18,7 +18,7 @@ def new_encrypter(password):
    keyBytes = 32
    encrypter = None
    m = md5()
-   m.update(str(random.random()))
+   m.update(str(Random.get_random_bytes(32)))
    salt = m.hexdigest()[0:16]
    try:
       key = KeyGen().makeKey(password, str(salt), iteration, keyBytes)
@@ -91,7 +91,5 @@ def generatePassword():
    #Based on the example from http://aspn.activestate.com/ASPN/Cookbook/Python/Recipe/59873
    import string
    chars = string.letters + string.digits
-   newpasswd=""
-   for i in range(32):
-      newpasswd = newpasswd + random.choice(chars)
+   newpasswd=str(Random.get_random_bytes(32))
    return newpasswd

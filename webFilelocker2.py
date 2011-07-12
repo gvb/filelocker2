@@ -2206,8 +2206,8 @@ class Root:
         sharedFiles = self.file_interface.get_files_shared_with_user_list(format="list")
         logoPath = fl.get_logo()
         response = ""
-        groups = fl.get_user_groups(user, user.userId)
         if kwargs.has_key("format"):
+            groups = fl.get_user_groups(user, user.userId)
             if kwargs['format'] == "cli":
                 groupShares = fl.get_private_group_shares_by_user(user, user.userId)
                 groupFileShareDict = {}
@@ -2389,7 +2389,7 @@ def get_current_web_users():
             logging.error("[%s] [admin] [Unable to read user session: %s]" % (user.userId, str(e)))
     return currentUsers, currentUserIds
 
-def strip_tags(value):
+def strip_tags(value, message=False):
     """Return the given HTML with all tags and dangerous characters stripped."""
     if message:
         p = re.compile(r'<.*?>')

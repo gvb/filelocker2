@@ -50,10 +50,11 @@ class LDAPDirectory(object):
         if result_length > 0:
             dn, ldap_dict = lusers[0]
             userFirstName, userLastName, userDisplayName, userEmail = (ldap_dict.get(self.firstNameAttr, [''])[0], ldap_dict.get(self.lastNameAttr, [''])[0], ldap_dict.get(self.displayNameAttr, [''])[0].title(), ldap_dict.get(self.emailAttr, [''])[0])
-            foundUser = User(userFirstName, userLastName, userEmail, None, None, None, userId)
-            foundUser.userDisplayName = userDisplayName
         else:
+            userFirstName, userLastName, userDisplayName, userEmail = ("NOT FOUND", "NOT FOUND", userId + " NOT FOUND", "")
             logging.error("Result length was 0 while looking up user %s" % userId)
+        foundUser = User(userFirstName, userLastName, userEmail, None, None, None, userId)
+        foundUser.userDisplayName = userDisplayName
         return foundUser
         
     #This function will do a search on an ldap directory getting all matches for a combination of first names and last names 
