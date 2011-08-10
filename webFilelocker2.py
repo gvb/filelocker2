@@ -49,6 +49,14 @@ from core.dao import dao_creator
 from core import encryption
 from core import directory
 
+class myFieldStorage(cgi.FieldStorage):
+    def make_file(self, binary=None):
+        return get_temp_file()
+
+def noBodyProcess():
+    cherrypy.request.process_request_body = False
+cherrypy.tools.noBodyProcess = cherrypy.Tool('before_request_body', noBodyProcess)
+
 def before_upload(**kwargs):
     fl, user, sMessages, fMessages, uploadTicket = None, None, None, None, None
     if cherrypy.session.has_key("uploadTicket") and cherrypy.session.get("uploadTicket") is not None:
@@ -115,7 +123,7 @@ def requires_login(**kwargs):
                         currentUser = fl.get_user(userId, True)
                     if currentUser.authorized == False:
                         raise cherrypy.HTTPError(403, "Your user account does not have access to this system.")
-                    cherrypy.session["user"], cherrypy.session['original_user'], cherrypy.session['sMessages'], cherrypy.session['fMessages'] = currentUser, currentUser, [], []
+                    setup_session(currentUser)
                     fl.record_login(cherrypy.session.get("user"), cherrypy.request.remote.ip)
                     if currentUser.userTosAcceptDatetime is None:
                         raise cherrypy.HTTPRedirect(fl.rootURL+"/sign_tos") 
@@ -563,6 +571,7 @@ class HTTP_Admin:
                     tempFileName = file_object.name.split(os.path.sep)[-1]
                     #Read the file from the client 
                     #Create the progress file object and drop it into the transfer dictionary
+                    print "==================CREATING UPFILE"
                     upFile = ProgressFile(8192, fileName, file_object, uploadIndex)
                     if cherrypy.file_transfers.has_key(uploadKey): #Drop the transfer into the global transfer list
                         cherrypy.file_transfers[uploadKey].append(upFile)
@@ -1167,6 +1176,7 @@ class HTTP_File:
             fMessages.extend(fle.failureMessages)
             sMessages.extend(fle.successMessages)
         return fl_response(sMessages, fMessages, format)
+
                     
     @cherrypy.expose
     @cherrypy.tools.before_upload()
@@ -1200,21 +1210,14 @@ class HTTP_File:
         #Set upload index if it's found in the arguments 
         if kwargs.has_key('uploadIndex'):
             uploadIndex = kwargs['uploadIndex']
-        print "Kwargs: %s" % str(kwargs)
-        print "headers: %s" % str(lcHDRS)
 
         fileSizeBytes = int(lcHDRS['content-length'])
         if lcHDRS['content-type'] == "application/octet-stream":
             #Create the temp file to store the uploaded file 
-            file_object = get_temp_file()
-            tempFileName = file_object.name.split(os.path.sep)[-1]
+            upFile = get_temp_file()
+            tempFileName = upFile.name.split(os.path.sep)[-1]
             #Read the file from the client 
-            #Create the progress file object and drop it into the transfer dictionary
-            upFile = ProgressFile(8192, fileName, file_object, uploadIndex)
-            if cherrypy.file_transfers.has_key(uploadKey): #Drop the transfer into the global transfer list
-                cherrypy.file_transfers[uploadKey].append(upFile)
-            else:
-                cherrypy.file_transfers[uploadKey] = [upFile,]
+
             bytesRemaining = fileSizeBytes
             while True:
                 if bytesRemaining >= 8192:
@@ -1226,17 +1229,10 @@ class HTTP_File:
                 if bytesRemaining <= 0: break
             upFile.seek(0)
             #If the file didn't get all the way there
-            if long(os.path.getsize(upFile.file_object.name)) != long(fileSizeBytes): #The file transfer stopped prematurely, take out of transfers and queue partial file for deletion
+            if long(os.path.getsize(upFile.name)) != long(fileSizeBytes): #The file transfer stopped prematurely, take out of transfers and queue partial file for deletion
                 fileUploadComplete = False
-                logging.debug("[system] [upload] [File upload was prematurely stopped, rejected]")
                 fl.queue_for_deletion(tempFileName)
                 fMessages.append("The file %s did not upload completely before the transfer ended" % fileName)
-                if cherrypy.file_transfers.has_key(uploadKey):
-                    for fileTransfer in cherrypy.file_transfers[uploadKey]:
-                        if fileTransfer.file_object.name == upFile.file_object.name:
-                            cherrypy.file_transfers[uploadKey].remove(fileTransfer)
-                    if len(cherrypy.file_transfers[uploadKey]) == 0:
-                        del cherrypy.file_transfers[uploadKey]
         else:
             cherrypy.request.headers['uploadindex'] = uploadIndex
             formFields = myFieldStorage(fp=cherrypy.request.rfile,
@@ -1251,14 +1247,9 @@ class HTTP_File:
                 newTempFile = get_temp_file()
                 newTempFile.write(str(upFile.file.getvalue()))
                 newTempFile.seek(0)
-                upFile = ProgressFile(8192, fileName, newTempFile)
-                if cherrypy.file_transfers.has_key(uploadKey): #Drop the transfer into the global transfer list
-                    cherrypy.file_transfers[uploadKey].append(upFile)
-                else:
-                    cherrypy.file_transfers[uploadKey] = [upFile,]
             else:
                 upFile = upFile.file
-            tempFileName = upFile.file_object.name.split(os.path.sep)[-1]
+            tempFileName = upFile.name.split(os.path.sep)[-1]
         
         if fileUploadComplete:
             #The file has been successfully uploaded by this point, process the rest of the variables regarding the file
@@ -1313,18 +1304,11 @@ class HTTP_File:
                     notifyOnDownload = False
                     
                 #Build the Filelocker File objects and check them in to Filelocker
-                print "File name before creation: %s" % str(fileName)
                 if uploadTicket is not None:
                     newFile = File(fileName, None, fileNotes, fileSizeBytes, datetime.datetime.now(), user.userId, expiration, False, None, None, "Processing File", "local", notifyOnDownload, uploadTicket.ticketId)
                 else:
                     newFile = File(fileName, None, fileNotes, fileSizeBytes, datetime.datetime.now(), ownerId, expiration, False, None, None, "Processing File", "local", notifyOnDownload, None)
-                if cherrypy.file_transfers.has_key(uploadKey):
-                    for fileTransfer in cherrypy.file_transfers[uploadKey]:
-                        if fileTransfer.file_object.name == upFile.file_object.name:
-                            if scanFile == True:
-                                fileTransfer.status = "Scanning and Encrypting"
-                            else:fileTransfer.status = "Encrypting"
-                createdFile = fl.check_in_file(user, upFile.file_object.name, newFile, scanFile)
+                createdFile = fl.check_in_file(user, os.path.join(fl.vault, str(tempFileName)), newFile, scanFile)
                 sMessages.append("File %s uploaded successfully." % str(fileName))
                 
                 #If this is an upload request, check to see if it's a single use request and nullify the ticket if so, now that the file has been successfully uploaded
@@ -1344,15 +1328,6 @@ class HTTP_File:
             except Exception, e:
                 fMessages.append("Could not upload file: %s." % str(e))
                 logging.error("[%s] [upload] [Error uploading file: %s]" % (uploadKey, str(e)))
-            
-            #At this point the file upload is done, one way or the other. Remove the ProgressFile from the transfer dictionary
-            try:
-                if cherrypy.file_transfers.has_key(uploadKey):
-                    for fileTransfer in cherrypy.file_transfers[uploadKey]:
-                        if fileTransfer.file_object.name == upFile.file_object.name:
-                            cherrypy.file_transfers[uploadKey].remove(fileTransfer)
-                    if len(cherrypy.file_transfers[uploadKey]) == 0:
-                        del cherrypy.file_transfers[uploadKey]
             except KeyError, ke:
                 logging.warning("[%s] [upload] [Key error deleting entry in file_transfer]" % user.userId)
             
@@ -1555,12 +1530,16 @@ class HTTP_File:
     def upload_stats(self, format="json", **kwargs):
         sMessages, fMessages, uploadStats, uploadKey = [], [], [], None
         try:
+            #if cherrypy.session.has_key("user"):
+                #userId = cherrypy.session.get("user").userId
+                #for key in cherrypy.file_transfers.keys():
+                    #if key.split(":")[0] == cherrypy.session.get('user').userId: # This will actually get uploads by the user and uploads using a ticket they generated
+                        #for fileStat in cherrypy.file_transfers[key]:
+                            #uploadStats.append(fileStat.stat_dict())
             if cherrypy.session.has_key("user"):
-                userId = cherrypy.session.get("user").userId
-                for key in cherrypy.file_transfers.keys():
-                    if key.split(":")[0] == cherrypy.session.get('user').userId: # This will actually get uploads by the user and uploads using a ticket they generated
-                        for fileStat in cherrypy.file_transfers[key]:
-                            uploadStats.append(fileStat.stat_dict())
+                for key in cherrypy.session.get("uploads"):
+                    for fileStat in cherrypy.session.get("uploads")[key]:
+                        uploadStats.append(fileStat)
             elif cherrypy.session.has_key("uploadTicket"):
                 uploadTicket = cherrypy.session.get("uploadTicket")
                 uploadKey = uploadTicket.ownerId + ":" + uploadTicket.ticketId
@@ -2048,7 +2027,7 @@ class Root:
                         currentUser.isLocal = True #Tags a user if they used a local login, in case we want to use this later
                     if currentUser.authorized == False:
                         raise cherrypy.HTTPError(403, "You do not have permission to access this system")
-                    cherrypy.session['user'], cherrypy.session['original_user'], cherrypy.session['sMessages'], cherrypy.session['fMessages'] = currentUser, currentUser, [], []
+                    setup_session(currentUser)
                     fl.record_login(cherrypy.session.get("user"), cherrypy.request.remote.ip)
                     raise cherrypy.HTTPRedirect(fl.rootURL)
                 else: #This should only happen in the case of a user existing in the external directory, but having never logged in before
@@ -2057,7 +2036,7 @@ class Root:
                         fl.install_user(newUser)
                         currentUser = fl.get_user(username, True)
                         if currentUser is not None and currentUser.authorized != False:
-                            cherrypy.session['user'], cherrypy.session['original_user'], cherrypy.session['sMessages'], cherrypy.session['fMessages'] = currentUser, currentUser, [], []
+                            setup_session(currentUser)
                             raise cherrypy.HTTPRedirect(fl.rootURL)
                         else:
                             raise cherrypy.HTTPError(403, "You do not have permission to access this system")
@@ -2206,20 +2185,18 @@ class Root:
         sharedFiles = self.file_interface.get_files_shared_with_user_list(format="list")
         logoPath = fl.get_logo()
         response = ""
-        if kwargs.has_key("format"):
+        if kwargs.has_key("format") and kwargs['format'] == "cli":
             groups = fl.get_user_groups(user, user.userId)
-            if kwargs['format'] == "cli":
-                groupShares = fl.get_private_group_shares_by_user(user, user.userId)
-                groupFileShareDict = {}
-                for groupShare in groupShares:
-                    if groupFileShareDict.has_key(str(groupShare.targetId)) == False:
-                        groupFileShareDict[str(groupShare.targetId)] = []
-                    groupFileShareDict[str(groupShare.targetId)].append(groupShare.fileId)
-                xml = str(Template(file=fl.get_template_file('files_xml.tmpl'), searchList=[locals(),globals()]))
-                sMessages.append("Successfully got the xml of the files")
-                response =  fl_response(sMessages, fMessages, "cli", data=xml)
+            groupShares = fl.get_private_group_shares_by_user(user, user.userId)
+            groupFileShareDict = {}
+            for groupShare in groupShares:
+                if groupFileShareDict.has_key(str(groupShare.targetId)) == False:
+                    groupFileShareDict[str(groupShare.targetId)] = []
+                groupFileShareDict[str(groupShare.targetId)].append(groupShare.fileId)
+            xml = str(Template(file=fl.get_template_file('files_xml.tmpl'), searchList=[locals(),globals()]))
+            sMessages.append("Successfully got the xml of the files")
+            response =  fl_response(sMessages, fMessages, "cli", data=xml)
         else:
-            
             defaultExpiration = datetime.date.today() + (datetime.timedelta(days=fl.maxFileLifeDays))
             uploadTickets = fl.get_upload_tickets_by_user(user, user.userId)
             userShareableAttributes = fl.get_available_attributes_by_user(user)
@@ -2372,6 +2349,9 @@ def fl_response(sMessages, fMessages, format, data=None):
     else:
         return "Successes: %s, Failures: %s" % (str(sMessages), str(fMessages))
 
+def setup_session(currentUser):
+    cherrypy.session['user'], cherrypy.session['original_user'], cherrypy.session['uploads'], cherrypy.session['sMessages'], cherrypy.session['fMessages'] = currentUser, currentUser, {}, [], []
+
 def get_current_web_users():
     sessionCache = {}
     currentUserIds, currentUsers = [], []
@@ -2474,111 +2454,7 @@ def get_temp_file():
         tempFileName = os.path.join(fl.vault, filePrefix + str(randomNumber) + fileSuffix)
     file_object = open(tempFileName, "w")
     return file_object
-    
-class myFieldStorage(cherrypy._cpcgifs.FieldStorage):
-    def __del__(self, *args, **kwargs):
-        try:
-            uploadKey = None
-            if cherrypy.session.has_key("user"):
-                uploadKey = cherrypy.session.get('user').userId
-            elif cherrypy.session.has_key("uploadTicket"):
-                uploadKey = cherrypy.session.has_key("uploadTicket").ownerId+":"+cherrypy.session.has_key("uploadTicket").ticketId
-            if cherrypy.file_transfers.has_key(uploadKey):
-                for transfer in cherrypy.file_transfers[uploadKey]:
-                    if transfer.file_object.name == self.file_location:
-                        cherrypy.file_transfers[uploadKey].remove(transfer)
-                if len(cherrypy.file_transfers[uploadKey]) == 0:
-                    del cherrypy.file_transfers[uploadKey]
-            if os.path.isfile(self.file_location):
-                fl = cherrypy.thread_data.flDict['app']
-                tempFileName = self.file_location.split(os.path.sep)[-1]
-                fl.queue_for_deletion(tempFileName)
-        except KeyError:
-            pass
-        except KeyError, ke:
-            pass
-        except AttributeError, ae:
-            pass
-        except OSError, oe:
-            pass
-        except Exception, e:
-            pass
-        
-    def make_file(self, binary=None):
-        if self.filename is not None:
-            uploadIndex = None
-            if cherrypy.request.headers.has_key("uploadindex"):
-                uploadIndex = cherrypy.request.headers['uploadindex']
-            fo = ProgressFile(self.bufsize, self.filename, uploadIndex=uploadIndex)
-            self.file_location = fo.file_object.name
-            uploadKey = None
-            if cherrypy.session.has_key("uploadTicket"):
-                uploadKey = cherrypy.session.get("uploadTicket").ownerId+":"+cherrypy.session.get("uploadTicket").ticketId
-            elif cherrypy.session.has_key("user"):
-                uploadKey = cherrypy.session.get('user').userId
-            
-            if cherrypy.file_transfers.has_key(uploadKey):
-                cherrypy.file_transfers[uploadKey].append(fo)
-            else:
-                cherrypy.file_transfers[uploadKey] = [fo,]
-            return fo
-        else:
-            return StringIO.StringIO("")
 
-class ProgressFile(object):
-    def __init__(self, buf, fileName, file_object=None, uploadIndex=None, *args, **kwargs):
-        if file_object is None:
-            #self.file_object = tempfile.NamedTemporaryFile(*args, **kwargs)
-            self.file_object = get_temp_file()
-        else:
-            self.file_object = file_object
-        self.fileName = fileName
-        self.transferred = 0
-        self.buf = buf
-        lcHDRS = {}
-        for key, val in cherrypy.request.headers.iteritems():
-            lcHDRS[key.lower()] = val
-        self.pre_sized = float(lcHDRS['content-length'])
-        self.speed = 1
-        self.remaining = 0
-        self.eta = 0
-        self.uploadIndex = uploadIndex
-        self._start = time.time()
-        self.status = "Uploading"
-    def write(self, data):
-        now = time.time()
-        self.transferred += len(data)
-        if (now - self._start) == 0:
-            self.speed = 0
-        else:
-            self.speed = self.transferred / (now - self._start)
-        self.remaining = self.pre_sized - self.transferred
-        if self.speed == 0: self.eta = 9999999
-        else: self.eta = self.remaining / self.speed
-        return self.file_object.write(data)
-
-    def seek(self, pos):
-        self.post_sized = self.transferred
-        self.transferred = True
-        return self.file_object.seek(pos)
-
-    def read(self, size):
-        return self.file_object.read(size)
-        
-    def stat_dict(self):
-        valDict = {}
-        valDict['fileName'] = self.fileName
-        valDict['speed'] = '%9.2f' % (self.speed / 1024.0)
-        valDict['sizeKB'] = '%9.2f' % (self.pre_sized / 1024.0)
-        valDict['transferredKB'] = '%9.2f' % (self.transferred / 1024.0)
-        valDict['eta'] = str(int(self.eta))
-        if self.uploadIndex is not None:
-            if self.uploadIndex.isdigit():
-                valDict['uploadIndex'] = self.uploadIndex
-            else:
-                valDict['uploadIndex'] = "\"%s\"" % self.uploadIndex
-        valDict['status'] = self.status
-        return valDict
 
 def fl_connect(threadIndex): 
     # Create a Filelocker instance and store it in the current thread 
@@ -2683,7 +2559,6 @@ def start(configfile=None, daemonize=False, pidfile=None):
     
     try:
         #This line override the cgi Fieldstorage with the one we defined in order to track upload progress
-        cherrypy._cpcgifs.FieldStorage = myFieldStorage
         cherrypy.server.socket_timeout = 60
         engine.start()
     except:

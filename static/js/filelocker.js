@@ -9,6 +9,7 @@ var uploader;
 // Files
 function initFiles()
 {
+    
     hideMultiShare();
     $(".fileSelectBox").prop("checked", false);
     $(".systemFileSelectBox").prop("checked", false);
@@ -501,7 +502,6 @@ function promptUpload()
             listElement: $("#progressBarSection")[0],
             action: FILELOCKER_ROOT+'/file_interface/upload?format=json',
             params: {},
-            sizeLimit: 2147483647,
             onSubmit: function(id, fileName){
                 var systemUpload = "no";
                 if ($("#systemUpload").length >0)
@@ -518,12 +518,45 @@ function promptUpload()
                     'fileName': fileName
                 });
                 $("#uploadBox").dialog("close");
-                continuePolling = true;
-                if(pollerId === "")
-                    pollerId = setInterval(function() { poll(); }, 1000);
             },
             onProgress: function(id, fileName, loaded, total){
-                checkServerMessages("uploading file");
+                    var suffix = "B";
+                    var fileStatus = "Uploading";
+                    var percent = (loaded/total)*100;
+                    var formattedTotal = total;
+                    while (formattedTotal>1024)
+                    {
+                        if (suffix == "B") {suffix="kB";}
+                        else if (suffix == "kB") {suffix = "MB";}
+                        else if (suffix == "MB") {suffix = "GB";}
+                        formattedTotal /= 1024;
+                    }
+
+                    if(fileName.length > 50)
+                        fileName = fileName.substring(0,25) + "..." + fileName.substring(fileName.length-10,fileName.length);
+                    percent = parseInt(percent, 10);
+                    var rowId = "upload_" + id;
+                    if ($("#"+rowId).length > 0)
+                    {
+                        $("#"+rowId).progressbar("value", percent);
+                        $("#"+rowId+" >div").html("<span class='document progressBarText' title='"+fileName+": "+Math.round(loaded)+" kB of "+Math.round(formattedTotal)+" "+suffix+" transferred'>"+fileName+": "+fileStatus+"</span>");
+                        $("#"+rowId+"_eta").html(" ");
+                        
+                    }
+                    else
+                    {
+                        $("#progressBarSection").append("<tr class='progress_row'><td></td><td><div class='progressbarDoc'></div><div id='"+rowId+"'></div></td><td>"+Math.round(formattedTotal)+" "+suffix+"</td><td id='"+rowId+"_eta'></td><td id='"+rowId+"_cancel'><a href='javascript:uploader._handler.cancel("+id+");' class='inlineLink' title='Cancel File Upload'><span class='cross'>&nbsp;</span></a></td></tr>"); 
+                        $("#"+rowId).progressbar({value:percent});
+                        $("#"+rowId+" >div").html("<span class='document progressBarText' title='"+fileName+": "+Math.round(loaded)+" kB of "+Math.round(formattedTotal)+" "+suffix+" transferred'>"+fileName+": "+fileStatus+"</span>");
+                    }
+                    if(loaded == total)
+                    {
+                        fileStatus = "Processing and Encrypting";
+                        $("#"+rowId+"_cancel").empty();
+                        $("#"+rowId).progressbar("value", 100);
+                        $("#"+rowId+" >div.ui-progressbar-value").css("background-image","url("+FILELOCKER_ROOT+"/static/images/pbar-ani.gif)");
+                    }
+                //checkServerMessages("uploading file");
             },
             onComplete: function(id, fileName, response){
                 var serverMsg = checkServerMessages("uploading file");
@@ -1782,6 +1815,6 @@ jQuery(document).ready(function() {
         $("#bannerBox").dialog("open");
     }
     getNewMessageCount();
-    messagePoller = setInterval(function() { getNewMessageCount(); }, 30000); //TODO Move this into poller with UpdateQuota
+    //messagePoller = setInterval(function() { getNewMessageCount(); }, 30000); //TODO Move this into poller with UpdateQuota
     checkServerMessages("loading page");
 });
