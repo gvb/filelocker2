@@ -1207,6 +1207,8 @@ class HTTP_File:
                                         environ={'REQUEST_METHOD':'POST'},
                                         keep_blank_values=True)
             file_object = formFields['qqfile']
+            logging.error("filename: %s" % file_object.filename)
+            logging.error("tempFileName: %s" % file_object.name)
             fileName = file_object.filename
             tempFileName = file_object.name.split(os.path.sep)[-1]
         
