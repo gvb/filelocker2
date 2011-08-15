@@ -593,7 +593,8 @@ class HTTP_Admin:
                         fileUploadComplete = False
                         logging.debug("[system] [upload] [File upload was prematurely stopped, rejected]")
                         #fl.queue_for_deletion(tempFileName)
-                        cherrypy.active_temp_files.remove(tempFileName)
+                        if tempFileName in cherrypy.active_temp_files:
+                            cherrypy.active_temp_files.remove(tempFileName)
                         fMessages.append("The file %s did not upload completely before the transfer ended" % fileName)
                 else:
                     formFields = myFieldStorage(fp=cherrypy.request.rfile,
@@ -1197,7 +1198,8 @@ class HTTP_File:
                 fileUploadComplete = False
                 logging.debug("[system] [upload] [File upload was prematurely stopped, rejected]")
                 #fl.queue_for_deletion(tempFileName)
-                cherrypy.active_temp_files.remove(tempFileName)
+                if tempFileName in cherrypy.active_temp_files:
+                    cherrypy.active_temp_files.remove(tempFileName)
                 cherrypy.session.get("uploads").remove(fileName)
                 fMessages.append("The file %s did not upload completely before the transfer ended" % fileName)
         else:
@@ -1293,7 +1295,8 @@ class HTTP_File:
                 logging.error("[%s] [upload] [Error uploading file: %s]" % (uploadKey, str(e)))
             
             #Release the temp file
-            cherrypy.active_temp_files.remove(tempFileName)
+            if tempFileName in cherrypy.active_temp_files:
+                cherrypy.active_temp_files.remove(tempFileName)
             cherrypy.session.get("uploads").remove(fileName)
         
         #Return the response
@@ -2086,11 +2089,10 @@ class Root:
         totalMessageCount = fl.get_message_count(user)
         currentUsersList, currentUserIds, currentUploads = get_current_web_users()
         currentUploadsCount = 0
-        for user in currentUploads.keys():
-            currentUploadsCount += len(currentUploads[user])
+        for userId in currentUploads.keys():
+            currentUploadsCount += len(currentUploads[userId])
         logsFile = open(fl.logFile)
         logs = tail(logsFile, 50)
-
         attributes = fl.get_available_attributes_by_user(user)
         tpl = Template(file=fl.get_template_file('admin.tmpl'), searchList=[locals(),globals()])  
         return str(tpl)
