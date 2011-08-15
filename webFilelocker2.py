@@ -1161,21 +1161,19 @@ class HTTP_File:
             lcHDRS[key.lower()] = val
         #Get the file name
         fileName, tempFileName, fileUploadComplete = None,None,True
-        if fileName is None and lcHDRS.has_key('x-file-name'):
-            fileName = lcHDRS['x-file-name']
-        if kwargs.has_key("fileName"):
-            fileName = kwargs['fileName']
-        if kwargs.has_key("filename"):
-            fileName = kwargs["filename"]
-            
+        
+        if lcHDRS.has_key('x-file-name'):
+                fileName = lcHDRS['x-file-name']
         if fileName is not None and fileName.split("\\")[-1] is not None:
             fileName = fileName.split("\\")[-1]
         if fileName is None: #This is to accomodate a poorly behaving browser that's not sending the file name
             fileName = "Unknown"
-
+        
         fileSizeBytes = int(lcHDRS['content-length'])
                 
         if lcHDRS['content-type'] == "application/octet-stream":
+            if kwargs.has_key("qqfile"):
+                fileName = kwargs['qqfile']
             #Create the temp file to store the uploaded file 
             file_object = get_temp_file()
             tempFileName = file_object.name.split(os.path.sep)[-1]
@@ -1208,9 +1206,8 @@ class HTTP_File:
                                         headers=lcHDRS,
                                         environ={'REQUEST_METHOD':'POST'},
                                         keep_blank_values=True)
-            file_object = formFields['fileName']
-            if fileName == "Unknown":
-                fileName = file_object.filename
+            file_object = formFields['qqfile']
+            fileName = file_object.filename
             tempFileName = file_object.name.split(os.path.sep)[-1]
         
         if fileUploadComplete:

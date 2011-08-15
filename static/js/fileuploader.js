@@ -4,7 +4,7 @@
  * Multiple file upload component with progress-bar, drag-and-drop. 
  * © 2010 Andrew Valums ( andrew(at)valums.com ) 
  * 
- * Licensed under GNU GPL 2 or later, see license.txt.
+ * Licensed under GNU GPL 2 or later and GNU LGPL 2 or later, see license.txt.
  */    
 
 //
@@ -368,9 +368,9 @@ qq.FileUploaderBasic.prototype = {
         this._filesInProgress--;        
     },
     _onInputChange: function(input){
-        if (this._handler instanceof qq.UploadHandlerXhr){
+        if (this._handler instanceof qq.UploadHandlerXhr){                
             this._uploadFileList(input.files);                   
-        } else {
+        } else {             
             if (this._validateFile(input)){                
                 this._uploadFile(input);                                    
             }                      
@@ -403,13 +403,13 @@ qq.FileUploaderBasic.prototype = {
         if (file.value){
             // it is a file input            
             // get input value and remove path to normalize
-            name = file.value.replace(/.*(\/|\\)/, ""); //TODO Get file size here in IE.
+            name = file.value.replace(/.*(\/|\\)/, "");
         } else {
             // fix missing properties in Safari
             name = file.fileName != null ? file.fileName : file.name;
             size = file.fileSize != null ? file.fileSize : file.size;
         }
-        
+                    
         if (! this._isAllowedExtension(name)){            
             this._error('typeError', name);
             return false;
@@ -418,19 +418,13 @@ qq.FileUploaderBasic.prototype = {
             this._error('emptyError', name);
             return false;
                                                      
-        } else if (size && this._options.sizeLimit && size > this._options.sizeLimit){
-            var browserAndVersion = detectBrowserVersion();
-            if(browserAndVersion[0] != "Chrome" // File uploads larger than 2GB work in Chrome, Safari, FF4, and IE9.
-                && browserAndVersion[0] != "Safari"
-                && !(browserAndVersion[0] == "Firefox" && parseInt(browserAndVersion[1]) >= 4)
-                && !(browserAndVersion[0] == "Internet Explorer" && parseInt(browserAndVersion[1]) >= 9)) //TODO Opera?
-            {
-                this._error('sizeError', name);
-                return false;
-            }       
+        } else if (size && this._options.sizeLimit && size > this._options.sizeLimit){            
+            this._error('sizeError', name);
+            return false;
+                        
         } else if (size && size < this._options.minSizeLimit){
             this._error('minSizeError', name);
-            return false;
+            return false;            
         }
         
         return true;                
@@ -491,18 +485,19 @@ qq.FileUploader = function(o){
         listElement: null,
                 
         template: '<div class="qq-uploader">' + 
-                '<div class="qq-upload-drop-area"><span>Drop Files Here to Upload</span></div>' +
-                '<div class="qq-upload-button"><span>Browse and Upload</span></div>' +
+                '<div class="qq-upload-drop-area"><span>Drop files here to upload</span></div>' +
+                '<div class="qq-upload-button">Upload a file</div>' +
                 '<ul class="qq-upload-list"></ul>' + 
              '</div>',
 
         // template for one item in file list
-        fileTemplate: '<span class="qq-upload-progress-stats hidden">' +
+        fileTemplate: '<li>' +
                 '<span class="qq-upload-file"></span>' +
                 '<span class="qq-upload-spinner"></span>' +
                 '<span class="qq-upload-size"></span>' +
-                '<a class="qq-upload-cancel" href="#"></a>' +
-            '</span>',
+                '<a class="qq-upload-cancel" href="#">Cancel</a>' +
+                '<span class="qq-upload-failed-text">Failed</span>' +
+            '</li>',        
         
         classes: {
             // used to get elements from templates
@@ -945,7 +940,7 @@ qq.UploadHandlerAbstract.prototype = {
                 
         var max = this._options.maxConnections;
         
-        if (this._queue.length >= max){
+        if (this._queue.length >= max && i < max){
             var nextId = this._queue[max-1];
             this._upload(nextId, this._params[nextId]);
         }
@@ -966,7 +961,7 @@ qq.extend(qq.UploadHandlerForm.prototype, qq.UploadHandlerAbstract.prototype);
 
 qq.extend(qq.UploadHandlerForm.prototype, {
     add: function(fileInput){
-        fileInput.setAttribute('name', 'fileName');
+        fileInput.setAttribute('name', 'qqfile');
         var id = 'qq-upload-handler-iframe' + qq.getUniqueId();       
         
         this._inputs[id] = fileInput;
@@ -1005,6 +1000,7 @@ qq.extend(qq.UploadHandlerForm.prototype, {
         }                
 
         var fileName = this.getName(id);
+                
         var iframe = this._createIframe(id);
         var form = this._createForm(iframe, params);
         form.appendChild(input);
@@ -1039,16 +1035,16 @@ qq.extend(qq.UploadHandlerForm.prototype, {
                 return;
             }
 
-            // fixing Opera 10.53. commented out because IE breaks here (iFrame access issues)
-//             if (iframe.contentDocument &&
-//                 iframe.contentDocument.body &&
-//                 iframe.contentDocument.body.innerHTML == "false"){
-//                 // In Opera event is fired second time
-//                 // when body.innerHTML changed from false
-//                 // to server response approx. after 1 sec
-//                 // when we upload file with iframe
-//                 return;
-//             }
+            // fixing Opera 10.53
+            if (iframe.contentDocument &&
+                iframe.contentDocument.body &&
+                iframe.contentDocument.body.innerHTML == "false"){
+                // In Opera event is fired second time
+                // when body.innerHTML changed from false
+                // to server response approx. after 1 sec
+                // when we upload file with iframe
+                return;
+            }
 
             callback();
         });
@@ -1151,9 +1147,10 @@ qq.extend(qq.UploadHandlerXhr.prototype, {
         if (!(file instanceof File)){
             throw new Error('Passed obj in not a File (in qq.UploadHandlerXhr)');
         }
+                
         return this._files.push(file) - 1;        
     },
-    getName: function(id){
+    getName: function(id){        
         var file = this._files[id];
         // fix missing name in Safari 4
         return file.fileName != null ? file.fileName : file.name;       
@@ -1176,7 +1173,7 @@ qq.extend(qq.UploadHandlerXhr.prototype, {
         var file = this._files[id],
             name = this.getName(id),
             size = this.getSize(id);
-            
+                
         this._loaded[id] = 0;
                                 
         var xhr = this._xhrs[id] = new XMLHttpRequest();
@@ -1189,7 +1186,7 @@ qq.extend(qq.UploadHandlerXhr.prototype, {
             }
         };
 
-        xhr.onreadystatechange = function(){
+        xhr.onreadystatechange = function(){            
             if (xhr.readyState == 4){
                 self._onComplete(id, xhr);                    
             }
@@ -1197,13 +1194,13 @@ qq.extend(qq.UploadHandlerXhr.prototype, {
 
         // build query string
         params = params || {};
-        params['fileName'] = name;
+        params['qqfile'] = name;
         var queryString = qq.obj2url(params, this._options.action);
+
         xhr.open("POST", queryString, true);
         xhr.setRequestHeader("X-Requested-With", "XMLHttpRequest");
         xhr.setRequestHeader("X-File-Name", encodeURIComponent(name));
         xhr.setRequestHeader("Content-Type", "application/octet-stream");
-        xhr.setRequestHeader("Content-Length", file.size);
         xhr.send(file);
     },
     _onComplete: function(id, xhr){
@@ -1214,6 +1211,7 @@ qq.extend(qq.UploadHandlerXhr.prototype, {
         var size = this.getSize(id);
         
         this._options.onProgress(id, name, size, size);
+                
         if (xhr.status == 200){
             this.log("xhr - server response received");
             this.log("responseText = " + xhr.responseText);
@@ -1247,17 +1245,3 @@ qq.extend(qq.UploadHandlerXhr.prototype, {
         }
     }
 });
-
-function getMethods(obj) {
-  var result = [];
-  for (var id in obj) {
-    try {
-      if (typeof(obj[id]) == "function") {
-        result.push(id + ": " + obj[id].toString());
-      }
-    } catch (err) {
-      result.push(id + ": inaccessible");
-    }
-  }
-  return result;
-}
