@@ -52,12 +52,12 @@ from core import directory
 class myFieldStorage(cgi.FieldStorage):
     _tempFileName = None
     def __del__(self):
-      if _tempFileName in cherrypy.active_temp_files:
-	cherrypy.active_temp_files.remove(_tempFileName)
+      if self._tempFileName in cherrypy.active_temp_files:
+	cherrypy.active_temp_files.remove(self._tempFileName)
     def make_file(self, binary=None):
         tempFile = get_temp_file()
-        _tempFileName = tempFile.name.split(os.path.sep)[-1]
-        cherrypy.active_temp_files.append(_tempFileName)
+        self._tempFileName = tempFile.name.split(os.path.sep)[-1]
+        cherrypy.active_temp_files.append(self._tempFileName)
         return tempFile
       
 
@@ -596,14 +596,12 @@ class HTTP_Admin:
                         cherrypy.active_temp_files.remove(tempFileName)
                         fMessages.append("The file %s did not upload completely before the transfer ended" % fileName)
                 else:
-                    cherrypy.request.headers['uploadindex'] = uploadIndex
                     formFields = myFieldStorage(fp=cherrypy.request.rfile,
                                                 headers=lcHDRS,
                                                 environ={'REQUEST_METHOD':'POST'},
                                                 keep_blank_values=True)
                     file_object = formFields['fileName']
-                    if fileName == "Unknown":
-                        fileName = file_object.filename
+                    fileName = file_object.filename.split(os.path.sep)[-1]
                     addToUploads = True
                     #if str(type(upFile.file)) == '<type \'cStringIO.StringO\'>' or isinstance(upFile.file, StringIO.StringIO): 
                         #newTempFile = get_temp_file()
@@ -1169,6 +1167,7 @@ class HTTP_File:
             fileName = kwargs['fileName']
         if kwargs.has_key("filename"):
             fileName = kwargs["filename"]
+            
         if fileName is not None and fileName.split("\\")[-1] is not None:
             fileName = fileName.split("\\")[-1]
         if fileName is None: #This is to accomodate a poorly behaving browser that's not sending the file name
@@ -1204,7 +1203,7 @@ class HTTP_File:
                 cherrypy.session.get("uploads").remove(fileName)
                 fMessages.append("The file %s did not upload completely before the transfer ended" % fileName)
         else:
-            cherrypy.request.headers['uploadindex'] = uploadIndex
+            cherrypy.session.get("uploads").append(fileName)
             formFields = myFieldStorage(fp=cherrypy.request.rfile,
                                         headers=lcHDRS,
                                         environ={'REQUEST_METHOD':'POST'},
@@ -1490,37 +1489,37 @@ class HTTP_File:
                 #cherrypy.session['fMessages'].append("Decryption failed due to bad encryption key")
             #raise HTTPError(403, "Decryption failed due to bad encryption key.")
 
-    @cherrypy.expose
-    def upload_stats(self, format="json", **kwargs):
-        sMessages, fMessages, uploadStats, uploadKey = [], [], [], None
-        try:
+    #@cherrypy.expose
+    #def upload_stats(self, format="json", **kwargs):
+        #sMessages, fMessages, uploadStats, uploadKey = [], [], [], None
+        #try:
+            ##if cherrypy.session.has_key("user"):
+                ##userId = cherrypy.session.get("user").userId
+                ##for key in cherrypy.file_transfers.keys():
+                    ##if key.split(":")[0] == cherrypy.session.get('user').userId: # This will actually get uploads by the user and uploads using a ticket they generated
+                        ##for fileStat in cherrypy.file_transfers[key]:
+                            ##uploadStats.append(fileStat.stat_dict())
             #if cherrypy.session.has_key("user"):
-                #userId = cherrypy.session.get("user").userId
-                #for key in cherrypy.file_transfers.keys():
-                    #if key.split(":")[0] == cherrypy.session.get('user').userId: # This will actually get uploads by the user and uploads using a ticket they generated
-                        #for fileStat in cherrypy.file_transfers[key]:
-                            #uploadStats.append(fileStat.stat_dict())
-            if cherrypy.session.has_key("user"):
-                for key in cherrypy.session.get("uploads"):
-                    for fileStat in cherrypy.session.get("uploads")[key]:
-                        uploadStats.append(fileStat)
-            elif cherrypy.session.has_key("uploadTicket"):
-                uploadTicket = cherrypy.session.get("uploadTicket")
-                uploadKey = uploadTicket.ownerId + ":" + uploadTicket.ticketId
-                if cherrypy.file_transfers.has_key(uploadKey):
-                    for fileStat in cherrypy.file_transfers[uploadKey]:
-                        uploadStats.append(fileStat.stat_dict()) 
-            if format=='cli':
-                uploadStatsXML = ""
-                for fileUpload in uploadStats:
-                    uploadStatsXML += "<upFile "
-                    for k,v in fileUpload.iteritems():
-                        uploadStatsXML += k+"='"+v+"' "
-                    uploadStatsXML += "></upFile>"
-                uploadStats = uploadStatsXML
-        except KeyError:
-            sMessages = ["No active uploads"]
-        yield fl_response(sMessages, fMessages, format, data=uploadStats)
+                #for key in cherrypy.session.get("uploads"):
+                    #for fileStat in cherrypy.session.get("uploads")[key]:
+                        #uploadStats.append(fileStat)
+            #elif cherrypy.session.has_key("uploadTicket"):
+                #uploadTicket = cherrypy.session.get("uploadTicket")
+                #uploadKey = uploadTicket.ownerId + ":" + uploadTicket.ticketId
+                #if cherrypy.file_transfers.has_key(uploadKey):
+                    #for fileStat in cherrypy.file_transfers[uploadKey]:
+                        #uploadStats.append(fileStat.stat_dict()) 
+            #if format=='cli':
+                #uploadStatsXML = ""
+                #for fileUpload in uploadStats:
+                    #uploadStatsXML += "<upFile "
+                    #for k,v in fileUpload.iteritems():
+                        #uploadStatsXML += k+"='"+v+"' "
+                    #uploadStatsXML += "></upFile>"
+                #uploadStats = uploadStatsXML
+        #except KeyError:
+            #sMessages = ["No active uploads"]
+        #yield fl_response(sMessages, fMessages, format, data=uploadStats)
 
 
 class HTTP_Message:
@@ -2086,8 +2085,10 @@ class Root:
         totalFileCount = fl.get_file_count(user)
         totalUserCount = fl.get_user_count(user)
         totalMessageCount = fl.get_message_count(user)
-        currentUsersList, currentUserIds = get_current_web_users()
-        currentUploads = len(cherrypy.file_transfers)
+        currentUsersList, currentUserIds, currentUploads = get_current_web_users()
+        currentUploadsCount = 0
+        for user in currentUploads.keys():
+            currentUploadsCount += len(currentUploads[user])
         logsFile = open(fl.logFile)
         logs = tail(logsFile, 50)
 
@@ -2318,7 +2319,7 @@ def setup_session(currentUser):
 
 def get_current_web_users():
     sessionCache = {}
-    currentUserIds, currentUsers = [], []
+    currentUserIds, currentUsers, currentUploads = [], [], {}
     if cherrypy.config['tools.sessions.storage_type'] == "db":
         sessionCache = cherrypy.session.get_all_sessions()
     else:
@@ -2329,9 +2330,14 @@ def get_current_web_users():
                 currentUser = sessionCache[key][0]['user']
                 currentUsers.append(currentUser)
                 currentUserIds.append(currentUser.userId)
+                for upload in sessionCache[key][0]['uploads']:
+                    if currentUploads.has_key(currentUser.userId):
+                        currentUploads[currentUser.userId].append(upload)
+                    else:
+                        currentUploads[currentUser.userId] = [upload,]
         except Exception, e:
             logging.error("[%s] [admin] [Unable to read user session: %s]" % (user.userId, str(e)))
-    return currentUsers, currentUserIds
+    return currentUsers, currentUserIds, currentUploads
 
 def strip_tags(value, message=False):
     """Return the given HTML with all tags and dangerous characters stripped."""
