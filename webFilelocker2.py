@@ -1193,6 +1193,8 @@ class HTTP_File:
                 bytesRemaining -= 8192
                 if bytesRemaining <= 0: break
             file_object.seek(0)
+            if fileName in cherrypy.session.get("uploads"):
+                cherrypy.session.get("uploads").remove(fileName)
             #If the file didn't get all the way there
             if long(os.path.getsize(file_object.name)) != long(fileSizeBytes): #The file transfer stopped prematurely, take out of transfers and queue partial file for deletion
                 fileUploadComplete = False
@@ -1200,7 +1202,8 @@ class HTTP_File:
                 #fl.queue_for_deletion(tempFileName)
                 if tempFileName in cherrypy.active_temp_files:
                     cherrypy.active_temp_files.remove(tempFileName)
-                cherrypy.session.get("uploads").remove(fileName)
+                if fileName in cherrypy.session.get("uploads"):
+                    cherrypy.session.get("uploads").remove(fileName)
                 fMessages.append("The file %s did not upload completely before the transfer ended" % fileName)
         else:
             cherrypy.session.get("uploads").append(fileName)
@@ -1208,6 +1211,8 @@ class HTTP_File:
                                         headers=lcHDRS,
                                         environ={'REQUEST_METHOD':'POST'},
                                         keep_blank_values=True)
+            if fileName in cherrypy.session.get("uploads"):
+                cherrypy.session.get("uploads").remove(fileName)
             file_object = formFields['qqfile']
             logging.error("filename: %s" % file_object.filename)
             logging.error("tempFileName: %s" % file_object.name)
@@ -1297,7 +1302,6 @@ class HTTP_File:
             #Release the temp file
             if tempFileName in cherrypy.active_temp_files:
                 cherrypy.active_temp_files.remove(tempFileName)
-            cherrypy.session.get("uploads").remove(fileName)
         
         #Return the response
         if format=="cli":
