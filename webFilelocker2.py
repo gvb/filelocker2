@@ -53,7 +53,7 @@ class myFieldStorage(cgi.FieldStorage):
     _tempFileName = None
     def __del__(self):
       if self._tempFileName in cherrypy.active_temp_files:
-	cherrypy.active_temp_files.remove(self._tempFileName)
+        cherrypy.active_temp_files.remove(self._tempFileName)
     def make_file(self, binary=None):
         tempFile = get_temp_file()
         self._tempFileName = tempFile.name.split(os.path.sep)[-1]
