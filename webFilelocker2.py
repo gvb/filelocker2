@@ -1178,12 +1178,10 @@ class HTTP_File:
             #Create the temp file to store the uploaded file 
             file_object = get_temp_file()
             tempFileName = file_object.name.split(os.path.sep)[-1]
-            logging.error("tempFileName(octet): %s" % tempFileName)
             cherrypy.active_temp_files.append(tempFileName)
             cherrypy.session.get("uploads").append(fileName)
             #Read the file from the client 
             #Create the progress file object and drop it into the transfer dictionary
-            logging.error("==================Reading in File, Octet Stream=====================")
             bytesRemaining = fileSizeBytes
             while True:
                 if bytesRemaining >= 8192:
@@ -1215,10 +1213,8 @@ class HTTP_File:
             if fileName in cherrypy.session.get("uploads"):
                 cherrypy.session.get("uploads").remove(fileName)
             file_object = formFields['qqfile']
-            logging.error("filename: %s" % file_object.filename)
-            logging.error("tempFileName(mpfd): %s" % file_object.name)
             fileName = file_object.filename
-            tempFileName = file_object.name.split(os.path.sep)[-1]
+            tempFileName = file_object._tempFileName
         
         if fileUploadComplete:
             #The file has been successfully uploaded by this point, process the rest of the variables regarding the file
