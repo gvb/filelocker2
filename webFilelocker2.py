@@ -1178,7 +1178,7 @@ class HTTP_File:
             #Create the temp file to store the uploaded file 
             file_object = get_temp_file()
             tempFileName = file_object.name.split(os.path.sep)[-1]
-			logging.error("tempFileName(octet): %s" % file_object.name)
+            logging.error("tempFileName(octet): %s" % tempFileName)
             cherrypy.active_temp_files.append(tempFileName)
             cherrypy.session.get("uploads").append(fileName)
             #Read the file from the client 
