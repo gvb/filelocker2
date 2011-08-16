@@ -28,41 +28,11 @@
 #end if
 <div id="uploadBox" class="hidden">
     <div class="popup_wrapper">
-        <div class="popup_small">
-            <form action="" name="form" id="uploadForm">
-                <input type="text" style="width: 0; height: 0; top: -100px; position: absolute;"/><!-- jQuery UI dialogs autofocus to the first element. -->
-                <div>
-                    #if $fl.check_permission($user, "expiration_exempt")
-                    <label for="expiration">Expiration date (you are expiration exempt):</label>
-                    <input type="text" name="expiration" id="uploadExpiration" class="dateFuture" value="$defaultExpiration.strftime('%m/%d/%Y')" />
-                    #else
-                    <label for="expiration">Expiration date:</label>
-                    <input type="text" name="expiration" id="uploadExpiration" class="dateExpire" value="$defaultExpiration.strftime('%m/%d/%Y')" />
-                    #end if
-                </div>
-                <div>
-                    <label for="fileNotes">Add notes to file:</label>
-                    <textarea name="fileNotes" id="uploadFileNotes" cols="38" rows="3" onKeyUp="javascript:limitCharacters('upload');"></textarea>
-                    <div id="uploadNotesInfo"></div>
-                </div>
-                <div>
-                    <label for="uploadScanFile">Other options:</label>
-                    <input type="checkbox" name="scanFile" id="uploadScanFile" checked="checked" /><span onclick="javascript:check('uploadScanFile');">Scan for viruses?</span>
-                </div>
-                #if $fl.check_admin($user)
-                <div>
-                    <input type="checkbox" name="systemUpload" id="systemUpload" /><span onclick="javascript:check('systemUpload');">System upload?</span>
-                </div>
-                #end if
-                #if $fl.geotagging
-                <div id="uploadGeolocationOption">
-                    <input type="checkbox" name="uploadGeolocation" id="uploadGeolocation" onClick="javascript:setGeoData();" /><span onclick="javascript:check('uploadGeolocation');javascript:setGeoData();">Geotag this file upload?</span> <a href="javascript:viewHelp('help_geotag');" class="helpLink">What's this?</a>
-                </div>
-                #end if
-                <div>
-                    <div class="button" id="uploadButton" class="uploadButton"></div>
-                </div>
-                <div class="clear"></div>
+        <div class="popup_upload">
+            <form>
+            <div id="uploader">
+                <p>You browser doesn't have Flash, Silverlight, or HTML5 support.</p>
+            </div>
             </form>
         </div>
     </div>

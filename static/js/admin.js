@@ -102,28 +102,6 @@ function initAdmin(tabIndex)
     
     if($("#newLogoButton")[0])
     {
-        newLogoUploader = new qq.FileUploader({
-            element: $("#newLogoButton")[0],
-            action: FILELOCKER_ROOT+'/admin_interface/upload_logo?format=json',
-            multiple: false,
-            params: {},
-            onSubmit: function(id, fileName){
-                newLogoUploader.setParams({
-                    'fileName': fileName
-                });
-            },
-            onComplete: function(id, fileName, response){
-                var serverMsg = checkServerMessages("uploading new logo");
-                if(!serverMsg)
-                    showMessages(response, "uploading new logo");
-                loadAdminInterface(0);
-            },
-            template: '<div class="qq-uploader">' + 
-                '<div class="qq-upload-drop-area"><span>Drop Files Here to Upload</span></div>' +
-                '<div class="qq-upload-button"><span>Change Logo</span></div>' +
-                '<ul class="qq-upload-list"></ul>' + 
-             '</div>'
-        });
     }
 }
 function loadAdminInterface(tabIndex)
@@ -759,35 +737,35 @@ function userRowClick(userId)
     }
 }
 jQuery(document).ready(function(){
-    bulkUserUploader = new qq.FileUploader({
-        element: $("#bulkCreateUserUploadButton")[0],
-        listElement: $("#bulkCreateUserFileList")[0],
-        action: FILELOCKER_ROOT+'/admin_interface/bulk_create_user?format=json',
-        params: {},
-        sizeLimit: 2147483647,
-        onSubmit: function(id, fileName){
-            if($("#bulkCreateUserPassword").val() == $("#bulkCreateUserPasswordConfirm").val())
-            {
-                $("#userCreateBox").dialog("close");
-                var permissions = "";
-                $(".permissionSelectBox:checked").each(function(index) {
-                    permissions += $(this).val() + ",";
-                });
-                bulkUserUploader.setParams({
-                    'quota': $("#bulkCreateUserQuota").val(),
-                    'password': $("#bulkCreateUserPassword").val(),
-                    'permissions': permissions
-                });
-            }
-            else
-            {
-                generatePseudoResponse("creating users", "Passwords do not match.", false);
-                return false;
-            }
-        },
-        onComplete: function(id, fileName, response){
-            showMessages(response, "creating users");
-            loadAdminInterface(0);
-        }
-    });
+//     bulkUserUploader = new qq.FileUploader({
+//         element: $("#bulkCreateUserUploadButton")[0],
+//         listElement: $("#bulkCreateUserFileList")[0],
+//         action: FILELOCKER_ROOT+'/admin_interface/bulk_create_user?format=json',
+//         params: {},
+//         sizeLimit: 2147483647,
+//         onSubmit: function(id, fileName){
+//             if($("#bulkCreateUserPassword").val() == $("#bulkCreateUserPasswordConfirm").val())
+//             {
+//                 $("#userCreateBox").dialog("close");
+//                 var permissions = "";
+//                 $(".permissionSelectBox:checked").each(function(index) {
+//                     permissions += $(this).val() + ",";
+//                 });
+//                 bulkUserUploader.setParams({
+//                     'quota': $("#bulkCreateUserQuota").val(),
+//                     'password': $("#bulkCreateUserPassword").val(),
+//                     'permissions': permissions
+//                 });
+//             }
+//             else
+//             {
+//                 generatePseudoResponse("creating users", "Passwords do not match.", false);
+//                 return false;
+//             }
+//         },
+//         onComplete: function(id, fileName, response){
+//             showMessages(response, "creating users");
+//             loadAdminInterface(0);
+//         }
+//     });
 });

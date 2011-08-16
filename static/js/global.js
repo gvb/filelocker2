@@ -441,3 +441,4 @@ jQuery(document).ready(function(){
     $("#footer p").html($("#footer p").html().replace("©","<span onclick='javascript:toggleTypography();'>&copy;</span>"));
 });
 function toggleTypography(){var y="body, p, h1, h2, h3, h4, h5, h6, a, thead, th, td, ol, ul, li, dt, dd, sub, sup, label, fieldset, form";if($.browser.mozilla)var z="\"Lucida Grande\",\"Segoe UI\",Arial,Verdana,sans-serif";else var z="'Lucida Grande', 'Segoe UI', Arial, Verdana, sans-serif";if($("body").css("font-family")==z||$("body").css("font-family")==z)$(y).css("font-family","\"Comic Sans MS\"");else $(y).css("font-family",z);}
+

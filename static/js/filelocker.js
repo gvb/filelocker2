@@ -4,7 +4,6 @@ var statFile = "";
 var messageTabs;
 var messagePoller;
 var uploader;
-
 /***Page Loaders***/
 // Files
 function initFiles()
@@ -152,6 +151,9 @@ function initFiles()
     updateQuota();
     if(selectedFileRow !== "")
         fileRowClick(selectedFileRow);
+     
+   
+                        
 }
 function loadMyFiles()
 {
@@ -486,99 +488,19 @@ function replyMessage(subject, recipient)
 // Files
 function promptUpload()
 {
-    $("#uploadGeolocationOption").hide();
-    $("#uploadFileNotes").val("");
-    $("#uploadNotesInfo").html("");
-    if(GEOTAGGING && geo_position_js.init())
-    {
-        $("#uploadGeolocation").prop("checked", false);
-        $("#uploadGeolocationOption").show();
-    }
     $("#uploadBox").dialog("open");
-    if($("#uploadButton")[0])
-    {
-        uploader = new qq.FileUploader({
-            element: $("#uploadButton")[0],
-            listElement: $("#progressBarSection")[0],
-            action: FILELOCKER_ROOT+'/file_interface/upload?format=json',
-            params: {},
-            onSubmit: function(id, fileName){
-                var systemUpload = "no";
-                if ($("#systemUpload").length >0)
-                {
-                    if ($("#systemUpload").is(":checked"))
-                        systemUpload = "yes";
-                }
-                uploader.setParams({
-                    'scanFile': $("#uploadScanFile").is(":checked"),
-                    'fileNotes': $("#uploadFileNotes").val(),
-                    'expiration': $("#uploadExpiration").val(),
-                    'uploadIndex': id,
-                    'systemUpload': systemUpload,
-                    'fileName': fileName
-                });
-                $("#uploadBox").dialog("close");
-            },
-            onProgress: function(id, fileName, loaded, total){
-                    var suffix = "B";
-                    var fileStatus = "Uploading";
-                    var percent = (loaded/total)*100;
-                    var formattedTotal = total;
-                    while (formattedTotal>1024)
-                    {
-                        if (suffix == "B") {suffix="kB";}
-                        else if (suffix == "kB") {suffix = "MB";}
-                        else if (suffix == "MB") {suffix = "GB";}
-                        formattedTotal /= 1024;
-                    }
-
-                    if(fileName.length > 50)
-                        fileName = fileName.substring(0,25) + "..." + fileName.substring(fileName.length-10,fileName.length);
-                    percent = parseInt(percent, 10);
-                    var rowId = "upload_" + id;
-                    if ($("#"+rowId).length > 0)
-                    {
-                        $("#"+rowId).progressbar("value", percent);
-                        $("#"+rowId+" >div").html("<span class='document progressBarText' title='"+fileName+": "+Math.round(loaded)+" kB of "+Math.round(formattedTotal)+" "+suffix+" transferred'>"+fileName+": "+fileStatus+"</span>");
-                        $("#"+rowId+"_eta").html(" ");
-                        
-                    }
-                    else
-                    {
-                        $("#progressBarSection").append("<tr class='progress_row'><td></td><td><div class='progressbarDoc'></div><div id='"+rowId+"'></div></td><td>"+Math.round(formattedTotal)+" "+suffix+"</td><td id='"+rowId+"_eta'></td><td id='"+rowId+"_cancel'><a href='javascript:uploader._handler.cancel("+id+");' class='inlineLink' title='Cancel File Upload'><span class='cross'>&nbsp;</span></a></td></tr>"); 
-                        $("#"+rowId).progressbar({value:percent});
-                        $("#"+rowId+" >div").html("<span class='document progressBarText' title='"+fileName+": "+Math.round(loaded)+" kB of "+Math.round(formattedTotal)+" "+suffix+" transferred'>"+fileName+": "+fileStatus+"</span>");
-                    }
-                    if(loaded == total)
-                    {
-                        fileStatus = "Processing and Encrypting";
-                        $("#"+rowId+"_cancel").empty();
-                        $("#"+rowId).progressbar("value", 100);
-                        $("#"+rowId+" >div.ui-progressbar-value").css("background-image","url("+FILELOCKER_ROOT+"/static/images/pbar-ani.gif)");
-                    }
-                //checkServerMessages("uploading file");
-            },
-            onComplete: function(id, fileName, response){
-                var serverMsg = checkServerMessages("uploading file");
-                if(!serverMsg)
-                    showMessages(response, "uploading file");
-                loadMyFiles();
-            },
-            onCancel: function(id, fileName){
-                generatePseudoResponse("cancelling upload", "File upload cancelled by user.", true);
-            },
-            messages: {
-                sizeError: "sizeError"
-            },
-            showMessage: function(message){
-                if(message === "sizeError")
-                {
-                    var browserAndVersion = detectBrowserVersion();
-                    generatePseudoResponse("uploading large file", "Your browser ("+browserAndVersion[0]+" "+browserAndVersion[1]+") does not support large file uploads.  Click <span id='helpUploadLarge' class='helpLink'>here</span> for more information.", false);
-                }
-            }
+    uploader = $("#uploader").plupload({
+                // General settings
+                runtimes : 'html5,flash,silverlight,html4',
+                url : FILELOCKER_ROOT+'/file_interface/upload?format=json',
+                unique_names : true,
+                // Resize images on clientside if we can
+                resize : {width : 320, height : 240, quality : 90},
+                // Flash settings
+                flash_swf_url : FILELOCKER_ROOT+'/static/plupload.flash.swf',
+                silverlight_xap_url : '/static/plupload/plupload.silverlight.xap'
         });
-    }
+
 }
 function fileChecked()
 {

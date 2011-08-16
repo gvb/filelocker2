@@ -207,6 +207,10 @@ ul {
     padding:20px;
     width:725px;
 }
+.popup_upload {
+    padding:0px;
+    width:800px;
+}
 .popup_small p, .popup_small h3 {
     margin: 0 30px;
 }

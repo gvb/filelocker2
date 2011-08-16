@@ -1172,49 +1172,49 @@ class HTTP_File:
         
         fileSizeBytes = int(lcHDRS['content-length'])
                 
-        if lcHDRS['content-type'] == "application/octet-stream":
-            if kwargs.has_key("qqfile"):
-                fileName = kwargs['qqfile']
-            #Create the temp file to store the uploaded file 
-            file_object = get_temp_file()
-            tempFileName = file_object.name.split(os.path.sep)[-1]
-            cherrypy.active_temp_files.append(tempFileName)
-            cherrypy.session.get("uploads").append(fileName)
-            #Read the file from the client 
-            #Create the progress file object and drop it into the transfer dictionary
-            bytesRemaining = fileSizeBytes
-            while True:
-                if bytesRemaining >= 8192:
-                    block = cherrypy.request.rfile.read(8192)
-                else:
-                    block = cherrypy.request.rfile.read(bytesRemaining)
-                file_object.write(block)
-                bytesRemaining -= 8192
-                if bytesRemaining <= 0: break
-            file_object.seek(0)
-            if fileName in cherrypy.session.get("uploads"):
-                cherrypy.session.get("uploads").remove(fileName)
-            #If the file didn't get all the way there
-            if long(os.path.getsize(file_object.name)) != long(fileSizeBytes): #The file transfer stopped prematurely, take out of transfers and queue partial file for deletion
-                fileUploadComplete = False
-                logging.debug("[system] [upload] [File upload was prematurely stopped, rejected]")
-                #fl.queue_for_deletion(tempFileName)
-                if tempFileName in cherrypy.active_temp_files:
-                    cherrypy.active_temp_files.remove(tempFileName)
-                if fileName in cherrypy.session.get("uploads"):
-                    cherrypy.session.get("uploads").remove(fileName)
-                fMessages.append("The file %s did not upload completely before the transfer ended" % fileName)
-        else:
-            cherrypy.session.get("uploads").append(fileName)
-            formFields = myFieldStorage(fp=cherrypy.request.rfile,
-                                        headers=lcHDRS,
-                                        environ={'REQUEST_METHOD':'POST'},
-                                        keep_blank_values=True)
-            if fileName in cherrypy.session.get("uploads"):
-                cherrypy.session.get("uploads").remove(fileName)
-            file_object = formFields['qqfile']
-            fileName = file_object.filename
-            tempFileName = file_object._tempFileName
+        #if lcHDRS['content-type'] == "application/octet-stream":
+            #if kwargs.has_key("qqfile"):
+                #fileName = kwargs['qqfile']
+            ##Create the temp file to store the uploaded file 
+            #file_object = get_temp_file()
+            #tempFileName = file_object.name.split(os.path.sep)[-1]
+            #cherrypy.active_temp_files.append(tempFileName)
+            #cherrypy.session.get("uploads").append(fileName)
+            ##Read the file from the client 
+            ##Create the progress file object and drop it into the transfer dictionary
+            #bytesRemaining = fileSizeBytes
+            #while True:
+                #if bytesRemaining >= 8192:
+                    #block = cherrypy.request.rfile.read(8192)
+                #else:
+                    #block = cherrypy.request.rfile.read(bytesRemaining)
+                #file_object.write(block)
+                #bytesRemaining -= 8192
+                #if bytesRemaining <= 0: break
+            #file_object.seek(0)
+            #if fileName in cherrypy.session.get("uploads"):
+                #cherrypy.session.get("uploads").remove(fileName)
+            ##If the file didn't get all the way there
+            #if long(os.path.getsize(file_object.name)) != long(fileSizeBytes): #The file transfer stopped prematurely, take out of transfers and queue partial file for deletion
+                #fileUploadComplete = False
+                #logging.debug("[system] [upload] [File upload was prematurely stopped, rejected]")
+                ##fl.queue_for_deletion(tempFileName)
+                #if tempFileName in cherrypy.active_temp_files:
+                    #cherrypy.active_temp_files.remove(tempFileName)
+                #if fileName in cherrypy.session.get("uploads"):
+                    #cherrypy.session.get("uploads").remove(fileName)
+                #fMessages.append("The file %s did not upload completely before the transfer ended" % fileName)
+        #else:
+        cherrypy.session.get("uploads").append(fileName)
+        formFields = myFieldStorage(fp=cherrypy.request.rfile,
+                                    headers=lcHDRS,
+                                    environ={'REQUEST_METHOD':'POST'},
+                                    keep_blank_values=True)
+        if fileName in cherrypy.session.get("uploads"):
+            cherrypy.session.get("uploads").remove(fileName)
+        file_object = formFields['file']
+        fileName = file_object.filename
+        tempFileName = file_object._tempFileName
         
         if fileUploadComplete:
             #The file has been successfully uploaded by this point, process the rest of the variables regarding the file
@@ -2023,6 +2023,10 @@ class Root:
             tplPath=os.path.join(fl.templatePath,'css','jquery-ui.css')
         elif style=="visualize":
             tplPath=os.path.join(fl.templatePath,'css','visualize.css')
+        elif style=="jquery.ui.plupload":
+            tplPath=os.path.join(fl.templatePath,'css','jquery.ui.plupload.css')
+        elif style=="jquery.plupload.queue":
+            tplPath=os.path.join(fl.templatePath,'css','jquery.plupload.queue.css')
         return str(Template(file=tplPath, searchList=[locals(),globals()]))
     
     @cherrypy.expose
