@@ -3,7 +3,7 @@ var selectedFileRow = "";
 var statFile = "";
 var messageTabs;
 var messagePoller;
-var uploader;
+var uploader=null;
 /***Page Loaders***/
 // Files
 function initFiles()
@@ -489,17 +489,26 @@ function replyMessage(subject, recipient)
 function promptUpload()
 {
     $("#uploadBox").dialog("open");
-    uploader = $("#uploader").plupload({
-                // General settings
-                runtimes : 'html5,flash,silverlight,html4',
-                url : FILELOCKER_ROOT+'/file_interface/upload?format=json',
-                unique_names : true,
-                // Resize images on clientside if we can
-                resize : {width : 320, height : 240, quality : 90},
-                // Flash settings
-                flash_swf_url : FILELOCKER_ROOT+'/static/plupload.flash.swf',
-                silverlight_xap_url : '/static/plupload/plupload.silverlight.xap'
-        });
+    if (uploader == null)
+    {
+        uploader = $("#uploader").plupload({
+                    // General settings
+                    runtimes : 'flash,silverlight,html5,html4',
+                    url : FILELOCKER_ROOT+'/file_interface/upload?format=json',
+                    unique_names : true,
+                    chunk_size: '1mb',
+                    // Resize images on clientside if we can
+                    resize : {width : 320, height : 240, quality : 90},
+                    // Flash settings
+                    flash_swf_url : FILELOCKER_ROOT+'/static/plupload.flash.swf',
+                    silverlight_xap_url : '/static/plupload/plupload.silverlight.xap',
+                    init: {
+                        FileUploaded: function(up, file, info) {
+                                        loadMyFiles();
+                                        }
+                    }
+            });
+    }
 
 }
 function fileChecked()
