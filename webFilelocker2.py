@@ -2196,16 +2196,16 @@ class Root:
             return str(tpl)
 
     @cherrypy.expose
-    @cherrypy.tools.requires_login()
     def get_server_messages(self, format="json", **kwargs):
         sMessages, fMessages = [], []
-        for message in cherrypy.session.get("sMessages"):
-            if message not in sMessages: #Interestingly, either the browser or the ajax upload script tries to re-submit a rejected file a few times resulting in duplicate messages
-                sMessages.append(message)
-        for message in cherrypy.session.get("fMessages"):
-            if message not in fMessages:
-                fMessages.append(message)
-        (cherrypy.session["sMessages"], cherrypy.session["fMessages"]) = [], []
+        if cherrypy.session.has_key("sMessages") and cherrypy.session.has_key("fMessages"):
+            for message in cherrypy.session.get("sMessages"):
+                if message not in sMessages: #Interestingly, either the browser or the ajax upload script tries to re-submit a rejected file a few times resulting in duplicate messages
+                    sMessages.append(message)
+            for message in cherrypy.session.get("fMessages"):
+                if message not in fMessages:
+                    fMessages.append(message)
+            (cherrypy.session["sMessages"], cherrypy.session["fMessages"]) = [], []
         return fl_response(sMessages, fMessages, format)
         
     @cherrypy.expose
