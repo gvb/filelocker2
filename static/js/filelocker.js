@@ -523,7 +523,7 @@ function promptUpload()
                     pollerId = setInterval(function() { poll(); }, 1000);
             },
             onProgress: function(id, fileName, loaded, total){
-                checkServerMessages("uploading file");
+                //checkServerMessages("uploading file");
             },
             onComplete: function(id, fileName, response){
                 var serverMsg = checkServerMessages("uploading file");

@@ -10,6 +10,7 @@ import random
 import re
 try:
     from hashlib import md5
+    import hashlib
 except ImportError, ie:
     from md5 import md5
 from stat import ST_SIZE
@@ -37,7 +38,7 @@ __author__      = "Brett Davis"
 __copyright__   = "Copyright 2011, Purdue University"
 __credits__     = "Christopher Miller, Brett Davis"
 __license__     = "Open Source License. See LICENSE.txt."
-__version__     = "2.4.3"
+__version__     = "2.4.5"
 __maintainer__  = "Brett Davis"
 __email__       = "wbdavis@purdue.edu"
 __status__      = "Production"
@@ -1163,10 +1164,10 @@ class Filelocker:
             self.log_action(user.userId, "Upload Requested File", None, "File %s uploaded from IP: %s (%s) %s" % (flFile.fileName, ip, dnsName, details))
         except FLError, fle:
             raise fle
+        
 
     def check_in_file(self, user, filePath, flFile, mustPassAvScan=True):
         tempFileName = filePath.split(os.path.sep)[-1]
-        
         #Virus scanning if requested
         if mustPassAvScan:
             avCommandList = self.antiVirusCommand.split(" ")
@@ -1186,6 +1187,12 @@ class Filelocker:
             except FLError, fle:
                 raise fle
         else: flFile.filePassedAvScan = False
+        md5sum = None
+        try:
+            p = subprocess.Popen(["md5sum",os.path.join(self.vault, tempFileName)], stdout=subprocess.PIPE)
+            md5sum = p.communicate()[0].split(" ")[0]
+        except Exception, e:
+            logging.error("Couldn't calculate file md5sum: %s" % str(e))
         #Determine file size and check against quota
         try:
             flFile.fileSizeBytes =  os.stat(filePath)[ST_SIZE]
@@ -1260,7 +1267,7 @@ class Filelocker:
             f.close()
             flFile.fileStatus = "Checked In"
             self.db.updateFile(flFile)
-            self.log_action(user.userId, "Check In File", None, "File %s (%s) checked in to Filelocker" % (flFile.fileName, flFile.fileId))
+            self.log_action(user.userId, "Check In File", None, "File %s (%s) checked in to Filelocker: MD5 %s " % (flFile.fileName, flFile.fileId, md5sum))
             logging.info("[%s] [checkInFile] [User checked in a new file %s]" % (user.userId, flFile.fileName))
             return flFile
         except IOError, ioe:

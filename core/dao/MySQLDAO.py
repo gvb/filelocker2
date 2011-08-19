@@ -1238,6 +1238,10 @@ class MySQLDAO(DAO):
         warnings.simplefilter("ignore")
         try:
             results = None
+            if self.cursor is None or self.db is None:
+                self.cursor, self.db = (None, None)
+                self.get_connection()
+                logging.error("Connection was None, rebuilt...")
             try:
                 self.cursor.execute(sql, sql_args)
             except MySQLdb.IntegrityError, ie:

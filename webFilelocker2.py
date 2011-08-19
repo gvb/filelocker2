@@ -1116,6 +1116,8 @@ class HTTP_File:
                                         headers=lcHDRS,
                                         environ={'REQUEST_METHOD':'POST'},
                                         keep_blank_values=True)
+            
+            
             upFile = formFields['fileName']
             if fileName == "Unknown":
                 fileName = upFile.filename
