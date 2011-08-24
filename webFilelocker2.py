@@ -1249,8 +1249,6 @@ class HTTP_File:
         cherrypy.session.release_lock()
         try:
             flFile = fl.get_file(user, fileId)
-            if cherrypy.file_downloads.has_key(user):
-                cherrypy.file_downloads[user].append({'fileId': flFile.fileId, }
             #if kwargs.has_key("encryptionKey") and kwargs['encryptionKey'] !="" and kwargs['encryptionKey'] is not None:
                 #flFile.fileEncryptionKey = kwargs['encryptionKey']
             #if flFile.fileEncryptionKey is None:
