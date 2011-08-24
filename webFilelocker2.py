@@ -1084,7 +1084,7 @@ class HTTP_File:
             tempFileName = file_object.name.split(os.path.sep)[-1]
             #Read the file from the client 
             #Create the progress file object and drop it into the transfer dictionary
-            upFile = ProgressFile(8192, fileName, file_object, uploadIndex, cherrypy.session.id)
+            upFile = ProgressFile(8192, fileName, file_object, uploadIndex)
             if cherrypy.file_uploads.has_key(uploadKey): #Drop the transfer into the global transfer list
                 cherrypy.file_uploads[uploadKey].append(upFile)
             else:
@@ -1127,7 +1127,7 @@ class HTTP_File:
                 newTempFile = get_temp_file()
                 newTempFile.write(str(upFile.file.getvalue()))
                 newTempFile.seek(0)
-                upFile = ProgressFile(8192, fileName, newTempFile, cherrypy.session.id)
+                upFile = ProgressFile(8192, fileName, newTempFile)
                 if cherrypy.file_uploads.has_key(uploadKey): #Drop the transfer into the global transfer list
                     cherrypy.file_uploads[uploadKey].append(upFile)
                 else:
@@ -2362,7 +2362,7 @@ class myFieldStorage(cherrypy._cpcgifs.FieldStorage):
             uploadIndex = None
             if cherrypy.request.headers.has_key("uploadindex"):
                 uploadIndex = cherrypy.request.headers['uploadindex']
-            fo = ProgressFile(self.bufsize, self.filename, uploadIndex=uploadIndex, sessionId=cherrypy.session.id)
+            fo = ProgressFile(self.bufsize, self.filename, uploadIndex=uploadIndex)
             self.file_location = fo.file_object.name
             uploadKey = None
             if cherrypy.session.has_key("uploadTicket"):
@@ -2580,9 +2580,6 @@ def start(configfile=None, daemonize=False, pidfile=None):
                 cherrypy.session.release_lock()
             except AttributeError, ae:
                 logging.error("No sessions built") #Sessions haven't been built yet
-            for key in sessionCache:
-                logging.error("I found a session id! %s" % str(sessionCache[key].id))
-                #validSessionIds.append(sessionCache[key][0].id)
             for key in cherrypy.file_uploads.keys():
                 pass
                 #for progressFile in cherrypy.file_uploads[key]:
@@ -2595,7 +2592,7 @@ def start(configfile=None, daemonize=False, pidfile=None):
                     validTempFiles.append(progressFile.file_object.name.split(os.path.sep)[-1])
             threadLessFL.clean_temp_files(validTempFiles)
             threadLessFL = None #This is so that config changes will be absorbed during the next maintenance cycle
-            time.sleep(30) #12 minutes
+            time.sleep(720) #12 minutes
     except KeyboardInterrupt, ki:
         engine.exit()
         sys.exit(1)
