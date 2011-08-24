@@ -139,7 +139,8 @@ def requires_login(**kwargs):
        
 cherrypy.tools.requires_login = cherrypy.Tool('before_request_body', requires_login, priority=70)
 cherrypy.tools.before_upload = cherrypy.Tool('before_request_body', before_upload, priority=71)
-cherrypy.file_transfers = dict()
+cherrypy.file_uploads = dict()
+cherrypy.file_downloads = dict()
 class HTTP_Admin:
     @cherrypy.expose
     @cherrypy.tools.requires_login()
@@ -1083,11 +1084,11 @@ class HTTP_File:
             tempFileName = file_object.name.split(os.path.sep)[-1]
             #Read the file from the client 
             #Create the progress file object and drop it into the transfer dictionary
-            upFile = ProgressFile(8192, fileName, file_object, uploadIndex)
-            if cherrypy.file_transfers.has_key(uploadKey): #Drop the transfer into the global transfer list
-                cherrypy.file_transfers[uploadKey].append(upFile)
+            upFile = ProgressFile(8192, fileName, file_object, uploadIndex, cherrypy.session.id)
+            if cherrypy.file_uploads.has_key(uploadKey): #Drop the transfer into the global transfer list
+                cherrypy.file_uploads[uploadKey].append(upFile)
             else:
-                cherrypy.file_transfers[uploadKey] = [upFile,]
+                cherrypy.file_uploads[uploadKey] = [upFile,]
             bytesRemaining = fileSizeBytes
             while True:
                 if bytesRemaining >= 8192:
@@ -1104,12 +1105,12 @@ class HTTP_File:
                 logging.debug("[system] [upload] [File upload was prematurely stopped, rejected]")
                 fl.queue_for_deletion(tempFileName)
                 fMessages.append("The file %s did not upload completely before the transfer ended" % fileName)
-                if cherrypy.file_transfers.has_key(uploadKey):
-                    for fileTransfer in cherrypy.file_transfers[uploadKey]:
+                if cherrypy.file_uploads.has_key(uploadKey):
+                    for fileTransfer in cherrypy.file_uploads[uploadKey]:
                         if fileTransfer.file_object.name == upFile.file_object.name:
-                            cherrypy.file_transfers[uploadKey].remove(fileTransfer)
-                    if len(cherrypy.file_transfers[uploadKey]) == 0:
-                        del cherrypy.file_transfers[uploadKey]
+                            cherrypy.file_uploads[uploadKey].remove(fileTransfer)
+                    if len(cherrypy.file_uploads[uploadKey]) == 0:
+                        del cherrypy.file_uploads[uploadKey]
         else:
             cherrypy.request.headers['uploadindex'] = uploadIndex
             formFields = myFieldStorage(fp=cherrypy.request.rfile,
@@ -1126,11 +1127,11 @@ class HTTP_File:
                 newTempFile = get_temp_file()
                 newTempFile.write(str(upFile.file.getvalue()))
                 newTempFile.seek(0)
-                upFile = ProgressFile(8192, fileName, newTempFile)
-                if cherrypy.file_transfers.has_key(uploadKey): #Drop the transfer into the global transfer list
-                    cherrypy.file_transfers[uploadKey].append(upFile)
+                upFile = ProgressFile(8192, fileName, newTempFile, cherrypy.session.id)
+                if cherrypy.file_uploads.has_key(uploadKey): #Drop the transfer into the global transfer list
+                    cherrypy.file_uploads[uploadKey].append(upFile)
                 else:
-                    cherrypy.file_transfers[uploadKey] = [upFile,]
+                    cherrypy.file_uploads[uploadKey] = [upFile,]
             else:
                 upFile = upFile.file
             tempFileName = upFile.file_object.name.split(os.path.sep)[-1]
@@ -1192,8 +1193,8 @@ class HTTP_File:
                     newFile = File(fileName, None, fileNotes, fileSizeBytes, datetime.datetime.now(), user.userId, expiration, False, None, None, "Processing File", "local", notifyOnDownload, uploadTicket.ticketId)
                 else:
                     newFile = File(fileName, None, fileNotes, fileSizeBytes, datetime.datetime.now(), ownerId, expiration, False, None, None, "Processing File", "local", notifyOnDownload, None)
-                if cherrypy.file_transfers.has_key(uploadKey):
-                    for fileTransfer in cherrypy.file_transfers[uploadKey]:
+                if cherrypy.file_uploads.has_key(uploadKey):
+                    for fileTransfer in cherrypy.file_uploads[uploadKey]:
                         if fileTransfer.file_object.name == upFile.file_object.name:
                             if scanFile == True:
                                 fileTransfer.status = "Scanning and Encrypting"
@@ -1221,12 +1222,12 @@ class HTTP_File:
             
             #At this point the file upload is done, one way or the other. Remove the ProgressFile from the transfer dictionary
             try:
-                if cherrypy.file_transfers.has_key(uploadKey):
-                    for fileTransfer in cherrypy.file_transfers[uploadKey]:
+                if cherrypy.file_uploads.has_key(uploadKey):
+                    for fileTransfer in cherrypy.file_uploads[uploadKey]:
                         if fileTransfer.file_object.name == upFile.file_object.name:
-                            cherrypy.file_transfers[uploadKey].remove(fileTransfer)
-                    if len(cherrypy.file_transfers[uploadKey]) == 0:
-                        del cherrypy.file_transfers[uploadKey]
+                            cherrypy.file_uploads[uploadKey].remove(fileTransfer)
+                    if len(cherrypy.file_uploads[uploadKey]) == 0:
+                        del cherrypy.file_uploads[uploadKey]
             except KeyError, ke:
                 logging.warning("[%s] [upload] [Key error deleting entry in file_transfer]" % user.userId)
             
@@ -1248,6 +1249,8 @@ class HTTP_File:
         cherrypy.session.release_lock()
         try:
             flFile = fl.get_file(user, fileId)
+            if cherrypy.file_downloads.has_key(user):
+                cherrypy.file_downloads[user].append({'fileId': flFile.fileId, }
             #if kwargs.has_key("encryptionKey") and kwargs['encryptionKey'] !="" and kwargs['encryptionKey'] is not None:
                 #flFile.fileEncryptionKey = kwargs['encryptionKey']
             #if flFile.fileEncryptionKey is None:
@@ -1431,15 +1434,15 @@ class HTTP_File:
         try:
             if cherrypy.session.has_key("user"):
                 userId = cherrypy.session.get("user").userId
-                for key in cherrypy.file_transfers.keys():
+                for key in cherrypy.file_uploads.keys():
                     if key.split(":")[0] == cherrypy.session.get('user').userId: # This will actually get uploads by the user and uploads using a ticket they generated
-                        for fileStat in cherrypy.file_transfers[key]:
+                        for fileStat in cherrypy.file_uploads[key]:
                             uploadStats.append(fileStat.stat_dict())
             elif cherrypy.session.has_key("uploadTicket"):
                 uploadTicket = cherrypy.session.get("uploadTicket")
                 uploadKey = uploadTicket.ownerId + ":" + uploadTicket.ticketId
-                if cherrypy.file_transfers.has_key(uploadKey):
-                    for fileStat in cherrypy.file_transfers[uploadKey]:
+                if cherrypy.file_uploads.has_key(uploadKey):
+                    for fileStat in cherrypy.file_uploads[uploadKey]:
                         uploadStats.append(fileStat.stat_dict()) 
             if format=='cli':
                 uploadStatsXML = ""
@@ -2014,7 +2017,7 @@ class Root:
         totalUserCount = fl.get_user_count(user)
         totalMessageCount = fl.get_message_count(user)
         currentUsersList = []
-        currentUploads = len(cherrypy.file_transfers)
+        currentUploads = len(cherrypy.file_uploads)
         logsFile = open(fl.logFile)
         logs = tail(logsFile, 50)
 
@@ -2324,7 +2327,7 @@ def get_temp_file():
         random.seed(fileNotes)
         randomNumber = random.randint(1, 1000000)
         tempFileName = os.path.join(fl.vault, filePrefix + str(randomNumber) + fileSuffix)
-    file_object = open(tempFileName, "w")
+    file_object = open(tempFileName, "wb")
     return file_object
     
 class myFieldStorage(cherrypy._cpcgifs.FieldStorage):
@@ -2335,12 +2338,12 @@ class myFieldStorage(cherrypy._cpcgifs.FieldStorage):
                 uploadKey = cherrypy.session.get('user').userId
             elif cherrypy.session.has_key("uploadTicket"):
                 uploadKey = cherrypy.session.has_key("uploadTicket").ownerId+":"+cherrypy.session.has_key("uploadTicket").ticketId
-            if cherrypy.file_transfers.has_key(uploadKey):
-                for transfer in cherrypy.file_transfers[uploadKey]:
+            if cherrypy.file_uploads.has_key(uploadKey):
+                for transfer in cherrypy.file_uploads[uploadKey]:
                     if transfer.file_object.name == self.file_location:
-                        cherrypy.file_transfers[uploadKey].remove(transfer)
-                if len(cherrypy.file_transfers[uploadKey]) == 0:
-                    del cherrypy.file_transfers[uploadKey]
+                        cherrypy.file_uploads[uploadKey].remove(transfer)
+                if len(cherrypy.file_uploads[uploadKey]) == 0:
+                    del cherrypy.file_uploads[uploadKey]
             if os.path.isfile(self.file_location):
                 fl = cherrypy.thread_data.flDict['app']
                 tempFileName = self.file_location.split(os.path.sep)[-1]
@@ -2361,7 +2364,7 @@ class myFieldStorage(cherrypy._cpcgifs.FieldStorage):
             uploadIndex = None
             if cherrypy.request.headers.has_key("uploadindex"):
                 uploadIndex = cherrypy.request.headers['uploadindex']
-            fo = ProgressFile(self.bufsize, self.filename, uploadIndex=uploadIndex)
+            fo = ProgressFile(self.bufsize, self.filename, uploadIndex=uploadIndex, sessionId=cherrypy.session.id)
             self.file_location = fo.file_object.name
             uploadKey = None
             if cherrypy.session.has_key("uploadTicket"):
@@ -2369,21 +2372,22 @@ class myFieldStorage(cherrypy._cpcgifs.FieldStorage):
             elif cherrypy.session.has_key("user"):
                 uploadKey = cherrypy.session.get('user').userId
             
-            if cherrypy.file_transfers.has_key(uploadKey):
-                cherrypy.file_transfers[uploadKey].append(fo)
+            if cherrypy.file_uploads.has_key(uploadKey):
+                cherrypy.file_uploads[uploadKey].append(fo)
             else:
-                cherrypy.file_transfers[uploadKey] = [fo,]
+                cherrypy.file_uploads[uploadKey] = [fo,]
             return fo
         else:
             return StringIO.StringIO("")
 
 class ProgressFile(object):
-    def __init__(self, buf, fileName, file_object=None, uploadIndex=None, *args, **kwargs):
+    def __init__(self, buf, fileName, file_object=None, uploadIndex=None, sessionId=None, *args, **kwargs):
         if file_object is None:
             #self.file_object = tempfile.NamedTemporaryFile(*args, **kwargs)
             self.file_object = get_temp_file()
         else:
             self.file_object = file_object
+        self.sessionId = sessionId
         self.fileName = fileName
         self.transferred = 0
         self.buf = buf
@@ -2438,7 +2442,6 @@ def fl_connect(threadIndex):
     cherrypy.thread_data.flDict = flDict
     cherrypy.FLThreads.append(cherrypy.thread_data.flDict)
     cherrypy.thread_data.db = cherrypy.thread_data.flDict['app'].db.get_db()
-        
 
 def check_updates():
     config = cherrypy._cpconfig._Parser()
@@ -2491,7 +2494,7 @@ def midnightloghandler(fn, level, backups):
     h.setLevel(level)
     h.setFormatter(cherrypy._cplogging.logfmt)
     return h
-    
+   
 def start(configfile=None, daemonize=False, pidfile=None):
     config = cherrypy._cpconfig._Parser()
     cherrypy.config.update({'log.screen': False})
@@ -2566,13 +2569,35 @@ def start(configfile=None, daemonize=False, pidfile=None):
                     hour += 0.2
                 if hour >= 24.0:
                     hour = 0.0
+            #Clean up stalled and invalid transfers
+            validSessionIds = []
+            sessionCache = {}
+            try:
+                cherrypy.lib.sessions.init()
+                cherrypy.session.acquire_lock()
+                if cherrypy.config['tools.sessions.storage_type'] == "db":
+                    sessionCache = cherrypy.session.get_all_sessions()
+                else:
+                    sessionCache = cherrypy.session.cache
+                cherrypy.session.release_lock()
+            except AttributeError, ae:
+                logging.error("No sessions built") #Sessions haven't been built yet
+            for key in sessionCache:
+                logging.error("I found a session id! %s" % str(sessionCache[key].id))
+                #validSessionIds.append(sessionCache[key][0].id)
+            for key in cherrypy.file_uploads.keys():
+                pass
+                #for progressFile in cherrypy.file_uploads[key]:
+                    #if progressFile.sessionId not in validSessionIds:
+                        #cherrypy.file_uploads[key].remove(progressFile)
+            #Cleanup orphaned temp files, possibly resulting from stalled transfers
             validTempFiles = []
-            for key in cherrypy.file_transfers.keys():
-                for progressFile in cherrypy.file_transfers[key]:
+            for key in cherrypy.file_uploads.keys():
+                for progressFile in cherrypy.file_uploads[key]:
                     validTempFiles.append(progressFile.file_object.name.split(os.path.sep)[-1])
             threadLessFL.clean_temp_files(validTempFiles)
             threadLessFL = None #This is so that config changes will be absorbed during the next maintenance cycle
-            time.sleep(720) #12 minutes
+            time.sleep(30) #12 minutes
     except KeyboardInterrupt, ki:
         engine.exit()
         sys.exit(1)
