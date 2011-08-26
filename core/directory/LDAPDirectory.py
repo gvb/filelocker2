@@ -52,7 +52,6 @@ class LDAPDirectory(object):
             userFirstName, userLastName, userDisplayName, userEmail = (ldap_dict.get(self.firstNameAttr, [''])[0], ldap_dict.get(self.lastNameAttr, [''])[0], ldap_dict.get(self.displayNameAttr, [''])[0].title(), ldap_dict.get(self.emailAttr, [''])[0])
         else:
             userFirstName, userLastName, userDisplayName, userEmail = ("NOT FOUND", "NOT FOUND", userId + " NOT FOUND", "")
-            logging.error("Result length was 0 while looking up user %s" % userId)
         foundUser = User(userFirstName, userLastName, userEmail, None, None, None, userId)
         foundUser.userDisplayName = userDisplayName
         return foundUser

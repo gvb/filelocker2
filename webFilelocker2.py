@@ -2540,7 +2540,8 @@ def start(configfile=None, daemonize=False, pidfile=None):
         cherrypy._cpcgifs.FieldStorage = myFieldStorage
         cherrypy.server.socket_timeout = 60
         engine.start()
-    except:
+    except Exception, e:
+        print "Exception when starting up: %s" % str(e)
         # Assume the error has been logged already via bus.log.
         sys.exit(1)
     else:
@@ -2568,20 +2569,20 @@ def start(configfile=None, daemonize=False, pidfile=None):
                 if hour >= 24.0:
                     hour = 0.0
             #Clean up stalled and invalid transfers
-            validSessionIds = []
-            sessionCache = {}
-            try:
-                cherrypy.lib.sessions.init()
-                cherrypy.session.acquire_lock()
-                if cherrypy.config['tools.sessions.storage_type'] == "db":
-                    sessionCache = cherrypy.session.get_all_sessions()
-                else:
-                    sessionCache = cherrypy.session.cache
-                cherrypy.session.release_lock()
-            except AttributeError, ae:
-                logging.error("No sessions built") #Sessions haven't been built yet
-            for key in cherrypy.file_uploads.keys():
-                pass
+            #validSessionIds = []
+            #sessionCache = {}
+            #try:
+                #cherrypy.lib.sessions.init()
+                #cherrypy.session.acquire_lock()
+                #if cherrypy.config['tools.sessions.storage_type'] == "db":
+                    #sessionCache = cherrypy.session.get_all_sessions()
+                #else:
+                    #sessionCache = cherrypy.session.cache
+                #cherrypy.session.release_lock()
+            #except AttributeError, ae:
+                #logging.error("No sessions built") #Sessions haven't been built yet
+            #for key in cherrypy.file_uploads.keys():
+                #pass
                 #for progressFile in cherrypy.file_uploads[key]:
                     #if progressFile.sessionId not in validSessionIds:
                         #cherrypy.file_uploads[key].remove(progressFile)
@@ -2594,10 +2595,11 @@ def start(configfile=None, daemonize=False, pidfile=None):
             threadLessFL = None #This is so that config changes will be absorbed during the next maintenance cycle
             time.sleep(720) #12 minutes
     except KeyboardInterrupt, ki:
+        logging.error("Keyboard interrupt")
         engine.exit()
         sys.exit(1)
     except Exception, e:
-        print "Exception: %s" % str(e)
+        logging.error("Exception: %s" % str(e))
         logging.critical("Failed to start up Filelocker: %s" % str(e))
         engine.exit()
         sys.exit(1)
