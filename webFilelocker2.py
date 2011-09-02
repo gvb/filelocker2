@@ -1430,7 +1430,7 @@ class HTTP_File:
     def upload_stats(self, format="json", **kwargs):
         sMessages, fMessages, uploadStats, uploadKey = [], [], [], None
         try:
-            if cherrypy.session.has_key("user"):
+            if cherrypy.session.has_key("user") and cherrypy.session.get("user") is not None:
                 userId = cherrypy.session.get("user").userId
                 for key in cherrypy.file_uploads.keys():
                     if key.split(":")[0] == cherrypy.session.get('user').userId: # This will actually get uploads by the user and uploads using a ticket they generated
