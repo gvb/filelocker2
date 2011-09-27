@@ -1,0 +1,70 @@
+#! /usr/local/bin/python
+# -*- coding: utf-8 -*-
+ 
+import sys
+sys.path.append("../")
+import logging
+from zope.interface import implements
+from twisted.plugin import IPlugin
+from core.dao.models.FilelockerPlugin import FilelockerPlugin
+from SOAPpy import Config, HTTPTransport, SOAPAddress, WSDL
+
+wsdlFile = "userinfoservice.wsdl" 
+class Purdue_I2A2_Webservices(object):
+    implements(IPlugin, FilelockerPlugin)
+    
+    def __init__(self, username, password):
+        self.login = username
+        self.password = password
+        
+    def get_user_attributes(self, userId, fl):
+        attributes = []
+        try:
+            wsdlFile = "%s/core/plugins/userinfoservice.wsdl" % fl.rootPath
+            myHTTPTransport.setAuthentication(self.login, self.password)
+            server = WSDL.Proxy(wsdlFile, transport=myHTTPTransport)
+            attributes = server.getI2A2Characteristics(userId)
+            return attributes
+        except Exception, e:
+            logging.error("PLUGIN: Purdue_I2A2_Webservices - Unable to get attributes for user %s" % str(e))
+        return attributes
+    
+    def is_authorized(self, userId, fl):
+        return True
+        
+    def __str__(self):
+        return "Purdue I2A2 Webservices Plugin"
+
+purdue_plugin = Purdue_I2A2_Webservices("", "")
+
+class myHTTPTransport(HTTPTransport):
+    username = None
+    passwd = None
+
+    @classmethod
+    def setAuthentication(cls,u,p):
+        cls.username = u
+        cls.passwd = p
+
+    def call(self, addr, data, namespace, soapaction=None, encoding=None, http_proxy=None, config=Config):
+
+        if not isinstance(addr, SOAPAddress):
+            addr=SOAPAddress(addr, config)
+
+        if self.username != None:
+            addr.user = self.username+":"+self.passwd
+
+        return HTTPTransport.call(self, addr, data, namespace, soapaction, encoding, http_proxy, config)
+    
+    
+if __name__ == '__main__':
+    #myHTTPTransport.setAuthentication(wslogin, wspassword)
+    #server = WSDL.Proxy(wsdlFile, transport=myHTTPTransport)
+    #userInfo = server.getI2A2Characteristics(login)
+    #userInfo = server.getUserIdentity(login) 
+    #print 'login = ' + userInfo.login
+    #print 'puid = ' + str(userInfo.puid.puid)
+    #print 'fullName = ' + userInfo.fullName
+    #for group in userInfo.groups:
+    #    print '  group = ' + group
+    #print str(userInfo)

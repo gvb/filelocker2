@@ -1,0 +1,27 @@
+<div class="popup_wrapper">
+    <div class="popup_large">
+        <table class="manage_group_table">
+        <tr>
+            <td style="width: 310px;">
+                <input type="hidden" id="manage_groups_selectedGroupId" value="$group.groupId"/>
+                <div id="current_members">
+                    <h3><a href="#">Members in $group.groupName</a></h3>
+                    <div>
+                        <ul class="menu">
+                        #if len($group.groupMembers) == 0
+                            <li><i>This group contains no members.</i></li>
+                        #else
+                            #for $member in $group.groupMembers
+                                <li><span class="itemTitleMedium"><span class="ownerItem memberTitle">$member.userDisplayName</span></span>
+                                <a href="javascript:removeUsersFromGroup('$member.userId', '$group.groupId', 'viewGroupBox');" title='Remove $member.userId from $group.groupName' class='deleteLink'>Remove</a></li>
+                            #end for
+                        #end if
+                        </ul>
+                    </div>
+                </div>
+            </td>
+            <td id="manage_groups_searchContainer">$searchWidget</td>
+        </tr>
+        </table>
+    </div>
+</div>

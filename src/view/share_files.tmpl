@@ -1,0 +1,101 @@
+#if len($myFilesList) > 1:
+<div class="popup_wrapper">
+    <div class="popup_large">
+        <input type="hidden" id="selectedFiles" value="$selectedFileIds"/>
+        <table class="manage_shares_table">
+        <tr>
+        <td style="width: 310px;">
+            <h3>Files selected for sharing</h3><br/>
+            #for $selectedFile in $myFilesList
+            <a class="$selectedFile.documentType" title="$selectedFile.fileName">
+                #if len($selectedFile.fileName) > 60
+                    $selectedFile.fileName[0:45]...$selectedFile.fileName[-10:]
+                #else
+                    $selectedFile.fileName
+                #end if
+            </a><br/>
+            #end for
+        </td>
+        <td id="private_sharing_searchContainer">
+        $searchWidget
+        </td>
+        </tr>
+        </table>
+    </div>
+</div>
+#elif len($myFilesList) == 1
+#set $selectedFile = $myFilesList[0]
+<div class="popup_wrapper">
+    <div class="popup_large">
+        <input type="hidden" id="selectedFiles" value="$selectedFileIds"/>
+        <table class="manage_shares_table">
+        <tr>
+        <td style="width: 310px;">
+            <div id="current_shares">
+                <h3><a href="#">Users sharing this file ($len($selectedFile.fileUserShares))</a></h3>
+                <div>
+                    <ul class="menu">
+                    #if len($selectedFile.fileUserShares) == 0
+                        <li><i>This file is not shared with any users.</i></li>
+                    #else
+                        #for $share in $selectedFile.fileUserShares
+                            <li><span class="itemTitleMedium"><span class="ownerItem memberTitle">$share.id</span></span>
+                            <a href="javascript:unPrivateShareFiles('$share['id']', 'private', $selectedFile.fileId);" title="Unshare this file from '$share.id'" class="deleteLink">Unshare</a></li>
+                        #end for
+                    #end if
+                    </ul>
+                </div>
+                <h3><a href="#">Groups sharing this file ($len($selectedFile.fileGroupShares))</a></h3>
+                <div>
+                    <ul class="menu">
+                    #if len($selectedFile.fileGroupShares) == 0
+                        <li><i>This file is not shared with any groups.</i></li>
+                    #else
+                        #for $share in $selectedFile.fileGroupShares
+                            #set $shortenedName = $share['name']
+                            #if len($share['name']) > 25
+                                #set $shortenedName = $share['name'][0:17] + "..." + $share['name'][-5:]
+                            #end if
+                            <li><span class="itemTitleMedium"><span class="groupItem memberTitle" title="$share['name']">$shortenedName</span></span>
+                            <a href="javascript:unPrivateShareFiles('$share['id']', 'private_group', $selectedFile.fileId);" title="Unshare this file from '$share['name']'" class="deleteLink">Unshare</a></li>
+                        #end for
+                    #end if
+                    </ul>
+                </div>
+                #if len($userShareableAttributes) > 0
+                <h3><a href="#">Shared by Attribute ($len($selectedFile.fileAttributeShares))</a></h3>
+                <div>
+                    <ul class="menu">
+                    #if len($selectedFile.fileAttributeShares) == 0
+                        <li><i>This file is not shared by attribute.</i></li>
+                    #else
+                        #for $share in $selectedFile.fileAttributeShares
+                            #set $shortenedName = $share['name']
+                            #if len($share['name']) > 25
+                                #set $shortenedName = $share['name'][0:17] + "..." + $share['name'][-5:]
+                            #end if
+                            <li><span class="itemTitleMedium"><span class="attributeItem memberTitle" title="$share['name']">$shortenedName</span></span>
+                            <a href="javascript:unPrivateShareFiles('$share['id']', 'private_attribute', $selectedFile.fileId);" title="Unshare this file from '$share['name']'" class="deleteLink">Unshare</a></li>
+                        #end for
+                    #end if
+                    </ul>
+                </div>
+                #end if
+            </div>
+        </td>
+        <td id="private_sharing_searchContainer">
+        $searchWidget
+        </td>
+        </tr>
+        </table>
+    </div>
+</div>
+#else
+<div class="popup_wrapper">
+    <div class="popup_large">
+        #for $message in $fMessages
+        <p>$message</p>
+        #end for
+    </div>
+</div>
+#end if
