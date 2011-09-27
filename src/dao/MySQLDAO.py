@@ -5,21 +5,21 @@ import MySQLdb
 import logging
 from DAO import DAO
 import sys
-from models.User import User
-from models.File import File
-from models.UploadTicket import UploadTicket
-from models.PrivateShare import PrivateShare
-from models.PrivateGroupShare import PrivateGroupShare
-from models.PrivateAttributeShare import PrivateAttributeShare
-from models.PublicShare import PublicShare
-from models.Parameter import Parameter
-from models.Group import Group
-from models.Message import Message
-from models.ActionLog import ActionLog
-from models.FLError import FLError
-from models.Attribute import Attribute
-from models.Permission import Permission
-from models.CLIKey import CLIKey
+from model.User import User
+from model.File import File
+from model.UploadTicket import UploadTicket
+from model.PrivateShare import PrivateShare
+from model.PrivateGroupShare import PrivateGroupShare
+from model.PrivateAttributeShare import PrivateAttributeShare
+from model.PublicShare import PublicShare
+from model.Parameter import Parameter
+from model.Group import Group
+from model.Message import Message
+from model.ActionLog import ActionLog
+from model.FLError import FLError
+from model.Attribute import Attribute
+from model.Permission import Permission
+from model.CLIKey import CLIKey
 try:
     from hashlib import md5
 except ImportError, ie:

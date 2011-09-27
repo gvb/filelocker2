@@ -1,45 +1,11 @@
-
+import cherrypy
+import logging
+from Cheetah.Template import Template
 __author__="wbdavis"
 __date__ ="$Sep 25, 2011 9:28:54 PM$"
 
-class FileTransferController
-    def before_upload(**kwargs):
-        fl, user, sMessages, fMessages, uploadTicket = None, None, None, None, None
-        if cherrypy.session.has_key("uploadTicket") and cherrypy.session.get("uploadTicket") is not None:
-            uploadTicket = cherrypy.session.get("uploadTicket")
-            #fl = Filelocker(cherrypy.request.app.config)
-            fl = cherrypy.thread_data.flDict['app']
-            user = fl.get_user(uploadTicket.ownerId)
-        else:
-            requires_login()
-            user, fl, sMessages, fMessages = cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], cherrypy.session.get("sMessages"), cherrypy.session.get("fMessages")
-        vaultSpaceFreeMB, vaultCapacityMB = fl.get_vault_usage()
-        cherrypy.response.timeout = 86400
-        lcHDRS = {}
-        for key, val in cherrypy.request.headers.iteritems():
-            lcHDRS[key.lower()] = val
-        # at this point we could limit the upload on content-length...
-        try:
-            fileSizeBytes = int(lcHDRS['content-length'])
-        except KeyError, ke:
-            fMessages.append("Request must have a valid content length")
-            raise HTTPError(411, "Request must have a valid content length")
-        fileSizeMB = ((fileSizeBytes/1024)/1024)
-        quotaSpaceRemainingBytes = (user.userQuota*1024*1024) - int(fl.get_user_quota_usage(user, user.userId))
-        if (fileSizeMB*2) >= vaultSpaceFreeMB:
-            logging.critical("[system] [beforeUpload] [File vault is running out of space and cannot fit this file. Remaining Space is %s MB, fileSizeBytes is %s]" % (vaultSpaceFreeMB, fileSizeBytes))
-            fMessages.append("The server doesn't have enough space left on its drive to fit this file. The administrator has been notified.")
-            raise HTTPError(413, "The server doesn't have enough space left on its drive to fit this file. The administrator has been notified.")
-        if fileSizeMB > fl.maxFileUploadSize:
-            logging.debug("[system] [beforeUpload] [File exceeded maximum allowed upload size, rejected]")
-            fMessages.append("File is too large for server to process.")
-            raise HTTPError(413, "File is too large for server to process.")
-        if fileSizeBytes > quotaSpaceRemainingBytes:
-            fMessages.append("File size is larger than your quota will accomodate")
-            raise HTTPError(413, "File size is larger than your quota will accomodate")
-        cherrypy.request.process_request_body = False
-
-        @cherrypy.expose
+class FileTransferController:
+    @cherrypy.expose
     @cherrypy.tools.requires_login()
     def get_quota_usage(self, format="json", **kwargs):
         user, fl, sMessages, fMessages, quotaMB, quotaUsed = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [], 0, 0)
@@ -690,5 +656,3 @@ class FileTransferController
             sMessages = ["No active uploads"]
         yield fl_response(sMessages, fMessages, format, data=uploadStats)
 
-if __name__ == "__main__":
-    print "Hello";

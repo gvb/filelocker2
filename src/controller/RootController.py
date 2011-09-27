@@ -1,16 +1,23 @@
-
+import cherrypy
+import re
+import os
+import logging
+from Cheetah.Template import Template
+import ShareController
+from controller.FileTransferController import FileTransferController
+from controller.AccountController import AccountController
+from controller.MessageController import MessageController
+from controller.AdminController import AdminController
 __author__="wbdavis"
 __date__ ="$Sep 25, 2011 9:36:56 PM$"
 
 class RootController:
     fl = None
-    share_interface = HTTP_Share()
-    file_interface = HTTP_File()
-    group_interface = HTTP_Groups()
-    admin_interface = HTTP_Admin()
-    user_interface = HTTP_User()
-    message_interface = HTTP_Message()
-    cli_interface = HTTP_CLI()
+    share_interface = ShareController
+    file_interface = FileTransferController
+    account_interface = AccountController
+    admin_interface = AdminController
+    message_interface = MessageController
     #DropPrivileges(cherrypy.engine, umask=077, uid='nobody', gid='nogroup').subscribe()
 
     def __init__(self):
@@ -407,5 +414,3 @@ class RootController:
             #return serve_file(os.path.join(fl.clientPath,"iosFilelocker.app"), "application/x-download", "attachment")
         #elif platform="android":
             #return serve_file(os.path.join(fl.clientPath,"androidFilelocker.app"), "application/x-download", "attachment")
-if __name__ == "__main__":
-    print "Hello";

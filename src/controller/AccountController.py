@@ -1,58 +1,10 @@
-
+import cherrypy
+import logging
+from Cheetah.Template import Template
 __author__="wbdavis"
 __date__ ="$Sep 25, 2011 9:37:17 PM$"
 class AccountController:
-    def requires_login(**kwargs):
-    cherrypy.response.headers['Pragma']="no-cache"
-    cherrypy.response.headers['Cache-Control']="no-cache"
-    format = None
-    fl = cherrypy.thread_data.flDict['app']
-    if cherrypy.request.params.has_key("format"):
-        format = cherrypy.request.params['format']
-    if cherrypy.session.has_key("user") and cherrypy.session.get('user') is not None:
-        if cherrypy.session.get('user').userTosAcceptDatetime == None:
-            raise cherrypy.HTTPRedirect(fl.rootURL+"/sign_tos")
-        else:
-            pass
-    else:
-        if fl.authType == "cas":
-            if cherrypy.request.params.has_key("ticket"):
-                valid_ticket, userId = fl.CAS.validate_ticket(fl.rootURL, cherrypy.request.params['ticket'])
-                if valid_ticket:
-                    currentUser = fl.get_user(userId, True)
-                    if currentUser is None:
-                        currentUser = fl.directory.lookup_user(userId) #Try to get user info from directory
-                        if currentUser is not None:
-                            fl.install_user(currentUser)
-                        else:
-                            logging.error("[system] [installUser] [User not found in directory lookup - installing with defaults]")
-                            currentUser = User("Guest", "Guest", "Unknown", None, None, None, userId)
-                            currentUser.userDisplayName = "Guest"
-                            fl.install_user(currentUser)
-                        currentUser = fl.get_user(userId, True)
-                    if currentUser.authorized == False:
-                        raise cherrypy.HTTPError(403, "Your user account does not have access to this system.")
-                    cherrypy.session["user"], cherrypy.session['original_user'], cherrypy.session['sMessages'], cherrypy.session['fMessages'] = currentUser, currentUser, [], []
-                    fl.record_login(cherrypy.session.get("user"), cherrypy.request.remote.ip)
-                    if currentUser.userTosAcceptDatetime is None:
-                        raise cherrypy.HTTPRedirect(fl.rootURL+"/sign_tos")
-                    raise cherrypy.HTTPRedirect(fl.rootURL)
-                else:
-                    raise cherrypy.HTTPError(403, "Invalid CAS Ticket. If you copied and pasted the URL for this server, you might need to remove the 'ticket' parameter from the URL.")
-            else:
-                if format=="json":
-                    raise cherrypy.HTTPRedirect(fl.rootURL+"/expired_json")
-                elif format=="text":
-                    raise cherrypy.HTTPRedirect(fl.rootURL+"/expired_text")
-                else:
-                    raise cherrypy.HTTPRedirect(fl.CAS.login_url(fl.rootURL))
-        else:
-            if format=="json":
-                raise cherrypy.HTTPRedirect(fl.rootURL+"/expired_json")
-            elif format=="text":
-                raise cherrypy.HTTPRedirect(fl.rootURL+"/expired_text")
-            else:
-                raise cherrypy.HTTPRedirect(fl.rootURL+"/login")
+    
             
     @cherrypy.expose
     @cherrypy.tools.requires_login()
@@ -256,5 +208,7 @@ class AccountController:
             sMessages.extend(fle.successMessages)
             fMessages.extend(fle.failureMessages)
         yield fl_response(sMessages, fMessages, format, data=groups)
+
+
 if __name__ == "__main__":
     print "Hello";

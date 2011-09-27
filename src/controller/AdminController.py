@@ -1,7 +1,11 @@
-
+import os
+import cherrypy
+import logging
+from lib.Formatters import strip_tags
+from Cheetah.Template import Template
 __author__="wbdavis"
 __date__ ="$Sep 25, 2011 9:36:30 PM$"
-class HTTP_Admin:
+class AdminController:
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def get_all_users(self, start=0, length=50, format="json", **kwargs):
