@@ -1,8 +1,12 @@
 import os
 import sys
+import signal
+import errno
 import cherrypy
 import logging
 from Cheetah.Template import Template
+from lib.SQLAlchemyTool import configure_session_for_app, session
+from model.ConfigParameter import ConfigParameter
 from dao import dao_creator
 __author__="wbdavis"
 __date__ ="$Sep 25, 2011 9:09:40 PM$"
@@ -169,15 +173,15 @@ def start(configfile=None, daemonize=False, pidfile=None):
     config.read(configfile)
     cherrypy.configfile = configfile
     cherrypy.config.update(configfile)
-    cherrypy.FLThreads = [] #Build a list to hold the threads in a globally accessible fashion. This is necessary for on the fly config updates to take effect.
     logLevel = 40
     if config.as_dict()['filelocker'].has_key("loglevel"):
         logLevel = config.as_dict()['filelocker']['loglevel']
-    if cherrypy.config['tools.sessions.storage_type'] == "db":
-        from dao import MySQLDAO
-        cherrypy.lib.sessions.DbSession = MySQLDAO.DbSession
+#    if cherrypy.config['tools.sessions.storage_type'] == "db":
+#        from dao import MySQLDAO
+#        cherrypy.lib.sessions.DbSession = MySQLDAO.DbSession
     from controller.RootController import RootController
     app = cherrypy.tree.mount(RootController(), '/', config=configfile)
+    
     #The following section handles the log rotation
     log = app.log
     log.error_file = ""
@@ -196,8 +200,6 @@ def start(configfile=None, daemonize=False, pidfile=None):
     if pidfile is None:
             pidfile = os.path.join(os.getcwd(),"filelocker.pid")
     cherrypy.process.plugins.PIDFile(engine, pidfile).subscribe()
-    #Build the DB connection threadpool
-    engine.subscribe('start_thread', fl_connect)
     #This was from the example
     if hasattr(engine, "signal_handler"):
         engine.signal_handler.subscribe()
@@ -210,6 +212,7 @@ def start(configfile=None, daemonize=False, pidfile=None):
         cherrypy._cpcgifs.FieldStorage = FileFieldStorage
         cherrypy.server.socket_timeout = 60
         engine.start()
+        configure_session_for_app(app)
     except Exception, e:
         print "Exception when starting up: %s" % str(e)
         # Assume the error has been logged already via bus.log.
@@ -218,61 +221,46 @@ def start(configfile=None, daemonize=False, pidfile=None):
         #engine.block()
         pass
 
-    try:
-        #Now that CherryPy has started, perform maintenance...first check that the database is up to date
-        check_updates()
+#    try:
+    from controller.FileController import FileController
 
-        #Set hour counter to 0.0. We have daily maintenance for expirations and maintenance every 12 minutes for queued deletions, etc.
-        hour = 0.0
-        while True:
-            threadLessFL = Filelocker(config.as_dict())
-            maxSize = int(1024*1024*threadLessFL.maxFileUploadSize)
-            #Set max file size, in bytes
-            cherrypy.config.update({'server.max_request_body_size': maxSize})
-            if threadLessFL.isClusterMaster:
-                if hour == 0.0: #on startup and each new day
-                    threadLessFL.check_expirations()
-                    threadLessFL.delete_orphaned_files()
-                threadLessFL.process_deletion_queue() #process deletion queue every 12 minutes
-                if hour < 24.0:
-                    hour += 0.2
-                if hour >= 24.0:
-                    hour = 0.0
-            #Clean up stalled and invalid transfers
-            #validSessionIds = []
-            #sessionCache = {}
-            #try:
-                #cherrypy.lib.sessions.init()
-                #cherrypy.session.acquire_lock()
-                #if cherrypy.config['tools.sessions.storage_type'] == "db":
-                    #sessionCache = cherrypy.session.get_all_sessions()
-                #else:
-                    #sessionCache = cherrypy.session.cache
-                #cherrypy.session.release_lock()
-            #except AttributeError, ae:
-                #logging.error("No sessions built") #Sessions haven't been built yet
-            #for key in cherrypy.file_uploads.keys():
-                #pass
-                #for progressFile in cherrypy.file_uploads[key]:
-                    #if progressFile.sessionId not in validSessionIds:
-                        #cherrypy.file_uploads[key].remove(progressFile)
-            #Cleanup orphaned temp files, possibly resulting from stalled transfers
-            validTempFiles = []
-            for key in cherrypy.file_uploads.keys():
-                for progressFile in cherrypy.file_uploads[key]:
-                    validTempFiles.append(progressFile.file_object.name.split(os.path.sep)[-1])
-            threadLessFL.clean_temp_files(validTempFiles)
-            threadLessFL = None #This is so that config changes will be absorbed during the next maintenance cycle
-            time.sleep(720) #12 minutes
-    except KeyboardInterrupt, ki:
-        logging.error("Keyboard interrupt")
-        engine.exit()
-        sys.exit(1)
-    except Exception, e:
-        logging.error("Exception: %s" % str(e))
-        logging.critical("Failed to start up Filelocker: %s" % str(e))
-        engine.exit()
-        sys.exit(1)
+    #Now that CherryPy has started, perform maintenance...first check that the database is up to date
+    #check_updates()
+
+    #Set hour counter to 0.0. We have daily maintenance for expirations and maintenance every 12 minutes for queued deletions, etc.
+    hour = 0.0
+    fileController = FileController()
+    while True:
+        #Set max file size, in bytes
+        query = session.query(ConfigParameter).filter(ConfigParameter.config_parameter_name == "max_file_size")
+        maxSizeParam = query.one()
+        maxSize = long(maxSizeParam.config_parameter_value)
+        cherrypy.config.update({'server.max_request_body_size': maxSize})
+        if config.as_dict()['filelocker'].has_key("clustermaster") and config.as_dict()["filelocker"]["clustermaster"]: # This will allow you set up other front ends that don't run maintenance on the DB or FS
+            if hour == 0.0: #on startup and each new day
+                fileController.check_expirations()
+                fileController.delete_orphaned_files()
+            fileController.process_deletion_queue() #process deletion queue every 12 minutes
+            if hour < 24.0:
+                hour += 0.2
+            if hour >= 24.0:
+                hour = 0.0
+        #Cleanup orphaned temp files, possibly resulting from stalled transfers
+        validTempFiles = []
+        for key in cherrypy.file_uploads.keys():
+            for progressFile in cherrypy.file_uploads[key]:
+                validTempFiles.append(progressFile.file_object.name.split(os.path.sep)[-1])
+        fileController.clean_temp_files(validTempFiles)
+        time.sleep(720) #12 minutes
+#    except KeyboardInterrupt, ki:
+#        logging.error("Keyboard interrupt")
+#        engine.exit()
+#        sys.exit(1)
+#    except Exception, e:
+#        logging.error("Exception: %s" % str(e))
+#        logging.critical("Failed to start up Filelocker: %s" % str(e))
+#        engine.exit()
+#        sys.exit(1)
 
 def stop(pidfile=None):
     if pidfile is None:

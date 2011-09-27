@@ -4,7 +4,7 @@ import os
 import logging
 from Cheetah.Template import Template
 import ShareController
-from controller.FileTransferController import FileTransferController
+from controller.FileController import FileController
 from controller.AccountController import AccountController
 from controller.MessageController import MessageController
 from controller.AdminController import AdminController
@@ -14,7 +14,7 @@ __date__ ="$Sep 25, 2011 9:36:56 PM$"
 class RootController:
     fl = None
     share_interface = ShareController
-    file_interface = FileTransferController
+    file_interface = FileController
     account_interface = AccountController
     admin_interface = AdminController
     message_interface = MessageController
