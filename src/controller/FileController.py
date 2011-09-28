@@ -659,17 +659,23 @@ class FileController:
             sMessages = ["No active uploads"]
         yield fl_response(sMessages, fMessages, format, data=uploadStats)
     
-    def check_expirations():
+    def check_expirations(self):
         expiredFiles = session.query(File).filter(File.file_expiration_datetime < datetime.datetime.now())
         for flFile in expiredFiles:
             try:
+                for share in flFile.private_shares:
+                    session.delete(share)
+                for share in flFile.private_group_shares:
+                    session.delete(share)
+                for share in flFile.public_shares:
+                    session.delete(share)
                 session.delete(flFile)
 
-                self.db.removeSharesByFileId(flFile.fileId)
-                self.db.deleteFile(flFile.fileId)
                 self.queue_for_deletion(str(flFile.fileId))
+                session.commit()
                 self.log_action("system", "Delete File", flFile.fileOwnerId, "File %s (ID:%s) has expired and has been purged by the system." % (flFile.fileName, flFile.fileId))
             except Exception, e:
+                session.rollback()
                 logging.error("[system] [checkExpirations] [Error while deleting expired file: %s]" % str(e))
         expiredMessages = self.db.getExpiredMessages()
         for message in expiredMessages:

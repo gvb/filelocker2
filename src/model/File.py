@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import relationship, backref
 Base = declarative_base()
-from sqlalchemy import Column,String,Enum,Sequence,Integer,BigInteger,DateTime,Boolean,ForeignKey
+from sqlalchemy import Column,String,Enum,Integer,BigInteger,DateTime,Boolean,ForeignKey
 class File(Base):
     __tablename__ = "file"
     file_id = Column(Integer, primary_key=True)
@@ -18,6 +19,9 @@ class File(Base):
     file_location = Column(Enum("local", "remote"))
     file_notify_on_download = Column(Boolean)
     file_upload_ticket = Column(String(64))
+    private_shares = relationship("PrivateShare", backref="file")
+    private_group_shares = relationship("PrivateGroupShare", backref="file")
+    public_shares = relationship("PublicShare", backref="file")
 
     def __init__ (self, fileName, fileType, fileNotes, fileSizeBytes, fileUploadedDatetime, fileOwnerId, fileExpirationDatetime, filePassedAvScan, fileEncryptionKey=None, fileId=None, fileStatus=None, fileLocation="local", fileNotifyOnDownload=False, fileUploadTicketId=None):
         self.file_name = fileName
