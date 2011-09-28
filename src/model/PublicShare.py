@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import relationship, backref
 Base = declarative_base()
 from sqlalchemy import Column,String,Enum,Integer,DateTime,ForeignKey
 try:
@@ -13,7 +14,7 @@ class PublicShare(Base):
     public_share_expiration = Column(DateTime)
     public_share_password_hash = Column(String(64))
     public_share_type = Column(Enum("single", "multi"), default="single")
-    
+    file = relationship("File", backref=backref('public_shares'))
     def __init__(self, fileId, ownerId, expirationDateTime, passwordHash, shareType="single", shareId=None):
         self.public_share_id = shareId
         self.public_share_file_id = fileId

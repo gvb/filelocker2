@@ -236,9 +236,11 @@ def start(configfile=None, daemonize=False, pidfile=None):
         maxSizeParam = query.one()
         maxSize = long(maxSizeParam.config_parameter_value)
         cherrypy.config.update({'server.max_request_body_size': maxSize})
+        logging.error("Just updated the max size to %s" % maxSize)
         if config.as_dict()['filelocker'].has_key("clustermaster") and config.as_dict()["filelocker"]["clustermaster"]: # This will allow you set up other front ends that don't run maintenance on the DB or FS
             if hour == 0.0: #on startup and each new day
                 fileController.check_expirations()
+                logging.error("Expirations checked")
                 fileController.delete_orphaned_files()
             fileController.process_deletion_queue() #process deletion queue every 12 minutes
             if hour < 24.0:
