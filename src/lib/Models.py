@@ -4,7 +4,7 @@ except ImportError, ie:
     from md5 import md5
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, backref
-from sqlalchemy import Column,String,Enum,Integer,BigInteger,DateTime,Boolean,ForeignKey
+from sqlalchemy import *
 __author__="wbdavis"
 __date__ ="$Sep 27, 2011 8:48:55 PM$"
 Base = declarative_base()
@@ -25,10 +25,10 @@ class File(Base):
     file_location = Column(Enum("local", "remote"))
     file_notify_on_download = Column(Boolean)
     file_upload_ticket = Column(String(64))
-    private_group_shares = relationship("PrivateGroupShare", backref="file")
-    private_shares = relationship("PrivateShare", backref="file")
-    public_shares = relationship("PublicShare", backref="file")
-    private_attribute_shares = relationship("PrivateAttributeShare", backref="file")
+    #private_group_shares = relationship("PrivateGroupShare", backref="file")
+    #private_shares = relationship("PrivateShare", backref="file")
+    #public_shares = relationship("PublicShare", backref="file")
+    #private_attribute_shares = relationship("PrivateAttributeShare", backref="file")
 
     def __init__ (self, fileName, fileType, fileNotes, fileSizeBytes, fileUploadedDatetime, fileOwnerId, fileExpirationDatetime, filePassedAvScan, fileEncryptionKey=None, fileId=None, fileStatus=None, fileLocation="local", fileNotifyOnDownload=False, fileUploadTicketId=None):
         self.file_name = fileName
@@ -51,7 +51,7 @@ class PrivateShare(Base):
     __tablename__ = "private_share"
     private_share_target_id = Column(Integer, ForeignKey("user.user_id"), primary_key=True)
     private_share_file_id = Column(Integer, ForeignKey("file.file_id"), primary_key=True)
-    file = relationship("File", backref=backref('private_shares'))
+    flFile = relationship("File", backref('private_shares'))
     def __init__(self, fileId, targetId):
         self.private_share_file_id = fileId
         self.private_share_target_id = targetId
@@ -60,7 +60,7 @@ class PrivateGroupShare(Base):
     __tablename__ = "private_group_share"
     private_group_share_target_id = Column(Integer, ForeignKey("groups.group_id"), primary_key=True)
     private_group_share_file_id = Column(Integer, ForeignKey("file.file_id"), primary_key=True)
-    file = relationship("File", backref=backref('private_group_shares'))
+    flFile = relationship("File", backref('private_group_shares'))
     def __init__(self, fileId, targetId):
         self.private_group_share_file_id = fileId
         self.private_group_share_target_id = targetId
@@ -72,7 +72,7 @@ class PublicShare(Base):
     public_share_expiration = Column(DateTime)
     public_share_password_hash = Column(String(64))
     public_share_type = Column(Enum("single", "multi"), default="single")
-    file = relationship("File", backref=backref('public_shares'))
+    flFile = relationship("File", backref('public_shares'))
     def __init__(self, fileId, ownerId, expirationDateTime, passwordHash, shareType="single", shareId=None):
         self.public_share_id = shareId
         self.public_share_file_id = fileId
@@ -88,7 +88,7 @@ class PrivateAttributeShare(Base):
     __tablename__ = "private_attribute_share"
     private_attribute_share_file_id = Column(Integer, ForeignKey("file.file_id"), primary_key=True)
     private_attribute_share_attribute_id = Column(String(50), ForeignKey("attribute.attribute_id"), primary_key=True)
-    file = relationship("File", backref=backref('private_attribute_shares'))
+    flFile = relationship("File", backref('private_attribute_shares'))
     def __init__(self, fileId, attributeId):
         self.private_attribute_share_file_id = fileId
         self.private_attribute_share_attribute_id = attributeId
@@ -105,47 +105,54 @@ class ConfigParameter(Base):
         self.config_parameter_description = parameterDescription
         self.config_parameter_type = pType
         self.config_parameter_value = value
+        
 class User(Base):
     __tablename__ = "user"
 
-    id = Column(String(50), primary_key=True)
-    name = Column(String(50))
-    email = Column(String(256))
-    lastLoginDate = Column(DateTime)
-    tosAcceptDate = Column(DateTime)
-    salt = Column(Integer)
-    password = Column(String(40))
-
-    self.isRole = False
-    self.userLastLogin = userLastLogin
-    self.user = userTosAcceptDatetime
-    self.userAttributes = []
-    self.password = None
+    #user_id = Column(String(50), primary_key=True)
+    #name = Column(String(50))
+    #email = Column(String(256))
+    #lastLoginDate = Column(DateTime)
+    #tosAcceptDate = Column(DateTime)
+    #salt = Column(Integer)
+    #password = Column(String(40))
+    
+    user_id = Column(String(30), primary_key=True)
+    user_quota = Column(Integer)
+    user_last_login_datetime = Column(DateTime)
+    user_tos_accept_datetime = Column(DateTime)
+    user_email = Column(String(320), default="directory")
+    user_first_name = Column(String(100))
+    user_last_name = Column(String(100))
+    user_password_hash = Column(String(64))
+    user_quota_used = 0
+    salt = None
+    is_role = False
+    user_attributes = []
+    
     def __init__ (self, firstName, lastName, userEmail, userQuota, userLastLogin, userTosAcceptDatetime, userId=None, userQuotaUsed=None):
-        self.userFirstName = firstName
-        self.userLastName = lastName
-        self.userDisplayName = "%s %s" % (firstName, lastName)
-        self.userEmail = userEmail
-        self.userQuota = userQuota
-        self.isRole = False
-        self.userLastLogin = userLastLogin
-        self.userTosAcceptDatetime = userTosAcceptDatetime
-        self.userAttributes = []
+        self.user_first_name = firstName
+        self.user_last_name = lastName
+        self.user_display_name = "%s %s" % (firstName, lastName)
+        self.user_email = userEmail
+        self.user_quota = userQuota
+        self.is_role = False
+        self.user_last_login_datetime = userLastLogin
+        self.user_tos_accept_datetime = userTosAcceptDatetime
+        self.user_attributes = []
         self.salt
         self.password = None
         if userId is not None:
-            self.userId = userId
+            self.user_id = userId
         if userQuotaUsed is not None:
-            self.userQuotaUsed = userQuotaUsed
+            self.user_quota_used = userQuotaUsed
+            
     def get_copy(self):
-        cUser = User(self.userFirstName, self.userLastName, self.userEmail, self.userQuota, self.userLastLogin, self.userTosAcceptDatetime, self.userId, self.userQuotaUsed)
+        cUser = User(self.user_first_name, self.user_last_name, self.user_email, self.user_quota, self.user_last_login_datetime, self.user_tos_accept_datetime, self.user_id, self.user_quota_used)
         return cUser
 
     def get_dict(self):
-        return {'userFirstName':self.userFirstName, 'userLastName':self.userLastName, 'userDisplayName': self.userDisplayName, 'userEmail': self.userEmail, 'isRole': self.isRole, 'isAdmin': self.isAdmin, 'userId': self.userId, 'userQuotaUsed': self.userQuotaUsed, 'userQuota': self.userQuota}
-
-    def __str__(self):
-        return "First Name: %s Last Name: %s Display Name: %s Email: %s Quota: %s Last Login: %s TOS Accept Time: %s" % (self.userFirstName, self.userLastName, self.userDisplayName, self.userEmail, self.userQuota, self.userLastLogin, self.userTosAcceptDatetime)
+        return {'userFirstName':self.user_first_name, 'userLastName':self.user_last_name, 'userDisplayName': self.user_display_name, 'userEmail': self.user_email, 'isRole': self.is_role, 'userId': self.user_id, 'userQuotaUsed': self.user_quota_used, 'userQuota': self.user_quota}
 
 group_membership_table = Table("group_membership", Base.metadata,
     Column("group_membership_group_id", Integer, ForeignKey("groups.group_id")),
@@ -159,14 +166,25 @@ class Group:
     group_scope = Column(Enum("public", "private", "reserved"), default="private")
     group_members = relationship("User", secondary=group_membership_table)
     def __init__(self, groupScope, ownerId, groupName, groupMembers=None, groupId=None):
-            self.group_scope = groupScope #public, private, reserved
-            self.group_owner_id = ownerId
-            self.group_name = groupName
-            if groupMembers is not None:
-                self.group_members = groupMembers
-            else:
-                self.group_members = []
-            if groupId is not None:
-                self.group_id = groupId
-            else:
-                self.group_id = None
+        self.group_scope = groupScope #public, private, reserved
+        self.group_owner_id = ownerId
+        self.group_name = groupName
+        if groupMembers is not None:
+            self.group_members = groupMembers
+        else:
+            self.group_members = []
+        if groupId is not None:
+            self.group_id = groupId
+        else:
+            self.group_id = None
+
+class Attribute:
+    __tablename__ = "attribute"
+    attribute_id = Column(String(50), primary_key=True)
+    attribute_name = Column(String)
+    def __init__ (self, attributeId, attributeName):
+        self.attribute_id = attributeId
+        self.attribute_name = attributeName
+    
+    def __str__(self):
+        return "%s (%s)" % (self.attribute_name, self.attribute_id)

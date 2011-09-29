@@ -7,7 +7,7 @@ import logging
 from Cheetah.Template import Template
 from lib.SQLAlchemyTool import configure_session_for_app, session
 from lib.Models import *
-from dao import dao_creator
+#from dao import dao_creator
 __author__="wbdavis"
 __date__ ="$Sep 25, 2011 9:09:40 PM$"
 __version__ = "2.6"
@@ -46,6 +46,7 @@ def before_upload(**kwargs):
         fMessages.append("File size is larger than your quota will accomodate")
         raise HTTPError(413, "File size is larger than your quota will accomodate")
     cherrypy.request.process_request_body = False
+    
 def requires_login(**kwargs):
     format = None
     fl = cherrypy.thread_data.flDict['app']
