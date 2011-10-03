@@ -1,3 +1,4 @@
+import lib.Models
 import os
 import sys
 import signal
@@ -283,7 +284,18 @@ def stop(pidfile=None):
             print "Error stopping: %s\n" % str(e)
         else:
             os.kill(pid, 9)
-
+            
+def build_database(configfile=None):
+    config = cherrypy._cpconfig._Parser()
+    cherrypy.config.update({'log.screen': False})
+    if configfile is None:
+        configfile = os.path.join(os.getcwd(),"etc","filelocker.conf")
+    config.read(configfile)
+    if config.as_dict()['/'].has_key("tools.SATransaction.dburi"):
+        dburi = config.as_dict()['/']["tools.SATransaction.dburi"]
+        lib.Models.create_database_tables(dburi)
+    print "Created Database"
+    
 if __name__ == '__main__':
     from optparse import OptionParser
 
@@ -303,6 +315,8 @@ if __name__ == '__main__':
         elif options.action == "restart":
             stop(options.pidfile)
             start(options.configfile, options.daemonize, options.pidfile)
+        elif options.action == "build_db":
+            build_database(options.configfile)
         elif options.action == "reconfig":
             reconfig(options.configfile)
         elif options.action == "start":
