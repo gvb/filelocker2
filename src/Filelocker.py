@@ -77,6 +77,7 @@ def requires_login(permissionId=None, **kwargs):
                         raise cherrypy.HTTPError(403, "Your user account does not have access to this system.")
                     cherrypy.session["user"], cherrypy.session['original_user'], cherrypy.session['sMessages'], cherrypy.session['fMessages'] = currentUser, currentUser, [], []
                     session.add(AuditLog(currentUser.id, "Login", "User %s logged in successfully from IP %s" % (currentUser.id, cherrypy.request.remote.ip)))
+                    session.commit()
                     if currentUser.date_tos_accept is None:
                         raise cherrypy.HTTPRedirect(fl.rootURL+"/sign_tos")
                     raise cherrypy.HTTPRedirect(fl.rootURL)

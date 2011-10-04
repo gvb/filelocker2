@@ -3,18 +3,26 @@ import logging
 from twisted.plugin import getPlugins, IPlugin
 from lib.SQLAlchemyTool import session
 from Cheetah.Template import Template
+from directory import *
 import plugins
 __author__="wbdavis"
 __date__ ="$Sep 25, 2011 9:37:17 PM$"
 
 class AccountController:
+    directory = None
+    def __init__(self):
+        directoryType = session.query(ConfigParameter).filter(ConfigParameter.name=="directory_type").one().value
+        if directoryType == "ldap":
+            directory = LDAPDirectory.LDAPDirectory()
+        elif directoryType == "local":
+            directory = None
 
     def install_user(self, user):
         if user is not None:
             if user.quota is None:
                 user.quota = int(session.query(ConfigParameter).filter(ConfigParameter.id=="default_quota").one().value)
             session.add(user)
-            session.add(ActionLog(user.id, "Install User", "User %s (%s) installed" % (user.display_name, user.id)))
+            session.add(AuditLog(user.id, "Install User", "User %s (%s) installed" % (user.display_name, user.id)))
             session.commit()
         else:
             raise Exception("User %s doesn't exist in directory" % userId)
@@ -40,7 +48,7 @@ class AccountController:
                 uniqueAttributeList = []
                 for attributeId in attributeList:
                     if attributeId not in uniqueAttributeList:
-                        attr = session.query(Attribute).filter(Attribute.id=attributeId).one()
+                        attr = session.query(Attribute).filter(Attribute.id==attributeId).one()
                         if attr is not None:
                             user.userAttributes.append(attr)
                         uniqueAttributeList.append(attributeId)
@@ -48,19 +56,21 @@ class AccountController:
 
     @cherrypy.expose
     @cherrypy.tools.requires_login()
-    def update_user(self, emailAddress, format="json", **kwargs):
+    def update_user(self, format="json", **kwargs):
         fl, user, sMessages, fMessages = cherrypy.thread_data.flDict['app'], cherrypy.session.get("user"), [], []
-        updatedUserObject = User(user.userFirstName, user.userLastName, emailAddress, user.userQuota, user.userLastLogin, user.userTosAcceptDatetime, user.userId)
+        currentUser = session.query(User).filter(User.id==user.id).one()
         try:
             if kwargs.has_key("password") and kwargs.has_key("confirmPassword"):
                 if kwargs['password'] != kwargs['confirmPassword']:
                     fMessages.append("Passwords do match. Please retype your new password")
                 elif kwargs['password'] != None and kwargs['password'] != "":
-                    fl.reset_password(user, user.userId, kwargs['password'])
+                    reset_password(currentUser.id, kwargs['password'])
                     sMessages.append("Password successfully changed")
                 else:
                     fMessages.append("Password cannot be blank")
-            fl.update_user(user, updatedUserObject)
+            if kwargs.has_key("emailAddress"):
+                currentUser.email = kwargs["emailAddress"]
+            session.commit()
             sMessages.append("Email address successfully updated")
         except FLError, fle:
             fMessages.extend(fle.failureMessages)
