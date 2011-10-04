@@ -3,6 +3,7 @@ import logging
 import datetime
 from Cheetah.Template import Template
 from lib.SQLAlchemyTool import session
+from sqlalchemy import *
 from model.File import File
 __author__="wbdavis"
 __date__ ="$Sep 25, 2011 9:28:54 PM$"
@@ -14,10 +15,10 @@ class FileController:
         user, fl, sMessages, fMessages, quotaMB, quotaUsed = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [], 0, 0)
         try:
             quotaMB = user.userQuota
-            quotaUsedMB = fl.get_user_quota_usage(user, user.userId) / 1024 / 1024
-        except FLError, fle:
-            fMessages.extend(fle.failureMessages)
-            sMessages.extend(fle.successMessages)
+            quotaUsage = session.query(func.sum(File.size).filter(File.owner_id==user.id))
+            quotaUsedMB = int(quotaUsage) / 1024 / 1024
+        except Exception, e::
+            fMessages.append(str(e))
         return fl_response(sMessages, fMessages, format, data={'quotaMB': quotaMB , 'quotaUsedMB': quotaUsedMB})
 
     @cherrypy.expose
@@ -25,23 +26,58 @@ class FileController:
     def get_download_statistics(self, fileId, startDate=None, endDate=None, format="json", **kwargs):
         user, fl, sMessages, fMessages, stats = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [], None)
         try:
+            flFile = session.query(File).filter(File.id == fileId).one()
             startDateFormatted, endDateFormatted = None, None
             thirtyDays = datetime.timedelta(days=30)
             today = datetime.datetime.now()
             thirtyDaysAgo = today - thirtyDays
             if startDate is not None:
-                startDateFormatted = datetime.datetime(*time.strptime(strip_tags(startDate), "%m/%d/%Y")[0:5])
+                startDateFormatted = datetime.datetime(*time.strptime(Formatters.strip_tags(startDate), "%m/%d/%Y")[0:5])
             else:
                 startDateFormatted =  thirtyDaysAgo
             if endDate is not None:
-                endDateFormatted = datetime.datetime(*time.strptime(strip_tags(endDate), "%m/%d/%Y")[0:5])
+                endDateFormatted = datetime.datetime(*time.strptime(Formatters.strip_tags(endDate), "%m/%d/%Y")[0:5])
             else:
                 endDateFormatted = today
-            stats = fl.get_download_statistics(user, fileId, startDateFormatted, endDateFormatted)
-        except FLError, fle:
-            fMessages.extend(fle.failureMessages)
-            sMessages.extend(fle.successMessages)
+            flFile = self.get_file(user, fileId)
+            if flFile.fileOwnerId == user.userId or self.check_admin(user):
+                if endDate is not None:
+                    endDate = endDate + datetime.timedelta(days=1)
+                stats = self.db.getDownloadStatistics(fileId, startDate, endDate)
+        except Exception, e:
+            fMessages.append(str(e)
         return fl_response(sMessages, fMessages, format, data=stats)
+        
+            #def getDownloadStatistics(self, fileId, startDate=None, endDate=None):
+        #totalDownloadSql = "SELECT DATE(audit_log_datetime) AS 'day', count(*) AS 'Downloads' FROM audit_log WHERE audit_log_action = 'Download File' AND audit_log_message LIKE '%%[File ID: %s]'"
+        #uniqueDownloadSql = "SELECT audit_log_datetime AS 'day', count(*) AS 'Unique User Downloads' FROM (SELECT DISTINCT audit_log_initiator_user_id, DATE(audit_log_datetime) AS audit_log_datetime FROM audit_log WHERE audit_log_action = 'Download File' AND audit_log_message LIKE '%%[File ID: %s]') AS t1"
+        #fileIdInt = int(fileId)
+        #sql_args = [fileIdInt]
+        #if startDate is not None:
+            #totalDownloadSql += " AND audit_log_datetime >= %s"
+            #uniqueDownloadSql += " WHERE audit_log_datetime >= %s"
+            #sql_args.append(startDate)
+        #if endDate is not None:
+            #totalDownloadSql += " AND audit_log_datetime <= %s"
+            #if startDate is not None:
+                #uniqueDownloadSql += " AND"
+            #else:
+                #uniqueDownloadSql += " WHERE"
+            #uniqueDownloadSql += " audit_log_datetime <= %s"
+            #sql_args.append(endDate)
+        #totalDownloadSql +=" GROUP BY DATE(audit_log_datetime) ORDER BY audit_log_datetime"
+        #uniqueDownloadSql +=" GROUP BY DATE(audit_log_datetime) ORDER BY audit_log_datetime"
+        #results = self.execute(totalDownloadSql, sql_args)
+        #totalDownloadStats = []
+        #for row in results:
+            #stat = (str(row['day']), row['Downloads'])
+            #totalDownloadStats.append(stat)
+        #uniqueDownloadStats = []
+        #results = self.execute(uniqueDownloadSql, sql_args)
+        #for row in results:
+            #stat = (str(row['day']), row['Unique User Downloads'])
+            #uniqueDownloadStats.append(stat)
+        #return {"total":totalDownloadStats, "unique":uniqueDownloadStats}
 
     @cherrypy.expose
     @cherrypy.tools.requires_login()
@@ -217,7 +253,7 @@ class FileController:
         fileIds = split_list_sanitized(fileIds)
         for fileId in fileIds:
             try:
-                fileId = int(strip_tags(str(fileId)))
+                fileId = int(Formatters.strip_tags(str(fileId)))
                 flFile = fl.get_file(user, fileId)
                 if flFile.fileOwnerId == user.userId or fl.check_admin(user):
                     fl.delete_file(user, fileId)
@@ -233,18 +269,18 @@ class FileController:
     @cherrypy.tools.requires_login()
     def update_file(self, fileId, format="json", **kwargs):
         user, fl, sMessages, fMessages = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [])
-        fileId = strip_tags(fileId)
+        fileId = Formatters.strip_tags(fileId)
         try:
             flFile = fl.get_file(user, fileId)
             if kwargs.has_key("fileName"):
-                flFile.fileName = strip_tags(kwargs['fileName'])
+                flFile.fileName = Formatters.strip_tags(kwargs['fileName'])
             if kwargs.has_key('notifyOnDownload'):
                 if kwargs['notifyOnDownload'] == "true":
                     flFile.fileNotifyOnDownload = True
                 elif kwargs['notifyOnDownload'] == "false":
                     flFile.fileNotifyOnDownload = False
             if kwargs.has_key('fileNotes'):
-                flFile.fileNotes = strip_tags(kwargs['fileNotes'])
+                flFile.fileNotes = Formatters.strip_tags(kwargs['fileNotes'])
             fl.update_file(user, flFile)
             sMessages.append("Successfully updated file %s" % flFile.fileName)
         except FLError, fle:
@@ -345,11 +381,11 @@ class FileController:
             #The file has been successfully uploaded by this point, process the rest of the variables regarding the file
             fileNotes = None
             if kwargs.has_key("fileNotes"):
-                fileNotes = strip_tags(kwargs['fileNotes'])
+                fileNotes = Formatters.strip_tags(kwargs['fileNotes'])
             if fileNotes is None:
                 fileNotes = ""
             else:
-                fileNotes = strip_tags(fileNotes)
+                fileNotes = Formatters.strip_tags(fileNotes)
                 if len(fileNotes) > 256:
                     fileNotes = fileNotes[0:256]
             ownerId = None #Owner ID is a separate variable since uploads can be owned by the system
@@ -369,14 +405,14 @@ class FileController:
                     else:
                         expiration = maxExpiration
                 else:
-                    expiration = datetime.datetime(*time.strptime(strip_tags(expiration), "%m/%d/%Y")[0:5])
+                    expiration = datetime.datetime(*time.strptime(Formatters.strip_tags(expiration), "%m/%d/%Y")[0:5])
                     if maxExpiration < expiration and fl.check_permission(user, "expiration_exempt")==False:
                         raise FLError(False, ["Expiration date must be between now and %s" % maxExpiration.strftime("%m/%d/%Y")])
 
                 #Virus scanning - Tells check_in whether to scan the file, and delete if infected. For upload tickets, scanning may be set by the requestor.
                 scanFile = ""
                 if kwargs.has_key("scanFile"):
-                    scanFile = strip_tags(kwargs['scanFile'])
+                    scanFile = Formatters.strip_tags(kwargs['scanFile'])
                 if scanFile.lower() == "true":
                     scanFile = True
                 elif uploadTicket is not None and uploadTicket.scanFile:
@@ -387,7 +423,7 @@ class FileController:
                 #Download notification - if "yes" then the owner will be notified whenever the file is downloaded by other users
                 notifyOnDownload = ""
                 if kwargs.has_key("notifyOnDownload"):
-                    scanFile = strip_tags(kwargs['notifyOnDownload'])
+                    scanFile = Formatters.strip_tags(kwargs['notifyOnDownload'])
                 if notifyOnDownload.lower() == "on":
                     notifyOnDownload = True
                 else:
@@ -469,15 +505,15 @@ class FileController:
     def generate_upload_ticket(self, password, expiration, scanFile, requestType, maxFileSize=None, emailAddresses=None, personalMessage=None, format="json", **kwargs):
         fl, user, uploadURL, sMessages, fMessages = cherrypy.thread_data.flDict['app'], cherrypy.session.get("user"), "", [], []
         try:
-            expiration = datetime.datetime(*time.strptime(strip_tags(expiration), "%m/%d/%Y")[0:5])
+            expiration = datetime.datetime(*time.strptime(Formatters.strip_tags(expiration), "%m/%d/%Y")[0:5])
             if expiration < datetime.datetime.now():
                 raise FLError(False, ["Expiration date cannot be before today"])
-            #maxFileSize = strip_tags(maxFileSize)
+            #maxFileSize = Formatters.strip_tags(maxFileSize)
             #if maxFileSize == "" or maxFileSize=="0" or maxFileSize == 0:
                 #maxFileSize = None
             #else:
-                #maxFileSize = int(strip_tags(maxFileSize))
-            scanFile = strip_tags(scanFile)
+                #maxFileSize = int(Formatters.strip_tags(maxFileSize))
+            scanFile = Formatters.strip_tags(scanFile)
             scanFile = scanFile.lower()
             if password == "":
                 password = None
@@ -491,8 +527,8 @@ class FileController:
             else:
                 emailAddress = []
             if personalMessage is not None:
-                personalMessage = strip_tags(personalMessage)
-            requestType = strip_tags(requestType.lower())
+                personalMessage = Formatters.strip_tags(personalMessage)
+            requestType = Formatters.strip_tags(requestType.lower())
             if requestType != "multi" and requestType != "single": #Complete failure conditions
                 fMessages.append("Request type must be specified as either 'single' or 'multi'");
             #elif maxFileSize is not None and maxFileSize < 1: #Complete failure condition
@@ -519,7 +555,7 @@ class FileController:
     def delete_upload_ticket(self, ticketId, format="json"):
         fl, user, uploadURL, sMessages, fMessages = cherrypy.thread_data.flDict['app'], cherrypy.session.get("user"), "", [], []
         try:
-            ticketId = strip_tags(ticketId)
+            ticketId = Formatters.strip_tags(ticketId)
             fl.delete_upload_ticket(user, ticketId)
             sMessages.append("Upload ticket deleted")
         except FLError, fle:

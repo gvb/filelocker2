@@ -11,6 +11,7 @@ except ImportError, ie:
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy import *
+from lib.SQLAlchemyTool import configure_session_for_app, session, _engines
 __author__="wbdavis"
 __date__ ="$Sep 27, 2011 8:48:55 PM$"
 Base = declarative_base()
@@ -121,9 +122,9 @@ class PublicShare(Base):
     reuse = Column(Enum("single", "multi"), default="single")
     flFile = relationship("File", backref('public_shares'))
 
-    def generateShareId(self):
-        import random
-        return md5(str(random.random())).hexdigest()
+    #def generateShareId(self):
+        #import random
+        #return md5(str(random.random())).hexdigest()
 
 class PrivateAttributeShare(Base):
     __tablename__ = "private_attribute_shares"
