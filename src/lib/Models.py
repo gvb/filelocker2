@@ -21,12 +21,13 @@ class User(Base):
     __tablename__ = "users"
     id = Column(String(30), primary_key=True)
     quota = Column(Integer)
-    last_login_dat = Column(DateTime)
-    tos_accept_date = Column(DateTime)
+    date_last_login = Column(DateTime)
+    date_tos_accept = Column(DateTime)
     email = Column(String(320), default="directory")
     first_name = Column(String(100))
     last_name = Column(String(100))
     password = Column(String(64))
+    permissions = relationship("Permission", secondary=user_permissions_table)
     quota_used = 0
     salt = None
     is_role = False
@@ -49,7 +50,8 @@ class Group(Base):
     name = Column(String(255), nullable=False)
     owner_id = Column(String(30), ForeignKey("users.id"))
     scope = Column(Enum("public", "private", "reserved"), default="private")
-    members = relationship("User", secondary=group_membership_table)
+    members = relationship("User", secondary=group_membership_table, backref="groups")
+    permissions = relationship("Permission", secondary=group_permissions_table)
 
 class File(Base):
     __tablename__ = "files"
@@ -122,9 +124,9 @@ class PublicShare(Base):
     reuse = Column(Enum("single", "multi"), default="single")
     flFile = relationship("File", backref('public_shares'))
 
-    #def generateShareId(self):
-        #import random
-        #return md5(str(random.random())).hexdigest()
+    def generateShareId(self):
+        import random
+        return md5(str(random.random())).hexdigest()
 
 class PrivateAttributeShare(Base):
     __tablename__ = "private_attribute_shares"
@@ -147,6 +149,26 @@ class Attribute(Base):
     def __str__(self):
         return "%s (%s)" % (self.name, self.id)
 
+class Permission(Base):
+    __tablename__ = "permissions"
+    id = Column(String(50), primary_key=True)
+    name = Column(String(255))
+    inherited_from = None
+
+    def __str__(self):
+        return str(self.get_dict())
+
+    def get_dict(self):
+        return {'permissionId': self.id, 'permissionName': self.name, 'inheritedFrom':self.inherited_from}
+
+user_permissions_table = Table("user_permissions", Base.metadata,
+    Column("user_id", String(30), ForeignKey("users.id"), primary_key=True, nullable=False),
+    Column("permission_id", String(50), ForeignKey("permissions.id"), primary_key=True, nullable=False))
+
+group_permissions_table = Table("group_permissions", Base.metadata,
+    Column("group_id", Integer, ForeignKey("groups.id"), primary_key=True),
+    Column("permission_id", String(50), ForeignKey("permissions.id"), primary_key=True))
+
 class AuditLog(Base):
     __tablename__ = "audit_logs"
     id = Column(Integer, primary_key=True)
@@ -156,6 +178,13 @@ class AuditLog(Base):
     message = Column(Text)
     date = Column(DateTime)
     display_class = None
+
+    def __init__(self, initiatorId, action, message, affectedId=None):
+        self.initiator_user_id = initiatorId
+        self.action = action
+        self.message = message
+        self.affected_user_id = affectedId
+        self.date = datetime.datetime.now()
 
     def __str__(self):
         return "[%s] [%s] [%s] [%s] [%s]" % (self.message, self.date.strftime("%m/%d/%Y"), self.initiator_user_id, self.action, self.affected_user_id)

@@ -12,6 +12,7 @@ from lib.Models import *
 __author__="wbdavis"
 __date__ ="$Sep 25, 2011 9:09:40 PM$"
 __version__ = "2.6"
+
 def before_upload(**kwargs):
     fl, user, sMessages, fMessages, uploadTicket = None, None, None, None, None
     if cherrypy.session.has_key("uploadTicket") and cherrypy.session.get("uploadTicket") is not None:
@@ -48,9 +49,8 @@ def before_upload(**kwargs):
         raise HTTPError(413, "File size is larger than your quota will accomodate")
     cherrypy.request.process_request_body = False
     
-def requires_login(**kwargs):
+def requires_login(permissionId=None, **kwargs):
     format = None
-    fl = cherrypy.thread_data.flDict['app']
     if cherrypy.request.params.has_key("format"):
         format = cherrypy.request.params['format']
     if cherrypy.session.has_key("user") and cherrypy.session.get('user') is not None:
@@ -59,26 +59,25 @@ def requires_login(**kwargs):
         else:
             pass
     else:
-        if fl.authType == "cas":
+        if session.query(ConfigParameter).filter(ConfigParameter.name="auth_type").one().value == "cas":
             if cherrypy.request.params.has_key("ticket"):
-                valid_ticket, userId = fl.CAS.validate_ticket(fl.rootURL, cherrypy.request.params['ticket'])
+                valid_ticket, userId = lib.CAS.validate_ticket(cherrypy.request.app.config['filelocker']['root_url'], cherrypy.request.params['ticket'])
                 if valid_ticket:
-                    currentUser = fl.get_user(userId, True)
+                    currentUser = AccountController.get_user(currentUser.id, True)
                     if currentUser is None:
                         currentUser = fl.directory.lookup_user(userId) #Try to get user info from directory
                         if currentUser is not None:
-                            fl.install_user(currentUser)
+                            AccountController.install_user(currentUser)
                         else:
                             logging.error("[system] [installUser] [User not found in directory lookup - installing with defaults]")
-                            currentUser = User("Guest", "Guest", "Unknown", None, None, None, userId)
-                            currentUser.userDisplayName = "Guest"
-                            fl.install_user(currentUser)
-                        currentUser = fl.get_user(userId, True)
+                            currentUser = User(id=userId, display_name="Guest user", first_name="Unknown", last_name="Unknown")
+                            AccountController.install_user(currentUser)
+                    currentUser = AccountController.get_user(currentUser.id, True)
                     if currentUser.authorized == False:
                         raise cherrypy.HTTPError(403, "Your user account does not have access to this system.")
                     cherrypy.session["user"], cherrypy.session['original_user'], cherrypy.session['sMessages'], cherrypy.session['fMessages'] = currentUser, currentUser, [], []
-                    fl.record_login(cherrypy.session.get("user"), cherrypy.request.remote.ip)
-                    if currentUser.userTosAcceptDatetime is None:
+                    session.add(AuditLog(currentUser.id, "Login", "User %s logged in successfully from IP %s" % (currentUser.id, cherrypy.request.remote.ip)))
+                    if currentUser.date_tos_accept is None:
                         raise cherrypy.HTTPRedirect(fl.rootURL+"/sign_tos")
                     raise cherrypy.HTTPRedirect(fl.rootURL)
                 else:

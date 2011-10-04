@@ -17,7 +17,7 @@ class FileController:
             quotaMB = user.userQuota
             quotaUsage = session.query(func.sum(File.size).filter(File.owner_id==user.id))
             quotaUsedMB = int(quotaUsage) / 1024 / 1024
-        except Exception, e::
+        except Exception, e:
             fMessages.append(str(e))
         return fl_response(sMessages, fMessages, format, data={'quotaMB': quotaMB , 'quotaUsedMB': quotaUsedMB})
 
@@ -40,7 +40,7 @@ class FileController:
             else:
                 endDateFormatted = today
             flFile = self.get_file(user, fileId)
-            if flFile.fileOwnerId == user.userId or self.check_admin(user):
+            if flFile.owner_id == user.id or self.check_admin(user):
                 if endDate is not None:
                     endDate = endDate + datetime.timedelta(days=1)
                 stats = self.db.getDownloadStatistics(fileId, startDate, endDate)

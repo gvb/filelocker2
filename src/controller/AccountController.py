@@ -1,11 +1,51 @@
 import cherrypy
 import logging
+from twisted.plugin import getPlugins, IPlugin
+from lib.SQLAlchemyTool import session
 from Cheetah.Template import Template
+import plugins
 __author__="wbdavis"
 __date__ ="$Sep 25, 2011 9:37:17 PM$"
+
 class AccountController:
-    
-            
+
+    def install_user(self, user):
+        if user is not None:
+            if user.quota is None:
+                user.quota = int(session.query(ConfigParameter).filter(ConfigParameter.id=="default_quota").one().value)
+            session.add(user)
+            session.add(ActionLog(user.id, "Install User", "User %s (%s) installed" % (user.display_name, user.id)))
+            session.commit()
+        else:
+            raise Exception("User %s doesn't exist in directory" % userId)
+
+    def get_user(self, userId, login=False):
+        import warnings
+        warnings.simplefilter("ignore")
+        user = session.query(User).filter(User.id==userId).one()
+        if user is not None:
+            attributeList = []
+            for permission in user.permissions:
+                if permission.id.startswith("(attr)"):
+                    attributeList.append(permission.id.split("(attr)")[1])
+            for group in user.groups:
+                for permission in group.permissions:
+                    if permission.id.startswith("(attr)"):
+                        attributeList.append(permission.id.split("(attr)")[1])
+            if login:
+                for flPlugin in getPlugins(FilelockerPlugin, plugins):
+                    attributeList.extend(flPlugin.get_user_attributes(user.id, self)) #Send user object off to  plugin to get the list populated
+                    if flPlugin.is_authorized(user.userId, self) == False: #Checks if any plugin is going to explicitly deny this user access to Filelocker
+                        user.authorized = False
+                uniqueAttributeList = []
+                for attributeId in attributeList:
+                    if attributeId not in uniqueAttributeList:
+                        attr = session.query(Attribute).filter(Attribute.id=attributeId).one()
+                        if attr is not None:
+                            user.userAttributes.append(attr)
+                        uniqueAttributeList.append(attributeId)
+        return user
+
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def update_user(self, emailAddress, format="json", **kwargs):
