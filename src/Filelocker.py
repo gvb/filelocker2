@@ -8,6 +8,8 @@ import logging
 from Cheetah.Template import Template
 from lib.SQLAlchemyTool import configure_session_for_app, session
 from lib.Models import *
+from controller.AccountController import AccountController
+from controller.FileController import FileController
 #from dao import dao_creator
 __author__="wbdavis"
 __date__ ="$Sep 25, 2011 9:09:40 PM$"
@@ -17,13 +19,11 @@ def before_upload(**kwargs):
     fl, user, sMessages, fMessages, uploadTicket = None, None, None, None, None
     if cherrypy.session.has_key("uploadTicket") and cherrypy.session.get("uploadTicket") is not None:
         uploadTicket = cherrypy.session.get("uploadTicket")
-        #fl = Filelocker(cherrypy.request.app.config)
-        fl = cherrypy.thread_data.flDict['app']
-        user = fl.get_user(uploadTicket.ownerId)
+        user = session.query(User).filter(User.id ==uploadTicket.ownerId).one()
     else:
         requires_login()
         user, fl, sMessages, fMessages = cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], cherrypy.session.get("sMessages"), cherrypy.session.get("fMessages")
-    vaultSpaceFreeMB, vaultCapacityMB = fl.get_vault_usage()
+    vaultSpaceFreeMB, vaultCapacityMB = FileController.get_vault_usage()
     cherrypy.response.timeout = 86400
     lcHDRS = {}
     for key, val in cherrypy.request.headers.iteritems():
@@ -35,15 +35,15 @@ def before_upload(**kwargs):
         fMessages.append("Request must have a valid content length")
         raise HTTPError(411, "Request must have a valid content length")
     fileSizeMB = ((fileSizeBytes/1024)/1024)
-    quotaSpaceRemainingBytes = (user.userQuota*1024*1024) - int(fl.get_user_quota_usage(user, user.userId))
+    quotaSpaceRemainingBytes = (user.quota*1024*1024) - int(FileController.get_user_quota_usage_bytes(user.id))
     if (fileSizeMB*2) >= vaultSpaceFreeMB:
         logging.critical("[system] [beforeUpload] [File vault is running out of space and cannot fit this file. Remaining Space is %s MB, fileSizeBytes is %s]" % (vaultSpaceFreeMB, fileSizeBytes))
         fMessages.append("The server doesn't have enough space left on its drive to fit this file. The administrator has been notified.")
         raise HTTPError(413, "The server doesn't have enough space left on its drive to fit this file. The administrator has been notified.")
-    if fileSizeMB > fl.maxFileUploadSize:
-        logging.debug("[system] [beforeUpload] [File exceeded maximum allowed upload size, rejected]")
-        fMessages.append("File is too large for server to process.")
-        raise HTTPError(413, "File is too large for server to process.")
+    #if fileSizeMB > fl.maxFileUploadSize:
+        #logging.debug("[system] [beforeUpload] [File exceeded maximum allowed upload size, rejected]")
+        #fMessages.append("File is too large for server to process.")
+        #raise HTTPError(413, "File is too large for server to process.")
     if fileSizeBytes > quotaSpaceRemainingBytes:
         fMessages.append("File size is larger than your quota will accomodate")
         raise HTTPError(413, "File size is larger than your quota will accomodate")
@@ -97,13 +97,7 @@ def requires_login(permissionId=None, **kwargs):
                 raise cherrypy.HTTPRedirect(fl.rootURL+"/expired_text")
             else:
                 raise cherrypy.HTTPRedirect(fl.rootURL+"/login")
-def fl_connect(threadIndex):
-    # Create a Filelocker instance and store it in the current thread
-    flDict = {'app': Filelocker(cherrypy.request.app.config)} #This is silly, but necessary
-    cherrypy.thread_data.flDict = flDict
-    cherrypy.FLThreads.append(cherrypy.thread_data.flDict)
-    cherrypy.thread_data.db = cherrypy.thread_data.flDict['app'].db.get_db()
-    
+
 def error(status, message, traceback, version):
     fl = cherrypy.thread_data.flDict['app']
     currentYear = datetime.date.today().year

@@ -9,13 +9,25 @@ __author__="wbdavis"
 __date__ ="$Sep 25, 2011 9:28:54 PM$"
 
 class FileController:
+    
+    def get_vault_usage(self):
+        s = os.statvfs(self.vault)
+        freeSpaceMB = int((s.f_bavail * s.f_frsize) / 1024 / 1024)
+        totalSizeMB = int((s.f_blocks * s.f_frsize) / 1024 / 1024 )
+        return freeSpaceMB, totalSizeMB
+    
+    def get_user_quota_usage_bytes(self, userId):
+            quotaUsage = session.query(func.sum(File.size).filter(File.owner_id==user.id))
+            return int(quotaUsage)
+
+        
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def get_quota_usage(self, format="json", **kwargs):
         user, fl, sMessages, fMessages, quotaMB, quotaUsed = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [], 0, 0)
         try:
-            quotaMB = user.userQuota
-            quotaUsage = session.query(func.sum(File.size).filter(File.owner_id==user.id))
+            quotaMB = user.quota
+            quotaUsage = self.get_user_quota_usage_bytes(user.id)
             quotaUsedMB = int(quotaUsage) / 1024 / 1024
         except Exception, e:
             fMessages.append(str(e))
