@@ -8,11 +8,11 @@ from controller.FileController import FileController
 from controller.AccountController import AccountController
 from controller.MessageController import MessageController
 from controller.AdminController import AdminController
+import lib.Formatters as Formatters
 __author__="wbdavis"
 __date__ ="$Sep 25, 2011 9:36:56 PM$"
 
 class RootController:
-    fl = None
     share_interface = ShareController
     file_interface = FileController
     account_interface = AccountController
@@ -29,7 +29,7 @@ class RootController:
 
     @cherrypy.expose
     def login(self, **kwargs):
-        fl, msg, errorMessage, authType = (cherrypy.thread_data.flDict['app'], None, None, None)
+        msg, errorMessage, authType, rootURL = ( None, None, None, cherrypy.request.app.config['filelocker']['root_url'])
         if kwargs.has_key("msg"):
             msg = kwargs['msg']
         if kwargs.has_key("authType"):
@@ -42,34 +42,22 @@ class RootController:
         elif msg is not None and str(strip_tags(msg))=="3":
             errorMessage = "Password cannot be blank"
         if authType is None:
-            authType = fl.authType
+            authType = cherrypy.request.app.config['filelocker']['auth_type']
         if authType == "cas":
             pass
         elif authType == "ldap" or authType == "local":
             currentYear = datetime.date.today().year
-            footerText = str(Template(file=fl.get_template_file('footer_text.tmpl'), searchList=[locals(),globals()]))
-            tpl = Template(file=fl.get_template_file('login.tmpl'), searchList=[locals(),globals()])
+            footerText = str(Template(file=Formatters.get_template_file('footer_text.tmpl'), searchList=[locals(),globals()]))
+            tpl = Template(file=Formatters.get_template_file('login.tmpl'), searchList=[locals(),globals()])
             return str(tpl)
         else:
             logging.error("[system] [login] [No authentication variable set in config]")
             raise cherrypy.HTTPError(403, "No authentication mechanism")
 
     @cherrypy.expose
-    def expired_json(self, **kwargs):
-        fMessages = ["expired"]
-        return fl_response([], fMessages, "json")
-
-    @cherrypy.expose
-    def expired_text(self, **kwargs):
-        fl = cherrypy.thread_data.flDict['app']
-        tpl = Template(file=fl.get_template_file('expired.tmpl'), searchList=[locals(), globals()])
-        return str(tpl)
-
-    @cherrypy.expose
     @cherrypy.tools.requires_login()
     def logout(self):
-        fl = cherrypy.thread_data.flDict['app']
-        if fl.authType == "cas":
+        if cherrypy.request.app.config['filelocker']['auth_type'] == "cas":
             casLogoutUrl =  fl.CAS.logout_url()+"?redirectUrl="+fl.rootURL+"/logout_cas"
             currentYear = datetime.date.today().year
             footerText = str(Template(file=fl.get_template_file('footer_text.tmpl'), searchList=[locals(),globals()]))
@@ -82,70 +70,68 @@ class RootController:
 
     @cherrypy.expose
     def logout_cas(self):
-        fl = cherrypy.thread_data.flDict['app']
+        from lib.CAS import CAS
+        orgURL = cherrypy.response.cookie['filelocker']['org_url']
+        orgName = cherrypy.response.cookie['filelocker']['org_name']
+        rootURL = cherrypy.response.cookie['filelocker']['root_url']
         currentYear = datetime.date.today().year
-        footerText = str(Template(file=fl.get_template_file('footer_text.tmpl'), searchList=[locals(),globals()]))
-        tpl = Template(file=fl.get_template_file('cas_logout_confirmation.tmpl'), searchList=[locals(), globals()])
+        footerText = str(Template(file=Formatters.get_template_file('footer_text.tmpl'), searchList=[locals(),globals()]))
+        tpl = Template(file=Formatters.get_template_file('cas_logout_confirmation.tmpl'), searchList=[locals(), globals()])
         return str(tpl)
 
     @cherrypy.expose
     def process_login(self, username, password, **kwargs):
-        fl, authType = cherrypy.thread_data.flDict['app'], None
+        authType, rootURL = cherrypy.request.app.config['filelocker']['auth_type'], cherrypy.request.app.config['filelocker']['root_url']
         if kwargs.has_key("authType"):
             authType = kwargs['authType']
-        else:
-            authType = fl.authType
         username = strip_tags(username)
         if authType == "cas":
             pass
         else:
             if password is None or password == "":
-                raise cherrypy.HTTPRedirect("%s/login?msg=3&authType=%s" % (fl.rootURL, authType))
-            elif (authType == "local" and fl.localDirectory.authenticate(username, password)) or (authType!="local" and fl.directory.authenticate(username, password)):
-                currentUser = fl.get_user(username, True) #if they are authenticated and local, this MUST return a user object
-                if currentUser is not None:
-                    if authType == "local":
-                        currentUser.isLocal = True #Tags a user if they used a local login, in case we want to use this later
-                    if currentUser.authorized == False:
-                        raise cherrypy.HTTPError(403, "You do not have permission to access this system")
-                    cherrypy.session['user'], cherrypy.session['original_user'], cherrypy.session['sMessages'], cherrypy.session['fMessages'] = currentUser, currentUser, [], []
-                    fl.record_login(cherrypy.session.get("user"), cherrypy.request.remote.ip)
-                    raise cherrypy.HTTPRedirect(fl.rootURL)
-                else: #This should only happen in the case of a user existing in the external directory, but having never logged in before
-                    try:
-                        newUser = fl.directory.lookup_user(username)
-                        fl.install_user(newUser)
-                        currentUser = fl.get_user(username, True)
-                        if currentUser is not None and currentUser.authorized != False:
-                            cherrypy.session['user'], cherrypy.session['original_user'], cherrypy.session['sMessages'], cherrypy.session['fMessages'] = currentUser, currentUser, [], []
-                            raise cherrypy.HTTPRedirect(fl.rootURL)
-                        else:
-                            raise cherrypy.HTTPError(403, "You do not have permission to access this system")
-                    except FLError, fle:
-                        return "Unable to install user: %s" % fle.failureMessages
+                raise cherrypy.HTTPRedirect("%s/login?msg=3&authType=%s" % (rootURL, authType))
             else:
-                raise cherrypy.HTTPRedirect("%s/login?msg=1&authType=%s" % (fl.rootURL, authType))
+                directory = AccountController.ExternalDirectory()
+                if directory.authenticate(username, password):
+                    currentUser = AccountController.get_user(username, True) #if they are authenticated and local, this MUST return a user object
+                    if currentUser is not None:
+                        if authType == "local":
+                            currentUser.isLocal = True #Tags a user if they used a local login, in case we want to use this later
+                        if currentUser.authorized == False:
+                            raise cherrypy.HTTPError(403, "You do not have permission to access this system")
+                        cherrypy.session['user'], cherrypy.session['original_user'], cherrypy.session['sMessages'], cherrypy.session['fMessages'] = currentUser, currentUser, [], []
+                        session.add(AuditLog(cherrypy.session.get("user").id, "Login", "User %s logged in successfully from IP %s" % (currentUser.id, cherrypy.request.remote.ip)))
+                        session.commit()
+                        raise cherrypy.HTTPRedirect(rootURL)
+                    else: #This should only happen in the case of a user existing in the external directory, but having never logged in before
+                        try:
+                            newUser = directory.lookup_user(username)
+                            AccountController.install_user(newUser)
+                            currentUser = AccountController.get_user(username, True)
+                            if currentUser is not None and currentUser.authorized != False:
+                                cherrypy.session['user'], cherrypy.session['original_user'], cherrypy.session['sMessages'], cherrypy.session['fMessages'] = currentUser, currentUser, [], []
+                                raise cherrypy.HTTPRedirect(rootURL)
+                            else:
+                                raise cherrypy.HTTPError(403, "You do not have permission to access this system")
+                        except Exception, e:
+                            return "Unable to install user: %s" % str(e)
+                else:
+                    raise cherrypy.HTTPRedirect("%s/login?msg=1&authType=%s" % (rootURL, authType))
 
     @cherrypy.expose
     def css(self, style):
-        fl = cherrypy.thread_data.flDict['app']
+        rootURL = cherrypy.request.app.config['filelocker']['root_url']
         cherrypy.response.headers['Content-Type'] = 'text/css'
-        staticDir = os.path.join(fl.rootURL,"static")
+        staticDir = os.path.join(rootURL,"static")
         tplPath = None
-        if style=="filelocker":
-            tplPath=os.path.join(fl.templatePath,'css','filelocker.css')
-        elif style=="jquery-ui":
-            tplPath=os.path.join(fl.templatePath,'css','jquery-ui.css')
-        elif style=="visualize":
-            tplPath=os.path.join(fl.templatePath,'css','visualize.css')
-        return str(Template(file=tplPath, searchList=[locals(),globals()]))
+        return str(Template(file=Formatters.get_template_path(styleFile), searchList=[locals(),globals()]))
 
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def index(self, **kwargs):
-        user, fl, originalUser = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], cherrypy.session.get("original_user"))
-        roles = fl.get_user_roles(user)
-        defaultExpiration = datetime.date.today() + (datetime.timedelta(days=fl.maxFileLifeDays))
+        user, originalUser = (cherrypy.session.get("user"),  cherrypy.session.get("original_user"))
+        roles = AccountController.get_user_roles(user)
+        defaultExpiration = datetime.date.today() + (datetime.timedelta(days=))
         currentYear = datetime.date.today().year
         startDateFormatted, endDateFormatted = None, None
         sevenDays = datetime.timedelta(days=7)
@@ -173,24 +159,23 @@ class RootController:
 
     @cherrypy.expose
     def sign_tos(self, **kwargs):
-        fl = cherrypy.thread_data.flDict['app']
+        rootURL = cherrypy.request.app.confg['filelocker']['root_url']
         if cherrypy.session.has_key("user") and cherrypy.session.get("user") is not None:
             user = cherrypy.session.get("user")
-            roles = fl.get_user_roles(user)
             if kwargs.has_key('action') and kwargs['action']=="sign":
                 try:
-                    fl.sign_tos(user)
-                    cherrypy.session['user'] = fl.get_user(user.userId, True)
-                    raise cherrypy.HTTPRedirect(fl.rootURL)
-                except FLError, fle:
-                    logging.error("[%s] [signTos] [Failed to sign TOS: %s]" % (user.userId, str(fle.failureMessages)))
-                    return "Failed to sign TOS: %s. The administrator has been notified of this error." % str(fle.failureMessages)
+                    user.date_tos_accept(datetime.datetime.now())
+                    session.commit()
+                    raise cherrypy.HTTPRedirect(rootURL)
+                except Exception, e:
+                    logging.error("[%s] [signTos] [Failed to sign TOS: %s]" % (user.userId, str(e)))
+                    return "Failed to sign TOS: %s. The administrator has been notified of this error." % str(e)
             else:
                 currentYear = datetime.date.today().year
-                footerText = str(Template(file=fl.get_template_file('footer_text.tmpl'), searchList=[locals(),globals()]))
-                return str(Template(file=fl.get_template_file('tos.tmpl'), searchList=[locals(),globals()]))
+                footerText = str(Template(file=Formatters.get_template_file('footer_text.tmpl'), searchList=[locals(),globals()]))
+                return str(Template(file=Formatters.get_template_file('tos.tmpl'), searchList=[locals(),globals()]))
         else:
-            raise cherrypy.HTTPRedirect(fl.rootURL)
+            raise cherrypy.HTTPRedirect(rootURL)
 
     @cherrypy.expose
     @cherrypy.tools.requires_login()

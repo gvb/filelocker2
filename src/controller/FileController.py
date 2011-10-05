@@ -8,19 +8,7 @@ from model.File import File
 __author__="wbdavis"
 __date__ ="$Sep 25, 2011 9:28:54 PM$"
 
-class FileController:
-    
-    def get_vault_usage(self):
-        s = os.statvfs(self.vault)
-        freeSpaceMB = int((s.f_bavail * s.f_frsize) / 1024 / 1024)
-        totalSizeMB = int((s.f_blocks * s.f_frsize) / 1024 / 1024 )
-        return freeSpaceMB, totalSizeMB
-    
-    def get_user_quota_usage_bytes(self, userId):
-            quotaUsage = session.query(func.sum(File.size).filter(File.owner_id==user.id))
-            return int(quotaUsage)
-
-        
+class FileController(object):
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def get_quota_usage(self, format="json", **kwargs):
@@ -707,135 +695,139 @@ class FileController:
             sMessages = ["No active uploads"]
         yield fl_response(sMessages, fMessages, format, data=uploadStats)
     
-    def check_expirations(self):
-        expiredFiles = session.query(File).filter(File.file_expiration_datetime < datetime.datetime.now())
-        for flFile in expiredFiles:
-            try:
-                for share in flFile.private_shares:
-                    session.delete(share)
-                for share in flFile.private_group_shares:
-                    session.delete(share)
-                for share in flFile.public_shares:
-                    session.delete(share)
-                session.delete(flFile)
+def check_expirations():
+    expiredFiles = session.query(File).filter(File.file_expiration_datetime < datetime.datetime.now())
+    for flFile in expiredFiles:
+        try:
+            for share in flFile.private_shares:
+                session.delete(share)
+            for share in flFile.private_group_shares:
+                session.delete(share)
+            for share in flFile.public_shares:
+                session.delete(share)
+            session.delete(flFile)
 
-                self.queue_for_deletion(str(flFile.fileId))
-                session.commit()
-                self.log_action("system", "Delete File", flFile.fileOwnerId, "File %s (ID:%s) has expired and has been purged by the system." % (flFile.fileName, flFile.fileId))
-            except Exception, e:
-                session.rollback()
-                logging.error("[system] [checkExpirations] [Error while deleting expired file: %s]" % str(e))
-        expiredMessages = self.db.getExpiredMessages()
-        for message in expiredMessages:
-            self.db.deleteMessage(message.messageId)
-            self.queue_for_deletion("m%s" % str(message.messageId))
-            self.log_action("system", "Delete Message", message.messageOwnerId, "Message %s (ID:%s) has expired and has been deleted by the system." % (message.messageSubject, message.messageId))
-        expiredPublicShares = self.db.getExpiredPublicShares()
-        for publicShare in expiredPublicShares:
-            try:
-                publicShareFile = self.db.getFile(publicShare.fileId)
-                self.db.deletePublicShare(publicShare.shareId)
-                fileName = "[unavailable]"
-                if publicShareFile is not None:
-                    fileName = publicShareFile.fileName
-                self.log_action("system", "Delete Public Share", publicShare.ownerId, "Public share of file %s has expired." % fileName)
-            except Exception, e:
-                logging.error("[system] [checkExpirations] [Error while deleting expired public share: %s]" % str(e))
-        expiredUploadTickets = self.db.getExpiredUploadTickets()
-        for uploadTicket in expiredUploadTickets:
-            try:
-                self.db.deleteUploadTicket(uploadTicket.ticketId)
-                self.log_action("system", "Delete Upload Request", uploadTicket.ownerId, "Upload request %s has expired." % uploadTicket.ticketId)
-            except Exception, e:
-                logging.error("[system] [checkExpirations] [Error while deleting expired upload ticket: %s]" % (str(e)))
-        expiredUsers = self.db.getExpiredUsers(self.maxUserInactivityDays)
-        for user in expiredUsers:
-            self.db.deleteUser(user.userId)
-            self.log_action("system", "Delete User", None, "User %s was deleted due to inactivity. All files and shares associated with this user have been purged as well" % str(user.userId))
+            self.queue_for_deletion(str(flFile.fileId))
+            session.commit()
+            self.log_action("system", "Delete File", flFile.fileOwnerId, "File %s (ID:%s) has expired and has been purged by the system." % (flFile.fileName, flFile.fileId))
+        except Exception, e:
+            session.rollback()
+            logging.error("[system] [checkExpirations] [Error while deleting expired file: %s]" % str(e))
+    expiredMessages = self.db.getExpiredMessages()
+    for message in expiredMessages:
+        self.db.deleteMessage(message.messageId)
+        self.queue_for_deletion("m%s" % str(message.messageId))
+        self.log_action("system", "Delete Message", message.messageOwnerId, "Message %s (ID:%s) has expired and has been deleted by the system." % (message.messageSubject, message.messageId))
+    expiredPublicShares = self.db.getExpiredPublicShares()
+    for publicShare in expiredPublicShares:
+        try:
+            publicShareFile = self.db.getFile(publicShare.fileId)
+            self.db.deletePublicShare(publicShare.shareId)
+            fileName = "[unavailable]"
+            if publicShareFile is not None:
+                fileName = publicShareFile.fileName
+            self.log_action("system", "Delete Public Share", publicShare.ownerId, "Public share of file %s has expired." % fileName)
+        except Exception, e:
+            logging.error("[system] [checkExpirations] [Error while deleting expired public share: %s]" % str(e))
+    expiredUploadTickets = self.db.getExpiredUploadTickets()
+    for uploadTicket in expiredUploadTickets:
+        try:
+            self.db.deleteUploadTicket(uploadTicket.ticketId)
+            self.log_action("system", "Delete Upload Request", uploadTicket.ownerId, "Upload request %s has expired." % uploadTicket.ticketId)
+        except Exception, e:
+            logging.error("[system] [checkExpirations] [Error while deleting expired upload ticket: %s]" % (str(e)))
+    expiredUsers = self.db.getExpiredUsers(self.maxUserInactivityDays)
+    for user in expiredUsers:
+        self.db.deleteUser(user.userId)
+        self.log_action("system", "Delete User", None, "User %s was deleted due to inactivity. All files and shares associated with this user have been purged as well" % str(user.userId))
 
 
-    def clean_temp_files(self, validTempFiles):
-        vaultFileList = os.listdir(self.vault)
-        for fileName in vaultFileList:
-            try:
-                if fileName.endswith(".tmp") and fileName.startswith("[%s]" % self.clusterMemberId): #This is a temp file and made by this cluster member
-                    if fileName not in validTempFiles:
+def clean_temp_files(validTempFiles):
+    vaultFileList = os.listdir(self.vault)
+    for fileName in vaultFileList:
+        try:
+            if fileName.endswith(".tmp") and fileName.startswith("[%s]" % self.clusterMemberId): #This is a temp file and made by this cluster member
+                if fileName not in validTempFiles:
+                    self.queue_for_deletion(fileName)
+        except Exception, e:
+            logging.error("[system] [cleanTempFiles] [There was a problem while trying to clean a stale temp file %s: %s]" % (str(fileName), str(e)))
+
+def delete_orphaned_files():
+    vaultFileList = os.listdir(self.vault)
+    for fileName in vaultFileList:
+        try:
+            if fileName.endswith(".tmp")==False and fileName.startswith(".") == False and fileName !="custom": #this is a file id, not a temp file
+                if fileName.startswith("m"):
+                    messageId = fileName.split("m")[1]
+                    flMessage = self.db.getMessage(messageId)
+                    if flMessage is None:
                         self.queue_for_deletion(fileName)
-            except Exception, e:
-                logging.error("[system] [cleanTempFiles] [There was a problem while trying to clean a stale temp file %s: %s]" % (str(fileName), str(e)))
-
-    def delete_orphaned_files(self):
-        vaultFileList = os.listdir(self.vault)
-        for fileName in vaultFileList:
-            try:
-                if fileName.endswith(".tmp")==False and fileName.startswith(".") == False and fileName !="custom": #this is a file id, not a temp file
-                    if fileName.startswith("m"):
-                        messageId = fileName.split("m")[1]
-                        flMessage = self.db.getMessage(messageId)
-                        if flMessage is None:
-                            self.queue_for_deletion(fileName)
-                    else:
-                        try:
-                            fileId = int(fileName)
-                            flFile = self.db.getFile(fileId)
-                            if flFile is None:
-                                self.queue_for_deletion(fileName)
-                        except Exception, e:
-                            logging.warning("There was a file that did not match Filelocker's naming convention in the vault: %s. It has not been purged." % fileName)
-            except Exception, e:
-                logging.error("[system] [deleteOrphanedFiles] [There was a problem while trying to delete an orphaned file %s: %s]" % (str(fileName), str(e)))
-
-    def queue_for_deletion(self, filePath):
-        try:
-            self.db.queueForDeletion(filePath)
-            logging.info("[system] [queueForDeletion] [File queued for deletion: %s]" % (str(filePath)))
-        except Exception, e:
-            raise FLError(False, ["Unable to queue file for deletion: %s" % str(e)])
-
-    def process_deletion_queue(self):
-        filePaths = self.db.getFilesQueuedForDeletion()
-        for filePath in filePaths:
-            try:
-                if os.path.isfile(os.path.join(self.vault,filePath)):
-                    self.secure_delete(filePath)
-                    if os.path.isfile(os.path.join(self.vault,filePath))==False:
-                        logging.debug("Dequeuing %s because secure delete ran and the os.path.isfile came up negative" % os.path.join(self.vault,filePath))
-                        self.db.deQueueForDeletion(filePath)
-                    else:
-                        #This isn't necessarily an error, it just means that the file finally got deleted
-                        logging.debug("[system] [processDeletionQueue] [Deletion of file must have failed - still exists after secure delete ran]")
                 else:
-                    logging.debug("[system] [processDeletionQueue] [File %s not deleted because it doesn't exist - dequeuing]" % os.path.join(self.vault,filePath))
-                    self.db.deQueueForDeletion(filePath)
-            except Exception, e:
-                logging.critical("[system] [processDeletionQueue] [Couldn't delete file in deletion queue: %s]" % str(e))
-
-    def get_vault_usage(self):
-        s = os.statvfs(self.vault)
-        freeSpaceMB = int((s.f_bavail * s.f_frsize) / 1024 / 1024)
-        totalSizeMB = int((s.f_blocks * s.f_frsize) / 1024 / 1024 )
-        return freeSpaceMB, totalSizeMB
-
-    def secure_delete(self, filePath):
-        import errno
-        deleteList = []
-        deleteList.append(self.deleteCommand)
-        for argument in self.deleteArguments.split(" "):
-            deleteList.append(argument)
-        deleteList.append(os.path.join(self.vault,filePath))
-        try:
-            p = subprocess.Popen(deleteList, stdout=subprocess.PIPE)
-            output = p.communicate()[0]
-            if(p.returncode != 0):
-                logging.error("[%s] [checkDelete] [The command to delete the file returned a failure code of %s: %s]" % ("system", p.returncode, output))
-            else:
-                self.db.deQueueForDeletion(filePath)
-        except OSError, oe:
-            if oe.errno == errno.ENOENT:
-                logging.error("[system] [secureDelete] [Couldn't delete because the file was not found (dequeing): %s]" % str(oe))
-                self.db.deQueueForDeletion(filePath)
-            else:
-                logging.error("[system] [secureDelete] [Generic system error while deleting file: %s" % str(oe))
+                    try:
+                        fileId = int(fileName)
+                        flFile = self.db.getFile(fileId)
+                        if flFile is None:
+                            self.queue_for_deletion(fileName)
+                    except Exception, e:
+                        logging.warning("There was a file that did not match Filelocker's naming convention in the vault: %s. It has not been purged." % fileName)
         except Exception, e:
-           logging.error("[system] [secureDelete] [Couldn't securely delete file: %s]" % str(e))
+            logging.error("[system] [deleteOrphanedFiles] [There was a problem while trying to delete an orphaned file %s: %s]" % (str(fileName), str(e)))
 
+def queue_for_deletion(filePath):
+    try:
+        self.db.queueForDeletion(filePath)
+        logging.info("[system] [queueForDeletion] [File queued for deletion: %s]" % (str(filePath)))
+    except Exception, e:
+        raise FLError(False, ["Unable to queue file for deletion: %s" % str(e)])
+
+def process_deletion_queue():
+    filePaths = self.db.getFilesQueuedForDeletion()
+    for filePath in filePaths:
+        try:
+            if os.path.isfile(os.path.join(self.vault,filePath)):
+                self.secure_delete(filePath)
+                if os.path.isfile(os.path.join(self.vault,filePath))==False:
+                    logging.debug("Dequeuing %s because secure delete ran and the os.path.isfile came up negative" % os.path.join(self.vault,filePath))
+                    self.db.deQueueForDeletion(filePath)
+                else:
+                    #This isn't necessarily an error, it just means that the file finally got deleted
+                    logging.debug("[system] [processDeletionQueue] [Deletion of file must have failed - still exists after secure delete ran]")
+            else:
+                logging.debug("[system] [processDeletionQueue] [File %s not deleted because it doesn't exist - dequeuing]" % os.path.join(self.vault,filePath))
+                self.db.deQueueForDeletion(filePath)
+        except Exception, e:
+            logging.critical("[system] [processDeletionQueue] [Couldn't delete file in deletion queue: %s]" % str(e))
+
+
+def secure_delete(filePath):
+    import errno
+    deleteList = []
+    deleteList.append(self.deleteCommand)
+    for argument in self.deleteArguments.split(" "):
+        deleteList.append(argument)
+    deleteList.append(os.path.join(self.vault,filePath))
+    try:
+        p = subprocess.Popen(deleteList, stdout=subprocess.PIPE)
+        output = p.communicate()[0]
+        if(p.returncode != 0):
+            logging.error("[%s] [checkDelete] [The command to delete the file returned a failure code of %s: %s]" % ("system", p.returncode, output))
+        else:
+            self.db.deQueueForDeletion(filePath)
+    except OSError, oe:
+        if oe.errno == errno.ENOENT:
+            logging.error("[system] [secureDelete] [Couldn't delete because the file was not found (dequeing): %s]" % str(oe))
+            self.db.deQueueForDeletion(filePath)
+        else:
+            logging.error("[system] [secureDelete] [Generic system error while deleting file: %s" % str(oe))
+    except Exception, e:
+       logging.error("[system] [secureDelete] [Couldn't securely delete file: %s]" % str(e))
+
+def get_vault_usage():
+    s = os.statvfs(self.vault)
+    freeSpaceMB = int((s.f_bavail * s.f_frsize) / 1024 / 1024)
+    totalSizeMB = int((s.f_blocks * s.f_frsize) / 1024 / 1024 )
+    return freeSpaceMB, totalSizeMB
+
+def get_user_quota_usage_bytes(userId):
+        quotaUsage = session.query(func.sum(File.size).filter(File.owner_id==user.id))
+        return int(quotaUsage)

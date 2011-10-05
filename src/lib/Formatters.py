@@ -1,4 +1,5 @@
 import json
+import cherrypy
 JSON_WRITE = None
 
 try: #This bit here is to handle backwards compatibility with python-json modules. The .write and .dumps methods work analagously as far as I can tell
@@ -8,6 +9,19 @@ except AttributeError, ae:
     JSON_WRITE = json.dumps
 __author__="wbdavis"
 __date__ ="$Sep 25, 2011 10:44:58 PM$"
+
+def get_template_file(fileName):
+        filePath = None
+        vault = cherrypy.request.app.config['filelocker']['vault']
+        templatePath = os.path.join(cherrypy.request.app.config['filelocker']['root_path'], "view")
+        if fileName.endswith(".css"):
+            if os.path.exists(os.path.join(vault,"custom", "css",fileName)):
+                filePath = os.path.join(vault,"custom", "css",fileName)
+        elif os.path.exists(os.path.join(vault,"custom",fileName)):
+            filePath = os.path.join(vault,"custom",fileName)
+        else:
+            filePath = os.path.join(templatePath, fileName)
+        return filePath
 
 def fl_response(sMessages, fMessages, format, data=None):
     if format=="json":

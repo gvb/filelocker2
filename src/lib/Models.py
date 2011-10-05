@@ -26,7 +26,7 @@ class User(Base):
     email = Column(String(320), default="directory")
     first_name = Column(String(100))
     last_name = Column(String(100))
-    password = Column(String(64))
+    password = Column(String(72))
     permissions = relationship("Permission", secondary=user_permissions_table)
     quota_used = 0
     salt = None

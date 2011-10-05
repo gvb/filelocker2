@@ -1,28 +1,29 @@
-import lib.Models
 import os
 import sys
 import signal
 import errno
-import cherrypy
 import logging
+import datetime
+import cherrypy
 from Cheetah.Template import Template
 from lib.SQLAlchemyTool import configure_session_for_app, session
 from lib.Models import *
 from controller.AccountController import AccountController
 from controller.FileController import FileController
+import lib.Formatters as Formatters
 #from dao import dao_creator
 __author__="wbdavis"
 __date__ ="$Sep 25, 2011 9:09:40 PM$"
 __version__ = "2.6"
 
 def before_upload(**kwargs):
-    fl, user, sMessages, fMessages, uploadTicket = None, None, None, None, None
+    user, sMessages, fMessages, uploadTicket = None, None, None, None
     if cherrypy.session.has_key("uploadTicket") and cherrypy.session.get("uploadTicket") is not None:
         uploadTicket = cherrypy.session.get("uploadTicket")
         user = session.query(User).filter(User.id ==uploadTicket.ownerId).one()
     else:
         requires_login()
-        user, fl, sMessages, fMessages = cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], cherrypy.session.get("sMessages"), cherrypy.session.get("fMessages")
+        user,sMessages, fMessages = cherrypy.session.get("user"), cherrypy.session.get("sMessages"), cherrypy.session.get("fMessages")
     vaultSpaceFreeMB, vaultCapacityMB = FileController.get_vault_usage()
     cherrypy.response.timeout = 86400
     lcHDRS = {}
@@ -50,22 +51,34 @@ def before_upload(**kwargs):
     cherrypy.request.process_request_body = False
     
 def requires_login(permissionId=None, **kwargs):
-    format = None
+    format, rootURL = None, request.app.config['filelocker']['root_url']
     if cherrypy.request.params.has_key("format"):
         format = cherrypy.request.params['format']
     if cherrypy.session.has_key("user") and cherrypy.session.get('user') is not None:
-        if cherrypy.session.get('user').userTosAcceptDatetime == None:
+        if cherrypy.session.get('user').date_tos_accept == None:
             raise cherrypy.HTTPRedirect(fl.rootURL+"/sign_tos")
+        elif permissionId is not None:
+            user, hasPermission = cherrypy.session.get('user'), False
+            if permissiondId in user.user_permissions:
+                hasPermission = True
+            if hasPermission == False:
+                for group in user.groups:
+                    if permissionId in group.group_permissions:
+                        hasPermission = True
+                        break
+            if hasPermission == False:
+                raise HTTPError(403)
         else:
             pass
     else:
-        if session.query(ConfigParameter).filter(ConfigParameter.name="auth_type").one().value == "cas":
+        if request.app.config['filelocker']['auth_type'] == "cas":
             if cherrypy.request.params.has_key("ticket"):
-                valid_ticket, userId = lib.CAS.validate_ticket(cherrypy.request.app.config['filelocker']['root_url'], cherrypy.request.params['ticket'])
+                valid_ticket, userId = lib.CAS.validate_ticket(rootURL, cherrypy.request.params['ticket'])
                 if valid_ticket:
                     currentUser = AccountController.get_user(currentUser.id, True)
                     if currentUser is None:
-                        currentUser = fl.directory.lookup_user(userId) #Try to get user info from directory
+                        directory = AccountController.ExternalDirectory()
+                        currentUser = directory.lookup_user(userId) #Try to get user info from directory
                         if currentUser is not None:
                             AccountController.install_user(currentUser)
                         else:
@@ -79,31 +92,45 @@ def requires_login(permissionId=None, **kwargs):
                     session.add(AuditLog(currentUser.id, "Login", "User %s logged in successfully from IP %s" % (currentUser.id, cherrypy.request.remote.ip)))
                     session.commit()
                     if currentUser.date_tos_accept is None:
-                        raise cherrypy.HTTPRedirect(fl.rootURL+"/sign_tos")
-                    raise cherrypy.HTTPRedirect(fl.rootURL)
+                        if format == None:
+                            raise cherrypy.HTTPRedirect(rootURL+"/sign_tos")
+                        else:
+                            raise cherrypy.HTTPError(401)
+                    raise cherrypy.HTTPRedirect(rootURL)
                 else:
                     raise cherrypy.HTTPError(403, "Invalid CAS Ticket. If you copied and pasted the URL for this server, you might need to remove the 'ticket' parameter from the URL.")
             else:
-                if format=="json":
-                    raise cherrypy.HTTPRedirect(fl.rootURL+"/expired_json")
-                elif format=="text":
-                    raise cherrypy.HTTPRedirect(fl.rootURL+"/expired_text")
+                if format == None:
+                    raise cherrypy.HTTPRedirect(fl.CAS.login_url(rootURL))
                 else:
-                    raise cherrypy.HTTPRedirect(fl.CAS.login_url(fl.rootURL))
+                    raise cherrypy.HTTPError(401)
         else:
-            if format=="json":
-                raise cherrypy.HTTPRedirect(fl.rootURL+"/expired_json")
-            elif format=="text":
-                raise cherrypy.HTTPRedirect(fl.rootURL+"/expired_text")
+            if format == None:
+                raise cherrypy.HTTPRedirect(rootURL+"/login")
             else:
-                raise cherrypy.HTTPRedirect(fl.rootURL+"/login")
+                raise cherrypy.HTTPError(401)
+                
 
 def error(status, message, traceback, version):
-    fl = cherrypy.thread_data.flDict['app']
     currentYear = datetime.date.today().year
     footerText = str(Template(file=fl.get_template_file('footer_text.tmpl'), searchList=[locals(),globals()]))
-    tpl = str(Template(file=fl.get_template_file('error.tmpl'), searchList=[locals(),globals()]))
+    tpl = str(Template(file=Formatters.get_template_file('error.tmpl'), searchList=[locals(),globals()]))
     return tpl
+
+def update_config(app):
+    parameters = session.query(ConfigParameter).all()
+    for parameter in parameters:
+        value = None
+        type = Column(Enum("boolean", "number", "text", "datetime"))
+        if parameter.type == "boolean":
+            value = (parameter.value in ['true','yes','True','Yes'])
+        elif parameter.type == "number":
+            value = int(parameter.value)
+        elif parameter.type == "test"
+            value = parameter.value
+        elif parameter.type == "datetime":
+            value = datetime.datetime.strptime(parameter.value, "%m/%d/%Y %H:%M:%S")
+        app.config['filelocker'][parameter.name] = value
 
 def check_updates():
     config = cherrypy._cpconfig._Parser()
@@ -204,11 +231,12 @@ def start(configfile=None, daemonize=False, pidfile=None):
     
     try:
         #This line override the cgi Fieldstorage with the one we defined in order to track upload progress
-        from model.FileFieldStorage import FileFieldStorage
+        from lib.Models import FileFieldStorage
         cherrypy._cpcgifs.FieldStorage = FileFieldStorage
         cherrypy.server.socket_timeout = 60
         engine.start()
         configure_session_for_app(app)
+        update_config(app)
     except Exception, e:
         print "Exception when starting up: %s" % str(e)
         # Assume the error has been logged already via bus.log.
@@ -218,27 +246,24 @@ def start(configfile=None, daemonize=False, pidfile=None):
         pass
 
 #    try:
-    from controller.FileController import FileController
+    from controller import FileController
 
     #Now that CherryPy has started, perform maintenance...first check that the database is up to date
     #check_updates()
 
     #Set hour counter to 0.0. We have daily maintenance for expirations and maintenance every 12 minutes for queued deletions, etc.
     hour = 0.0
-    fileController = FileController()
     while True:
         #Set max file size, in bytes
-        query = session.query(ConfigParameter).filter(ConfigParameter.config_parameter_name == "max_file_size")
-        maxSizeParam = query.one()
-        maxSize = long(maxSizeParam.config_parameter_value)
+        maxSize = app.config['filelocker']['max_file_size']
         cherrypy.config.update({'server.max_request_body_size': maxSize})
         logging.error("Just updated the max size to %s" % maxSize)
-        if config.as_dict()['filelocker'].has_key("clustermaster") and config.as_dict()["filelocker"]["clustermaster"]: # This will allow you set up other front ends that don't run maintenance on the DB or FS
+        if app.config['filelocker'].has_key("cluster_master") and app.config['filelocker']["cluster_master"]: # This will allow you set up other front ends that don't run maintenance on the DB or FS
             if hour == 0.0: #on startup and each new day
-                fileController.check_expirations()
+                FileController.check_expirations()
                 logging.error("Expirations checked")
-                fileController.delete_orphaned_files()
-            fileController.process_deletion_queue() #process deletion queue every 12 minutes
+                FileController.delete_orphaned_files()
+            FileController.process_deletion_queue() #process deletion queue every 12 minutes
             if hour < 24.0:
                 hour += 0.2
             if hour >= 24.0:
@@ -248,7 +273,7 @@ def start(configfile=None, daemonize=False, pidfile=None):
         for key in cherrypy.file_uploads.keys():
             for progressFile in cherrypy.file_uploads[key]:
                 validTempFiles.append(progressFile.file_object.name.split(os.path.sep)[-1])
-        fileController.clean_temp_files(validTempFiles)
+        FileController.clean_temp_files(validTempFiles)
         time.sleep(720) #12 minutes
 #    except KeyboardInterrupt, ki:
 #        logging.error("Keyboard interrupt")

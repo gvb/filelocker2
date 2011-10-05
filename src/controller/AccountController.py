@@ -9,51 +9,6 @@ __author__="wbdavis"
 __date__ ="$Sep 25, 2011 9:37:17 PM$"
 
 class AccountController:
-    directory = None
-    def __init__(self):
-        directoryType = session.query(ConfigParameter).filter(ConfigParameter.name=="directory_type").one().value
-        if directoryType == "ldap":
-            directory = LDAPDirectory.LDAPDirectory()
-        elif directoryType == "local":
-            directory = None
-
-    def install_user(self, user):
-        if user is not None:
-            if user.quota is None:
-                user.quota = int(session.query(ConfigParameter).filter(ConfigParameter.id=="default_quota").one().value)
-            session.add(user)
-            session.add(AuditLog(user.id, "Install User", "User %s (%s) installed" % (user.display_name, user.id)))
-            session.commit()
-        else:
-            raise Exception("User %s doesn't exist in directory" % userId)
-
-    def get_user(self, userId, login=False):
-        import warnings
-        warnings.simplefilter("ignore")
-        user = session.query(User).filter(User.id==userId).one()
-        if user is not None:
-            attributeList = []
-            for permission in user.permissions:
-                if permission.id.startswith("(attr)"):
-                    attributeList.append(permission.id.split("(attr)")[1])
-            for group in user.groups:
-                for permission in group.permissions:
-                    if permission.id.startswith("(attr)"):
-                        attributeList.append(permission.id.split("(attr)")[1])
-            if login:
-                for flPlugin in getPlugins(FilelockerPlugin, plugins):
-                    attributeList.extend(flPlugin.get_user_attributes(user.id, self)) #Send user object off to  plugin to get the list populated
-                    if flPlugin.is_authorized(user.userId, self) == False: #Checks if any plugin is going to explicitly deny this user access to Filelocker
-                        user.authorized = False
-                uniqueAttributeList = []
-                for attributeId in attributeList:
-                    if attributeId not in uniqueAttributeList:
-                        attr = session.query(Attribute).filter(Attribute.id==attributeId).one()
-                        if attr is not None:
-                            user.userAttributes.append(attr)
-                        uniqueAttributeList.append(attributeId)
-        return user
-
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def update_user(self, format="json", **kwargs):
@@ -258,6 +213,73 @@ class AccountController:
             sMessages.extend(fle.successMessages)
             fMessages.extend(fle.failureMessages)
         yield fl_response(sMessages, fMessages, format, data=groups)
+
+class ExternalDirectory(object):
+    directory = None
+    def __init__(self, appConfig=cherrypy.request.app.config):
+        self.directoryType = appConfig['filelocker']['directory_type']
+        if directoryType == "ldap":
+            directory = LDAPDirectory.LDAPDirectory()
+        elif directoryType == "local":
+            directory = LocalDirectory.LocalDirectory()
+    def lookup_user(self, userId):
+        return directory.lookup_user(userId)
+    def authenticate(self, username, password):
+        return directory.authenticate(username, password)
+    def get_user_matches(self, firstname, lastname, userId):
+        return directory.get_user_matches(firstname, lastname, userId)
+
+def get_user_roles(user):
+    roleUsers = []
+    for permission in user.permissions:
+        if permission.permissionId.startswith("(role)"):
+            roleUserId = permission.permissionId.split("(role)")[1]
+            roleUser = AccountController.get_user(roleUserId)
+            roleUsers.append(roleUser)
+    for group in user.groups:
+        for permission in permission.group.permissions:
+            if permission.permissionId.startswith("(role)"):
+                roleUserId = permission.permissionId.split("(role)")[1]
+                roleUser = AccountController.get_user(roleUserId)
+                roleUsers.append(roleUser)
+    return roleUsers
+
+def install_user(self, user):
+    if user is not None:
+        if user.quota is None:
+            user.quota = int(session.query(ConfigParameter).filter(ConfigParameter.id=="default_quota").one().value)
+        session.add(user)
+        session.add(AuditLog(user.id, "Install User", "User %s (%s) installed" % (user.display_name, user.id)))
+        session.commit()
+    else:
+        raise Exception("User %s doesn't exist in directory" % userId)
+
+def get_user(userId, login=False):
+    import warnings
+    warnings.simplefilter("ignore")
+    user = session.query(User).filter(User.id==userId).one()
+    if user is not None:
+        attributeList = []
+        for permission in user.permissions:
+            if permission.id.startswith("(attr)"):
+                attributeList.append(permission.id.split("(attr)")[1])
+        for group in user.groups:
+            for permission in group.permissions:
+                if permission.id.startswith("(attr)"):
+                    attributeList.append(permission.id.split("(attr)")[1])
+        if login:
+            for flPlugin in getPlugins(FilelockerPlugin, plugins):
+                attributeList.extend(flPlugin.get_user_attributes(user.id, self)) #Send user object off to  plugin to get the list populated
+                if flPlugin.is_authorized(user.userId, self) == False: #Checks if any plugin is going to explicitly deny this user access to Filelocker
+                    user.authorized = False
+            uniqueAttributeList = []
+            for attributeId in attributeList:
+                if attributeId not in uniqueAttributeList:
+                    attr = session.query(Attribute).filter(Attribute.id==attributeId).one()
+                    if attr is not None:
+                        user.userAttributes.append(attr)
+                    uniqueAttributeList.append(attributeId)
+    return user
 
 
 if __name__ == "__main__":

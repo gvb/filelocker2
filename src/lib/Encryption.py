@@ -6,6 +6,8 @@ except ImportError, ie:
     from md5 import md5
 from Crypto.Cipher import XOR
 from Crypto.Cipher import AES
+from Crypto.Hash import SHA256
+
 from random import SystemRandom
 import os
 import re
@@ -86,6 +88,22 @@ class KeyGen:
             raise "ERROR: Strings are of different size! %s %s" % (len(a), len(b))
         xor = XOR.new(a)
         return xor.encrypt(b)
+
+def hash_password(password, salt=None):
+    sha = SHA256.new()
+    if salt is None:
+        salt = os.urandom(8)
+    sha.update(salt+password)
+    saltedHash = "%s%s" % (salt, sha.hexdigest()) #Yum
+    return saltedHash #8char salt, 64 char hash
+
+def compare_password_hash(plaintextPassword, saltedHash):
+    salt = saltedHash[0:8]
+    resultingHash = hash_password(plaintextPassword, salt)
+    if resultingHash == saltedHash:
+        return True
+    else:
+        return False
     
 def generatePassword():
    #Based on the example from http://aspn.activestate.com/ASPN/Cookbook/Python/Recipe/59873
