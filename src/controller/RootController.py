@@ -8,7 +8,7 @@ from controller.FileController import FileController
 from controller.AccountController import AccountController
 from controller.MessageController import MessageController
 from controller.AdminController import AdminController
-import lib.Formatters as Formatters
+from lib.Formatters import *
 __author__="wbdavis"
 __date__ ="$Sep 25, 2011 9:36:56 PM$"
 
@@ -47,8 +47,8 @@ class RootController:
             pass
         elif authType == "ldap" or authType == "local":
             currentYear = datetime.date.today().year
-            footerText = str(Template(file=Formatters.get_template_file('footer_text.tmpl'), searchList=[locals(),globals()]))
-            tpl = Template(file=Formatters.get_template_file('login.tmpl'), searchList=[locals(),globals()])
+            footerText = str(Template(file=get_template_file('footer_text.tmpl'), searchList=[locals(),globals()]))
+            tpl = Template(file=get_template_file('login.tmpl'), searchList=[locals(),globals()])
             return str(tpl)
         else:
             logging.error("[system] [login] [No authentication variable set in config]")
@@ -75,8 +75,8 @@ class RootController:
         orgName = cherrypy.response.cookie['filelocker']['org_name']
         rootURL = cherrypy.response.cookie['filelocker']['root_url']
         currentYear = datetime.date.today().year
-        footerText = str(Template(file=Formatters.get_template_file('footer_text.tmpl'), searchList=[locals(),globals()]))
-        tpl = Template(file=Formatters.get_template_file('cas_logout_confirmation.tmpl'), searchList=[locals(), globals()])
+        footerText = str(Template(file=get_template_file('footer_text.tmpl'), searchList=[locals(),globals()]))
+        tpl = Template(file=get_template_file('cas_logout_confirmation.tmpl'), searchList=[locals(), globals()])
         return str(tpl)
 
     @cherrypy.expose
@@ -124,28 +124,26 @@ class RootController:
         cherrypy.response.headers['Content-Type'] = 'text/css'
         staticDir = os.path.join(rootURL,"static")
         tplPath = None
-        return str(Template(file=Formatters.get_template_path(styleFile), searchList=[locals(),globals()]))
+        return str(Template(file=get_template_path(styleFile), searchList=[locals(),globals()]))
 
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def index(self, **kwargs):
-        user, originalUser = (cherrypy.session.get("user"),  cherrypy.session.get("original_user"))
+        user, originalUser, maxDays = (cherrypy.session.get("user"),  cherrypy.session.get("original_user"), cherrypy.request.app.config['filelocker']['max_file_life_days'])
         roles = AccountController.get_user_roles(user)
-        defaultExpiration = datetime.date.today() + (datetime.timedelta(days=))
         currentYear = datetime.date.today().year
         startDateFormatted, endDateFormatted = None, None
-        sevenDays = datetime.timedelta(days=7)
         today = datetime.datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        sevenDays = datetime.timedelta(days=7)
         sevenDaysAgo = today - sevenDays
         sevenDaysAgo = sevenDaysAgo.replace(hour=0, minute=0, second=0, microsecond=0)
+        defaultExpiration = datetime.date.today() + (datetime.timedelta(days=maxDays))
         startDateFormatted = sevenDaysAgo
         endDateFormatted = today
-        messageSearchWidget = HTTP_User.get_search_widget(HTTP_User(), "messages")
-        header = Template(file=fl.get_template_file('header.tmpl'), searchList=[locals(),globals()])
-        footerText = str(Template(file=fl.get_template_file('footer_text.tmpl'), searchList=[locals(),globals()]))
-        footer = Template(file=fl.get_template_file('footer.tmpl'), searchList=[locals(),globals()])
-        defaultExpiration = datetime.date.today() + (datetime.timedelta(days=fl.maxFileLifeDays))
-        uploadTickets = fl.get_upload_tickets_by_user(user, user.userId)
+        messageSearchWidget = account_interface.get_search_widget(account_interface, "messages")
+        header = Template(file=get_template_file('header.tmpl'), searchList=[locals(),globals()])
+        footerText = str(Template(file=get_template_file('footer_text.tmpl'), searchList=[locals(),globals()]))
+        footer = Template(file=get_template_file('footer.tmpl'), searchList=[locals(),globals()])
         filesSection = self.files()
         indexHTML = str(header) + str(filesSection) + str(footer)
         self.saw_banner()
@@ -172,49 +170,47 @@ class RootController:
                     return "Failed to sign TOS: %s. The administrator has been notified of this error." % str(e)
             else:
                 currentYear = datetime.date.today().year
-                footerText = str(Template(file=Formatters.get_template_file('footer_text.tmpl'), searchList=[locals(),globals()]))
-                return str(Template(file=Formatters.get_template_file('tos.tmpl'), searchList=[locals(),globals()]))
+                footerText = str(Template(file=get_template_file('footer_text.tmpl'), searchList=[locals(),globals()]))
+                return str(Template(file=get_template_file('tos.tmpl'), searchList=[locals(),globals()]))
         else:
             raise cherrypy.HTTPRedirect(rootURL)
 
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def admin(self, **kwargs):
-        user, fl = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'])
-        userFiles = self.file_interface.get_user_file_list(format="list")
-        templateFiles = os.listdir(fl.templatePath)
-        configParameters = fl.get_config(user)
-        flUsers = fl.get_all_users(user, 0, 50)
-        totalFileCount = fl.get_file_count(user)
-        totalUserCount = fl.get_user_count(user)
-        totalMessageCount = fl.get_message_count(user)
+        user = cherrypy.session.get("user")
+        userFiles = FileController.get_user_file_list(format="list")
+        templateFiles = os.listdir(os.path.join(cherrypy.request.app.config['filelocker']['root_path'], "view"))
+        configParameters = session.query(ConfigParameter).all()
+        flUsers = session.query(User).slice(0,50)
+        totalFileCount = session.query(func.count(File.id))
+        totalUserCount = session.query(func.count(User.id))
+        totalMessageCount = session.query(func.count(Message.id))
         currentUsersList = []
         currentUploads = len(cherrypy.file_uploads)
-        logsFile = open(fl.logFile)
+        logsFile = open(cherrypy.config["log.error_file"])
         logs = tail(logsFile, 50)
-
-        attributes = fl.get_available_attributes_by_user(user)
+        attributes = ShareController.get_user_shareable_attributes(user)
         currentUserIds = []
         sessionCache = {}
-        if cherrypy.config['tools.sessions.storage_type'] == "db":
-            sessionCache = cherrypy.session.get_all_sessions()
-        else:
-            sessionCache = cherrypy.session.cache
+        sessionCache = cherrypy.session.cache
         for key in sessionCache.keys():
             try:
-                if sessionCache[key][0].has_key('user') and sessionCache[key][0]['user'] is not None and sessionCache[key][0]['user'].userId not in currentUserIds:
+                if sessionCache[key][0].has_key('user') and sessionCache[key][0]['user'] is not None and sessionCache[key][0]['user'].id not in currentUserIds:
                     currentUser = sessionCache[key][0]['user']
                     currentUsersList.append(currentUser)
-                    currentUserIds.append(currentUser.userId)
+                    currentUserIds.append(currentUser.id)
             except Exception, e:
-                logging.error("[%s] [admin] [Unable to read user session: %s]" % (user.userId, str(e)))
-        tpl = Template(file=fl.get_template_file('admin.tmpl'), searchList=[locals(),globals()])
+                logging.error("[%s] [admin] [Unable to read user session: %s]" % (user.id, str(e)))
+        tpl = Template(file=get_template_file('admin.tmpl'), searchList=[locals(),globals()])
         return str(tpl)
 
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def history(self, userId=None, startDate=None, endDate=None, logAction=None, format="html", **kwargs):
-        sMessages, fMessages, user, fl = ([],[],cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'])
+        sMessages, fMessages, user= ([],[],cherrypy.session.get("user"))
+        if (userId != user.id and AccountController.user_has_permission(user, "admin")==False)
+            raise cherrypy.HTTPError(403)
         actionList, actionLogList = ([], [])
         try:
             startDateFormatted, endDateFormatted = None, None
@@ -230,15 +226,18 @@ class RootController:
                 endDateFormatted = datetime.datetime(*time.strptime(strip_tags(endDate), "%m/%d/%Y")[0:5])
             else:
                 endDateFormatted = today
+            actionLogList = session.query(AuditLog).filter(and_(AuditLog.date > startDateFormatted, AuditLog.date < endDateFormatted))
+
             if logAction is None or logAction == "":
                 logAction = "all_minus_login"
+                actionLogList.filter(AuditLog.action != "Login")
             if userId is None:
                 userId = user.userId
-            actionLogList = fl.get_audit_log(user, userId, startDateFormatted, endDateFormatted, logAction)
+            
             for log in actionLogList:
                 log.displayClass = "%s_%s" % ("audit", log.action.replace(" ", "_").lower())
                 log.displayClass = re.sub('_\(.*?\)', '', log.displayClass) # Removes (You) and (Recipient) from Read Message actions
-            actionNames = fl.get_audit_log_action_names(user, userId)
+            actionNames = session.query(AuditLog.action).filter(or_(AuditLog.initiator_user_id==userId, AuditLog.affected_user_id==userId)).distinct()
             for actionLog in actionNames:
                 if actionLog not in actionList:
                     actionList.append(actionLog)
@@ -257,13 +256,14 @@ class RootController:
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def files(self, **kwargs):
-        user, fl, systemFiles = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [])
-        if fl.check_admin(user):
-            systemFiles = self.file_interface.get_user_file_list(format="list", userId="system")
+        user, systemFiles = (cherrypy.session.get("user"), [])
+        if AccountController.user_has_permission(user, "admin"):
+            systemFiles = session.query(File).filter(File.owner_id == "system").all()
         defaultExpiration = datetime.date.today() + (datetime.timedelta(days=fl.maxFileLifeDays))
-        uploadTickets = fl.get_upload_tickets_by_user(user, user.userId)
-        userFiles = self.file_interface.get_user_file_list(format="list")
-        userShareableAttributes = fl.get_available_attributes_by_user(user)
+        uploadRequests = session.query(UploadRequest).filter(UploadRequest.owner_id==user.id).all()
+        userFiles = session.query(File).filter(File.owner_id == user.id).all()
+        userShareableAttributes = ShareController.get_user_shareable_attributes(user)
+        #TODO: Figure this out
         attributeFilesDict = fl.get_attribute_shares_by_user(user, user.userId)
         sharedFiles = self.file_interface.get_files_shared_with_user_list(format="list")
         tpl = Template(file=fl.get_template_file('files.tmpl'), searchList=[locals(),globals()])
@@ -388,9 +388,9 @@ class RootController:
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def download_filelocker_client(self, platform, **kwargs):
-        fl = cherrypy.thread_data.flDict['app']
+        clientPath = os.path.join(cherrypy.request.app.config['root_path'], "static", "clients")
         if platform=="cli":
-            return serve_file(os.path.join(fl.clientPath,"cliFilelocker.py"), "application/x-download", "attachment")
+            return serve_file(os.path.join(clientPath,"cliFilelocker.py"), "application/x-download", "attachment")
         #elif platform="windows":
             #return serve_file(os.path.join(fl.clientPath,"windowsFilelocker.exe"), "application/x-download", "attachment")
         #elif platform="macintosh":

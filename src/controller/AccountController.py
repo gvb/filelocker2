@@ -237,12 +237,21 @@ def get_user_roles(user):
             roleUser = AccountController.get_user(roleUserId)
             roleUsers.append(roleUser)
     for group in user.groups:
-        for permission in permission.group.permissions:
+        for permission in group.permissions:
             if permission.permissionId.startswith("(role)"):
                 roleUserId = permission.permissionId.split("(role)")[1]
                 roleUser = AccountController.get_user(roleUserId)
                 roleUsers.append(roleUser)
     return roleUsers
+
+def user_has_permission(user, permissionId):
+    if permissionId in user.permissions:
+        return True
+    else:
+        for group in user.groups:
+            if permissionId in group.permissions:
+                return True
+        return False
 
 def install_user(self, user):
     if user is not None:

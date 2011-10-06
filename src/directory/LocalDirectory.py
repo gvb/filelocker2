@@ -12,7 +12,13 @@ class LocalDirectory(object):
     def authenticate(self, userId, password):
         #We have to support real-time conversion from less-secure MD5 hashed passwords
         passwordHash = session.query(User.password).filter(User.id == userId).scalar()
-        return lib.Encryption.compare_password_hash(password, passwordHash
+        isValid = lib.Encryption.compare_password_hash(password, passwordHash)
+        if isValid and len(passwordHash) == 32:
+            newHash = lib.Encryption.hash_password(password)
+            user = session.query(User).filter(User.id==userId).one()
+            user.password = newHash
+            session.commit() #New has stored in the db
+        return isValid
 
     def get_user_matches(self, firstName=None, lastName=None, userId=None):
         query = session.query(User)

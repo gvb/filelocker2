@@ -167,5 +167,38 @@ class ShareController:
                 fMessages.extend(fle.failureMessages)
                 sMessages.extend(fle.successMessages)
         return fl_response(sMessages, fMessages, format)
+
+def get_user_shareable_attributes(self, user):
+    """
+    This function gets the attributes that a user has permission to share with.
+
+    Examples of this would be a teacher for a class being able to share with all users
+    who have the class as an attribute"""
+    attributeList = []
+    allAttributes = session.query(Attribute).all()
+    if AccountController.user_has_permission(user, "admin"):
+        attributeList = allAttributes
+    else:
+        for attribute in allAttributes:
+            attributePermissionId = "(attr)%s" % attribute.attributeId
+            if AccountController.user_has_permission(user, attributePermissionId)
+                attributeList.append(attribute)
+    return attributeList
+
+ def get_attribute_dict(user):
+    attributeShareDictionary = {}
+    for attributeShare in user.private_attribute_shares:
+        if attributeShareDictionary.has_key(attributeShare.attribute_id):
+            attributeShareDictionary[attributeShare.attribute_id].append()
+
+    for attribute in user.attributes:
+        attributeShareDictionary[attribute.attributeName] = self.db.getSharedFilesByAttribute(attribute.attributeId)
+    for attribute in self.get_available_attributes_by_user(user):
+        if attributeShareDictionary.has_key(attribute.attributeName) == False: #This will allow users who are admins of attributes but not members to see shares with that attribute
+            attributeShareDictionary[attribute.attributeName] = self.db.getSharedFilesByAttribute(attribute.attributeId)
+    return attributeShareDictionary
+
+
+
 if __name__ == "__main__":
     print "Hello";

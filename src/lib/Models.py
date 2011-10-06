@@ -134,6 +134,20 @@ class PrivateAttributeShare(Base):
     attribute_id = Column(String(50), ForeignKey("attributes.id"), primary_key=True)
     flFile = relationship("File", backref('private_attribute_shares'))
 
+class UploadRequest(Base):
+    __tablename__ = "upload_requests"
+    id = Column(String(32), primary_key=True)
+    owner_id = Column(String(30), ForeignKey("users.id"))
+    max_file_size = Column(Float)
+    data_expires = Column(DateTime)
+    password = Column(String(72))
+    type = Column(Enum("single", "multi"))
+    expired = False
+
+    def generateTicketId(self):
+        import random
+        return md5(str(random.random())).hexdigest()
+    
 class ConfigParameter(Base):
     __tablename__ = "config"
     name = Column(String(30), primary_key=True)

@@ -98,12 +98,18 @@ def hash_password(password, salt=None):
     return saltedHash #8char salt, 64 char hash
 
 def compare_password_hash(plaintextPassword, saltedHash):
-    salt = saltedHash[0:8]
-    resultingHash = hash_password(plaintextPassword, salt)
-    if resultingHash == saltedHash:
-        return True
+    if len(saltedHash)==32: #Old md5, unsalted
+        if saltedHash == md5(plaintextPassword).hexdigest():
+            return True
+        else:
+            return False
     else:
-        return False
+        salt = saltedHash[0:8]
+        resultingHash = hash_password(plaintextPassword, salt)
+        if resultingHash == saltedHash:
+            return True
+        else:
+            return False
     
 def generatePassword():
    #Based on the example from http://aspn.activestate.com/ASPN/Cookbook/Python/Recipe/59873
