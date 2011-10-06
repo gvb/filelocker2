@@ -264,21 +264,21 @@ class RootController:
         userFiles = session.query(File).filter(File.owner_id == user.id).all()
         userShareableAttributes = ShareController.get_user_shareable_attributes(user)
         #TODO: Figure this out
-        attributeFilesDict = fl.get_attribute_shares_by_user(user, user.userId)
-        sharedFiles = self.file_interface.get_files_shared_with_user_list(format="list")
-        tpl = Template(file=fl.get_template_file('files.tmpl'), searchList=[locals(),globals()])
+        attributeFilesDict = ShareController.get_files_shared_with_user_by_attribute(user)
+        sharedFiles = ShareController.get_files_shared_with_user_privately(user)
+        tpl = Template(file=get_template_file('files.tmpl'), searchList=[locals(),globals()])
         return str(tpl)
 
     @cherrypy.expose
     def help(self, **kwargs):
-        fl = cherrypy.thread_data.flDict['app']
-        tpl = Template(file=fl.get_template_file('halp.tmpl'), searchList=[locals(),globals()])
+        tpl = Template(file=get_template_file('halp.tmpl'), searchList=[locals(),globals()])
         return str(tpl)
 
     @cherrypy.expose
     @cherrypy.tools.requires_login()
+    #TODO: This
     def manage_groups(self, **kwargs):
-        user, fl = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'])
+        user = cherrypy.session.get("user")
         groups = fl.get_user_groups(user, user.userId)
         tpl = Template(file=fl.get_template_file('manageGroups.tmpl'), searchList=[locals(),globals()])
         return str(tpl)

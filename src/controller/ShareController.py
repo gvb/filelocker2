@@ -185,18 +185,20 @@ def get_user_shareable_attributes(self, user):
                 attributeList.append(attribute)
     return attributeList
 
- def get_attribute_dict(user):
+ def get_files_shared_with_user_by_attribute(user):
     attributeShareDictionary = {}
     for attributeShare in user.private_attribute_shares:
-        if attributeShareDictionary.has_key(attributeShare.attribute_id):
-            attributeShareDictionary[attributeShare.attribute_id].append()
-
-    for attribute in user.attributes:
-        attributeShareDictionary[attribute.attributeName] = self.db.getSharedFilesByAttribute(attribute.attributeId)
-    for attribute in self.get_available_attributes_by_user(user):
-        if attributeShareDictionary.has_key(attribute.attributeName) == False: #This will allow users who are admins of attributes but not members to see shares with that attribute
-            attributeShareDictionary[attribute.attributeName] = self.db.getSharedFilesByAttribute(attribute.attributeId)
+        if attributeShareDictionary.has_key(attributeShare.attribute_id)==False:
+                attributeShareDictionary[attributeShare.attribute_id] = []
+        attributeShareDictionary[attributeShare.attribute_id].append(attributeShare.flFile)
     return attributeShareDictionary
+    
+def get_files_shared_with_user_privately(user):
+    fileList = []
+    userShares = session.query(PrivateShare).filter(PrivateShare.user_id == user.id)
+    for share in userShares:
+        fileList.append(share.flFile)
+    return fileList
 
 
 
