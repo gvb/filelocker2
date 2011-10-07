@@ -1,4 +1,4 @@
-from cherrypy.lib.sessions import Session
+import cherrypy
 try:
     import cPickle as pickle
 except ImportError:
@@ -9,7 +9,7 @@ try:
 except ImportError, ie:
     from md5 import md5
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import relationship, backref
+from sqlalchemy.orm import relationship, backref, sessionmaker
 from sqlalchemy import *
 from lib.SQLAlchemyTool import configure_session_for_app, session, _engines
 __author__="wbdavis"
@@ -17,6 +17,10 @@ __date__ ="$Sep 27, 2011 8:48:55 PM$"
 Base = declarative_base()
 
 #Database Backended Models
+user_permissions_table = Table("user_permissions", Base.metadata,
+    Column("user_id", String(30), ForeignKey("users.id"), primary_key=True, nullable=False),
+    Column("permission_id", String(50), ForeignKey("permissions.id"), primary_key=True, nullable=False))
+
 class User(Base):
     __tablename__ = "users"
     id = Column(String(30), primary_key=True)
@@ -40,9 +44,26 @@ class User(Base):
     def get_dict(self):
         return {'userFirstName':self.first_name, 'userLastName':self.last_name, 'userDisplayName': self.display_name, 'userEmail': self.email, 'isRole': self.is_role, 'userId': self.id, 'userQuotaUsed': self.quota_used, 'userQuota': self.quota}
 
+class Permission(Base):
+    __tablename__ = "permissions"
+    id = Column(String(50), primary_key=True)
+    name = Column(String(255))
+    inherited_from = None
+
+    def __str__(self):
+        return str(self.get_dict())
+
+    def get_dict(self):
+        return {'permissionId': self.id, 'permissionName': self.name, 'inheritedFrom':self.inherited_from}
+
+
 group_membership_table = Table("group_membership", Base.metadata,
     Column("group_id", Integer, ForeignKey("groups.id")),
-    Column("user_id", String(50), ForeignKey("users.id")))
+    Column("user_id", String(30), ForeignKey("users.id")))
+
+group_permissions_table = Table("group_permissions", Base.metadata,
+    Column("group_id", Integer, ForeignKey("groups.id"), primary_key=True),
+    Column("permission_id", String(50), ForeignKey("permissions.id"), primary_key=True))
 
 class Group(Base):
     __tablename__ = "groups"
@@ -61,17 +82,22 @@ class File(Base):
     size = Column(BigInteger)
     notes = Column(Text)
     uploaded_date = Column(DateTime)
-    owner_id = Column(String(50), ForeignKey('users.id'))
+    owner_id = Column(String(30), ForeignKey('users.id'))
     date_expires = Column(DateTime)
     passed_avscan = Column(Boolean)
     encryption_key = Column(String(64))
     status = Column(String(255))
     notify_on_download = Column(Boolean)
-    upload_ticket = Column(String(64))
-    #private_group_shares = relationship("PrivateGroupShare", backref="file")
-    #private_shares = relationship("PrivateShare", backref="file")
-    #public_shares = relationship("PublicShare", backref="file")
-    #private_attribute_shares = relationship("PrivateAttributeShare", backref="file")
+    upload_request_id = Column(String(64), ForeignKey("upload_requests.id"))
+
+    private_shares = relationship("PrivateShare", backref="files")
+    public_shares = relationship("PublicShare", backref="files")
+    private_group_shares = relationship("PrivateGroupShare", backref="files")
+    private_attribute_shares = relationship("PrivateAttributeShare", backref="files")
+
+class DeletedFile(Base):
+    __tablename__ = "deletion_queue"
+    file_name = Column(String(255), primary_key=True)
 
 class Message(Base):
     __tablename__ = "messages"
@@ -97,23 +123,23 @@ class Message(Base):
         if self.recipients is not None:
             messageDict['messageRecipients'] = self.recipients
         return messageDict
-    
+
 message_recipients_table = Table("message_recipients", Base.metadata,
     Column("message_id", Integer, ForeignKey("messages.id"), primary_key=True, nullable=False),
     Column("recipient_id", String(50), ForeignKey("users.id"), primary_key=True, nullable=False),
-    Column("date_viewed", DateTime, default=None))
+    Column("date_viewed", DateTime, nullable=True, default=None))
 
 class PrivateShare(Base):
     __tablename__ = "private_shares"
     user_id = Column(Integer, ForeignKey("users.id"), primary_key=True)
     file_id = Column(Integer, ForeignKey("files.id"), primary_key=True)
-    flFile = relationship("File", backref('private_shares'))
+    flFile = relationship("File")
 
 class PrivateGroupShare(Base):
     __tablename__ = "private_group_shares"
     group_id = Column(Integer, ForeignKey("groups.id"), primary_key=True)
     file_id = Column(Integer, ForeignKey("files.id"), primary_key=True)
-    flFile = relationship("File", backref('private_group_shares'))
+    flFile = relationship("File")
 
 class PublicShare(Base):
     __tablename__="public_shares"
@@ -122,7 +148,7 @@ class PublicShare(Base):
     expiration_date = Column(DateTime)
     password = Column(String(64))
     reuse = Column(Enum("single", "multi"), default="single")
-    flFile = relationship("File", backref('public_shares'))
+    flFile = relationship("File")
 
     def generateShareId(self):
         import random
@@ -132,14 +158,14 @@ class PrivateAttributeShare(Base):
     __tablename__ = "private_attribute_shares"
     file_id = Column(Integer, ForeignKey("files.id"), primary_key=True)
     attribute_id = Column(String(50), ForeignKey("attributes.id"), primary_key=True)
-    flFile = relationship("File", backref('private_attribute_shares'))
+    flFile = relationship("File")
 
 class UploadRequest(Base):
     __tablename__ = "upload_requests"
     id = Column(String(32), primary_key=True)
     owner_id = Column(String(30), ForeignKey("users.id"))
     max_file_size = Column(Float)
-    data_expires = Column(DateTime)
+    date_expires = Column(DateTime)
     password = Column(String(72))
     type = Column(Enum("single", "multi"))
     expired = False
@@ -147,7 +173,7 @@ class UploadRequest(Base):
     def generateTicketId(self):
         import random
         return md5(str(random.random())).hexdigest()
-    
+
 class ConfigParameter(Base):
     __tablename__ = "config"
     name = Column(String(30), primary_key=True)
@@ -159,29 +185,9 @@ class Attribute(Base):
     __tablename__ = "attributes"
     id = Column(String(50), primary_key=True)
     name = Column(String(255))
-    
+
     def __str__(self):
         return "%s (%s)" % (self.name, self.id)
-
-class Permission(Base):
-    __tablename__ = "permissions"
-    id = Column(String(50), primary_key=True)
-    name = Column(String(255))
-    inherited_from = None
-
-    def __str__(self):
-        return str(self.get_dict())
-
-    def get_dict(self):
-        return {'permissionId': self.id, 'permissionName': self.name, 'inheritedFrom':self.inherited_from}
-
-user_permissions_table = Table("user_permissions", Base.metadata,
-    Column("user_id", String(30), ForeignKey("users.id"), primary_key=True, nullable=False),
-    Column("permission_id", String(50), ForeignKey("permissions.id"), primary_key=True, nullable=False))
-
-group_permissions_table = Table("group_permissions", Base.metadata,
-    Column("group_id", Integer, ForeignKey("groups.id"), primary_key=True),
-    Column("permission_id", String(50), ForeignKey("permissions.id"), primary_key=True))
 
 class AuditLog(Base):
     __tablename__ = "audit_logs"
@@ -202,13 +208,63 @@ class AuditLog(Base):
 
     def __str__(self):
         return "[%s] [%s] [%s] [%s] [%s]" % (self.message, self.date.strftime("%m/%d/%Y"), self.initiator_user_id, self.action, self.affected_user_id)
-        
+
     def get_dict(self):
         return {"initiatorUserId":self.initiator_user_id, "action": self.action, "affectedUserId": self.affected_user_id, "message": self.message, "actionDatetime": self.date.strftime("%m/%d/%Y %H:%M"), "displayClass": self.display_class, "logId": self.id}
 
 def create_database_tables(dburi):
     engine = create_engine(dburi, echo=True)
     Base.metadata.create_all(engine)
+    Session = sessionmaker(bind=engine)
+    session = Session()
+    initialConfigList = [("org_name", "Name of your organization.", "text", "My Company"),
+    ("org_url", "Home page of your organization.", "text", "http://www.mycompany.com"),
+    ("admin_email", "Public email address of the Filelocker Administrator.", "text", "admin@mycompany.com"),
+    ("max_file_life_days", "Max number of days a file can exist on the system. After this time, the file will be securely erased along with any shares it was associated with.", "number", "7"),
+    ("user_inactivity_expiration", "Max number of days of inactivity permitted on a user account before the account is deleted from the system.", "number", "90"),
+    ("delete_command", "Command used by the operating system that Filelocker is installed on to securely erase a file. This does not include arguments to the command (e.g. 'rm' not 'rm -p')", "text", "rm"),
+    ("delete_arguments", "Any parameters needed by the delete command (in an additive fashion, such as -P, -fP, -fPq, etc)", "text", "-f"),
+    ("antivirus_command", "Command to execute a virus scan of a file on the operating system on which Filelocker is installed.", "text", "clamscan"),
+    ("file_command", "Command which returns information about a file's type. On most *nix systems, this will be the 'file -b' command", "text", "file -b"),
+    ("max_file_size", "Maximum size (in Megabytes) for a single file on the system. Individual user quotas will ultimately override this if a user has less space available than this value.(DVD: 4812, CD: 700)","number", "4812"),
+    ("default_quota", "Default quota (in Megabytes) assigned to each user. This can be changed by an administrator","number", "750"),
+    ("smtp_sender", "This is the email address that Filelocker will send email notifications as.","text", "filelocker@mycompany.com"),
+    ("smtp_server", "The server that Filelocker will use to send mail","text", ""),
+    ("smtp_start_tls", "Should Filelocker use StartTLS when connection the SMTP server?","boolean", "No"),
+    ("smtp_port", "SMTP Port","number", "25"),
+    ("smtp_auth_required", "Does this SMTP server require authentication?","boolean", "No"),
+    ("smtp_user", "If SMTP server requires authentication, what username should be used to connect (leave blank if no auth required)?","text", ""),
+    ("smtp_pass", "If SMTP server requires authentication, what password should be used (leave blank if no auth required)?","text", ""),
+    ("smtp_obscure_links", """Would you like for links in emails to obscured by adding spaces between periods and stripping off http:// and https://?""","boolean", "Yes"),
+    ("auth_type", "Authentication mechanism Filelocker should use (e.g. LDAP, CAS, Local)","text", "local"),
+    ("directory_type", "Type of directory to use (e.g. local, ldap)","text", "local"),
+    ("cas_url", "URL of CAS server","text", ""),
+    ("ldap_host", "URI of LDAP directory","text", ""),
+    ("ldap_bind_dn", "LDAP Bind DN (e.g. ou=ped,dc=purdue,dc=edu)","text", ""),
+    ("ldap_bind_user", "Account to use when binding to LDAP for searching (anonymous if blank)?", "text", ""),
+    ("ldap_bind_pass", "Password to use when binding to LDAP for searching (anonymous if blank)?", "text", ""),
+    ("ldap_is_active_directory", "Is this LDAP server and Active Directory server?", "boolean", "No"),
+    ("ldap_domain_name", "Active Directory will not authenticate a bind unless you use the FQDN", "text", ""),
+    ("ldap_user_name_attr", "LDAP username attribute","text", "uid"),
+    ("ldap_last_name_attr", "LDAP last name attribute","text", "sn"),
+    ("ldap_first_name_attr", "LDAP first name attribute","text", "givenName"),
+    ("ldap_displayname_attr", "LDAP display name attribute, if one is to be used","text", "displayName"),
+    ("ldap_email_attr", "LDAP email address attribute","text", "mail"),
+    ("banner", "Message displayed to all users upon login", "text", ""),
+    ("geotagging", "Should users be allowed to geotag Filelocker uploads?", "boolean", "No")]
+    for cTuple in initialConfigList:
+        confParameter = ConfigParameter(name=cTuple[0], description=cTuple[1], type=cTuple[2], value=cTuple[3])
+        session.add(confParameter)
+    adminPerm = Permission(id="admin", name="Administrator")
+    expirationExemptPerm = Permission(id="expiration_exempt", name="User may have files that don't expire")
+    session.add(adminPerm)
+    session.add(expirationExemptPerm)
+    session.commit()
+    
+def drop_database_tables(dburi):
+    engine = create_engine(dburi, echo=True)
+    Base.metadata.drop_all(engine)
+    print "Dropped all"
 
 #Non database backended models
 class FileFieldStorage(cherrypy._cpcgifs.FieldStorage):

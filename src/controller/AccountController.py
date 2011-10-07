@@ -216,8 +216,8 @@ class AccountController:
 
 class ExternalDirectory(object):
     directory = None
-    def __init__(self, appConfig=cherrypy.request.app.config):
-        self.directoryType = appConfig['filelocker']['directory_type']
+    def __init__(self, directoryType):
+        self.directoryType = directoryType
         if directoryType == "ldap":
             directory = LDAPDirectory.LDAPDirectory()
         elif directoryType == "local":

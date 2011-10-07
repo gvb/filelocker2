@@ -168,7 +168,7 @@ class ShareController:
                 sMessages.extend(fle.successMessages)
         return fl_response(sMessages, fMessages, format)
 
-def get_user_shareable_attributes(self, user):
+def get_user_shareable_attributes(user):
     """
     This function gets the attributes that a user has permission to share with.
 
@@ -181,11 +181,11 @@ def get_user_shareable_attributes(self, user):
     else:
         for attribute in allAttributes:
             attributePermissionId = "(attr)%s" % attribute.attributeId
-            if AccountController.user_has_permission(user, attributePermissionId)
+            if AccountController.user_has_permission(user, attributePermissionId):
                 attributeList.append(attribute)
     return attributeList
 
- def get_files_shared_with_user_by_attribute(user):
+def get_files_shared_with_user_by_attribute(user):
     attributeShareDictionary = {}
     for attributeShare in user.private_attribute_shares:
         if attributeShareDictionary.has_key(attributeShare.attribute_id)==False:

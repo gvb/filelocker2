@@ -1,3 +1,4 @@
+import lib.Models
 import os
 import sys
 import signal
@@ -8,8 +9,6 @@ import cherrypy
 from Cheetah.Template import Template
 from lib.SQLAlchemyTool import configure_session_for_app, session
 from lib.Models import *
-from controller.AccountController import AccountController
-from controller.FileController import FileController
 import lib.Formatters as Formatters
 #from dao import dao_creator
 __author__="wbdavis"
@@ -77,7 +76,7 @@ def requires_login(permissionId=None, **kwargs):
                 if valid_ticket:
                     currentUser = AccountController.get_user(currentUser.id, True)
                     if currentUser is None:
-                        directory = AccountController.ExternalDirectory()
+                        directory = AccountController.ExternalDirectory(cherrypy.request.app.config['filelocker']['directory_type'])
                         currentUser = directory.lookup_user(userId) #Try to get user info from directory
                         if currentUser is not None:
                             AccountController.install_user(currentUser)
@@ -117,20 +116,86 @@ def error(status, message, traceback, version):
     tpl = str(Template(file=Formatters.get_template_file('error.tmpl'), searchList=[locals(),globals()]))
     return tpl
 
-def update_config(app):
+def daily_maintenance(config):
+    from controller import FileController
+    expiredFiles = session.query(File).filter(File.date_expires < datetime.datetime.now())
+    for flFile in expiredFiles:
+        try:
+            for share in flFile.private_shares:
+                session.delete(share)
+            for share in flFile.private_group_shares:
+                session.delete(share)
+            for share in flFile.public_shares:
+                session.delete(share)
+            for share in flFile.private_attribute_shares:
+                session.delete(share)
+            FileController.queue_for_deletion(flFile.id)
+            session.add(AuditLog("system", "Delete File", "File %s (ID:%s) has expired and has been purged by the system." % (flFile.name, flFile.id), flFile.owner_id))
+            session.delete(flFile)
+            session.commit()
+        except Exception, e:
+            session.rollback()
+            logging.error("[system] [checkExpirations] [Error while deleting expired file: %s]" % str(e))
+    expiredMessages = session.query(Message).filter(Message.date_expires < datetime.datetime.now())
+    for message in expiredMessages:
+        try:
+            session.delete(message)
+            FileController.queue_for_deletion("m%s" % str(message.id))
+            session.add(AuditLog("system", "Delete Message", "Message %s (ID:%s) has expired and has been deleted by the system." % (message.messageSubject, message.messageId), message.owner_id))
+            session.commit()
+        except Exception, e:
+            session.rollback()
+            logging.error("[system] [checkExpirations] [Error while deleting expired message: %s]" % str(e))
+    expiredUploadRequests = session.query(UploadRequest).filter(UploadRequest.date_expires < datetime.datetime.now())
+    for uploadRequest in expiredUploadRequests:
+        try:
+            session.delete(uploadRequest)
+            session.add(AuditLog("system", "Delete Upload Request", "Upload request %s has expired." % uploadRequest.id, uploadRequest.owner_id))
+            session.commit()
+        except Exception, e:
+            logging.error("[system] [checkExpirations] [Error while deleting expired upload request: %s]" % (str(e)))
+    maxUserDays = config['filelocker']['user_inactivity_expiration']
+    expiredUsers = session.query(User).filter(User.date_last_login < (datetime.date.today() - datetime.timedelta(days=maxUserDays)))
+    for user in expiredUsers:
+        session.delete(user)
+        session.add(AuditLog("system", "Delete User", "User %s was deleted due to inactivity. All files and shares associated with this user have been purged as well" % str(user.id)))
+        session.commit()
+    vaultFileList = os.listdir(config['filelocker']['vault'] )
+    for fileName in vaultFileList:
+        try:
+            if fileName.endswith(".tmp")==False and fileName.startswith(".") == False and fileName !="custom": #this is a file id, not a temp file
+                if fileName.startswith("m"):
+                    messageId = fileName.split("m")[1]
+                    try:
+                        session.query(Message).filter(Message.id==messageId).one()
+                    except sqlalchemy.orm.exc.NoResultFound, nrf:
+                        FileController.queue_for_deletion(fileName)
+                else:
+                    try:
+                        fileId = int(fileName)
+                        try:
+                            session.query(File).filter(File.id==fileId).one()
+                        except sqlalchemy.orm.exc.NoResultFound, nrf:
+                            FileController.queue_for_deletion(fileName)
+                    except Exception, e:
+                        logging.warning("There was a file that did not match Filelocker's naming convention in the vault: %s. It has not been purged." % fileName)
+        except Exception, e:
+            logging.error("[system] [deleteOrphanedFiles] [There was a problem while trying to delete an orphaned file %s: %s]" % (str(fileName), str(e)))
+
+
+def update_config(config):
     parameters = session.query(ConfigParameter).all()
     for parameter in parameters:
         value = None
-        type = Column(Enum("boolean", "number", "text", "datetime"))
         if parameter.type == "boolean":
             value = (parameter.value in ['true','yes','True','Yes'])
         elif parameter.type == "number":
             value = int(parameter.value)
-        elif parameter.type == "test"
+        elif parameter.type == "test":
             value = parameter.value
         elif parameter.type == "datetime":
             value = datetime.datetime.strptime(parameter.value, "%m/%d/%Y %H:%M:%S")
-        app.config['filelocker'][parameter.name] = value
+        config['filelocker'][parameter.name] = value
 
 def check_updates():
     config = cherrypy._cpconfig._Parser()
@@ -199,11 +264,9 @@ def start(configfile=None, daemonize=False, pidfile=None):
     logLevel = 40
     if config.as_dict()['filelocker'].has_key("loglevel"):
         logLevel = config.as_dict()['filelocker']['loglevel']
-#    if cherrypy.config['tools.sessions.storage_type'] == "db":
-#        from dao import MySQLDAO
-#        cherrypy.lib.sessions.DbSession = MySQLDAO.DbSession
-    from controller.RootController import RootController
-    app = cherrypy.tree.mount(RootController(), '/', config=configfile)
+
+    from controller import RootController
+    app = cherrypy.tree.mount(RootController.RootController(), '/', config=configfile)
     
     #The following section handles the log rotation
     log = app.log
@@ -229,21 +292,12 @@ def start(configfile=None, daemonize=False, pidfile=None):
     if hasattr(engine, "console_control_handler"):
         engine.console_control_handler.subscribe()
     
-    try:
-        #This line override the cgi Fieldstorage with the one we defined in order to track upload progress
-        from lib.Models import FileFieldStorage
-        cherrypy._cpcgifs.FieldStorage = FileFieldStorage
-        cherrypy.server.socket_timeout = 60
-        engine.start()
-        configure_session_for_app(app)
-        update_config(app)
-    except Exception, e:
-        print "Exception when starting up: %s" % str(e)
-        # Assume the error has been logged already via bus.log.
-        sys.exit(1)
-    else:
-        #engine.block()
-        pass
+    #This line override the cgi Fieldstorage with the one we defined in order to track upload progress
+    cherrypy._cpcgifs.FieldStorage = FileFieldStorage
+    engine.start()
+    configure_session_for_app(app)
+    update_config(app.config)
+
 
 #    try:
     from controller import FileController
@@ -260,10 +314,9 @@ def start(configfile=None, daemonize=False, pidfile=None):
         logging.error("Just updated the max size to %s" % maxSize)
         if app.config['filelocker'].has_key("cluster_master") and app.config['filelocker']["cluster_master"]: # This will allow you set up other front ends that don't run maintenance on the DB or FS
             if hour == 0.0: #on startup and each new day
-                FileController.check_expirations()
+                daily_maintenance(app.config)
                 logging.error("Expirations checked")
-                FileController.delete_orphaned_files()
-            FileController.process_deletion_queue() #process deletion queue every 12 minutes
+            FileController.process_deletion_queue(app.config) #process deletion queue every 12 minutes
             if hour < 24.0:
                 hour += 0.2
             if hour >= 24.0:
@@ -273,8 +326,8 @@ def start(configfile=None, daemonize=False, pidfile=None):
         for key in cherrypy.file_uploads.keys():
             for progressFile in cherrypy.file_uploads[key]:
                 validTempFiles.append(progressFile.file_object.name.split(os.path.sep)[-1])
-        FileController.clean_temp_files(validTempFiles)
-        time.sleep(720) #12 minutes
+        FileController.clean_temp_files(app.config, validTempFiles)
+#        time.sleep(720) #12 minutes
 #    except KeyboardInterrupt, ki:
 #        logging.error("Keyboard interrupt")
 #        engine.exit()
@@ -312,8 +365,8 @@ def build_database(configfile=None):
     config.read(configfile)
     if config.as_dict()['/'].has_key("tools.SATransaction.dburi"):
         dburi = config.as_dict()['/']["tools.SATransaction.dburi"]
+        lib.Models.drop_database_tables(dburi)
         lib.Models.create_database_tables(dburi)
-    print "Created Database"
     
 if __name__ == '__main__':
     from optparse import OptionParser
@@ -334,7 +387,7 @@ if __name__ == '__main__':
         elif options.action == "restart":
             stop(options.pidfile)
             start(options.configfile, options.daemonize, options.pidfile)
-        elif options.action == "build_db":
+        elif options.action == "init_db":
             build_database(options.configfile)
         elif options.action == "reconfig":
             reconfig(options.configfile)
