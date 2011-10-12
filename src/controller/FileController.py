@@ -2,6 +2,7 @@ import os
 import cherrypy
 import logging
 import datetime
+import subprocess
 from Cheetah.Template import Template
 from lib.SQLAlchemyTool import session
 from sqlalchemy import *
@@ -727,30 +728,35 @@ def clean_temp_files(config, validTempFiles):
 
 def queue_for_deletion(filePath):
     try:
-        session.add(DeletedFile(file_name=filePath))
-        session.commit()
+        if session.query(DeletedFile).filter(DeletedFile.file_name==filePath).scalar() == None:
+            session.add(DeletedFile(file_name=filePath))
+            session.commit()
         logging.info("[system] [queueForDeletion] [File queued for deletion: %s]" % (str(filePath)))
     except Exception, e:
-        raise FLError(False, ["Unable to queue file for deletion: %s" % str(e)])
+        logging.critical("Unable to queue file for deletion: %s" % str(e))
 
 def process_deletion_queue(config):
     vault = config['filelocker']['vault']
-    fileNames = session.query(DeletedFile.file_name).all()
-    for fileName in fileNames:
+    fileRows = session.query(DeletedFile.file_name).all()
+    for fileRow in fileRows:
         try:
-            if os.path.isfile(os.path.join(vault,fileName)):
-                secure_delete(config, fileName)
-                if os.path.isfile(os.path.join(vault,fileName))==False:
-                    logging.debug("Dequeuing %s because secure delete ran and the os.path.isfile came up negative" % os.path.join(self.vault,fileName))
-                    session.delete(DeletedFile(file_name=fileName))
-                    session.commit()
+            if os.path.isfile(os.path.join(vault, fileRow.file_name)):
+                secure_delete(config, fileRow.file_name)
+                if os.path.isfile(os.path.join(vault,fileRow.file_name))==False:
+                    logging.debug("Dequeuing %s because secure delete ran and the os.path.isfile came up negative" % os.path.join(vault, fileRow.file_name))
+                    deletedFile = session.query(DeletedFile).filter(DeletedFile.file_name==fileRow.file_name).scalar()
+                    if deletedFile is not None:
+                        session.delete(deletedFile)
+                        session.commit()
                 else:
                     #This isn't necessarily an error, it just means that the file finally got deleted
                     logging.debug("[system] [processDeletionQueue] [Deletion of file must have failed - still exists after secure delete ran]")
             else:
-                logging.debug("[system] [processDeletionQueue] [File %s not deleted because it doesn't exist - dequeuing]" % os.path.join(self.vault,fileName))
-                session.delete(DeletedFile(file_name=fileName))
-                session.commit()
+                logging.debug("[system] [processDeletionQueue] [File %s not deleted because it doesn't exist - dequeuing]" % os.path.join(vault, fileRow.file_name))
+                deletedFile = session.query(DeletedFile).filter(DeletedFile.file_name==fileRow.file_name).scalar()
+                if deletedFile is not None:
+                    session.delete(deletedFile)
+                    session.commit()
         except Exception, e:
             logging.critical("[system] [processDeletionQueue] [Couldn't delete file in deletion queue: %s]" % str(e))
 
@@ -771,13 +777,17 @@ def secure_delete(config, fileName):
         if(p.returncode != 0):
             logging.error("[%s] [checkDelete] [The command to delete the file returned a failure code of %s: %s]" % ("system", p.returncode, output))
         else:
-            session.delete(DeletedFile(file_name=fileName))
-            session.commit()
+            deletedFile = session.query(DeletedFile).filter(DeletedFile.file_name==fileName).scalar()
+            if deletedFile is not None:
+                session.delete(deletedFile)
+                session.commit()
     except OSError, oe:
         if oe.errno == errno.ENOENT:
             logging.error("[system] [secureDelete] [Couldn't delete because the file was not found (dequeing): %s]" % str(oe))
-            session.delete(DeletedFile(file_name=fileName))
-            session.commit()
+            deletedFile = session.query(DeletedFile).filter(DeletedFile.file_name==fileName).scalar()
+            if deletedFile is not None:
+                session.delete(deletedFile)
+                session.commit()
         else:
             logging.error("[system] [secureDelete] [Generic system error while deleting file: %s" % str(oe))
     except Exception, e:

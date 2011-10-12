@@ -10,6 +10,7 @@ import datetime
 import cherrypy
 from Cheetah.Template import Template
 from lib.SQLAlchemyTool import configure_session_for_app, session
+import sqlalchemy
 from lib.Models import *
 from lib.Formatters import *
 #from dao import dao_creator
@@ -137,7 +138,7 @@ def daily_maintenance(config):
             session.commit()
         except Exception, e:
             session.rollback()
-            logging.error("[system] [checkExpirations] [Error while deleting expired file: %s]" % str(e))
+            logging.error("[system] [daily_maintenance] [Error while deleting expired file: %s]" % str(e))
     expiredMessages = session.query(Message).filter(Message.date_expires < datetime.datetime.now())
     for message in expiredMessages:
         try:
@@ -147,7 +148,7 @@ def daily_maintenance(config):
             session.commit()
         except Exception, e:
             session.rollback()
-            logging.error("[system] [checkExpirations] [Error while deleting expired message: %s]" % str(e))
+            logging.error("[system] [daily_maintenance] [Error while deleting expired message: %s]" % str(e))
     expiredUploadRequests = session.query(UploadRequest).filter(UploadRequest.date_expires < datetime.datetime.now())
     for uploadRequest in expiredUploadRequests:
         try:
@@ -155,7 +156,7 @@ def daily_maintenance(config):
             session.add(AuditLog("system", "Delete Upload Request", "Upload request %s has expired." % uploadRequest.id, uploadRequest.owner_id))
             session.commit()
         except Exception, e:
-            logging.error("[system] [checkExpirations] [Error while deleting expired upload request: %s]" % (str(e)))
+            logging.error("[system] [daily_maintenance] [Error while deleting expired upload request: %s]" % (str(e)))
     maxUserDays = config['filelocker']['user_inactivity_expiration']
     expiredUsers = session.query(User).filter(User.date_last_login < (datetime.date.today() - datetime.timedelta(days=maxUserDays)))
     for user in expiredUsers:
@@ -182,7 +183,8 @@ def daily_maintenance(config):
                     except Exception, e:
                         logging.warning("There was a file that did not match Filelocker's naming convention in the vault: %s. It has not been purged." % fileName)
         except Exception, e:
-            logging.error("[system] [deleteOrphanedFiles] [There was a problem while trying to delete an orphaned file %s: %s]" % (str(fileName), str(e)))
+            logging.error("[system] [daily_maintenance] [There was a problem while trying to delete an orphaned file %s: %s]" % (str(fileName), str(e)))
+            session.rollback()
 
 
 def update_config(config):
