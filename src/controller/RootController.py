@@ -124,7 +124,7 @@ class RootController:
         cherrypy.response.headers['Content-Type'] = 'text/css'
         staticDir = os.path.join(rootURL,"static")
         tplPath = None
-        return str(Template(file=get_template_path(styleFile), searchList=[locals(),globals()]))
+        return str(Template(file=get_template_file(styleFile), searchList=[locals(),globals()]))
     
     @cherrypy.expose
     @cherrypy.tools.requires_login()
