@@ -1,8 +1,10 @@
-import cherrypy
 import re
 import os
+import datetime
 import logging
+import cherrypy
 from Cheetah.Template import Template
+import AccountController
 
 from lib.Formatters import *
 __author__="wbdavis"
@@ -11,7 +13,7 @@ __date__ ="$Sep 25, 2011 9:36:56 PM$"
 class RootController:
 #    share_interface = ShareController
 #    file_interface = FileController
-#    account_interface = AccountController
+    account_interface = AccountController.AccountController()
 #    admin_interface = AdminController
 #    message_interface = MessageController
     #DropPrivileges(cherrypy.engine, umask=077, uid='nobody', gid='nogroup').subscribe()
@@ -19,51 +21,53 @@ class RootController:
     def __init__(self):
         pass
 
-#    @cherrypy.expose
-#    def local(self, **kwargs):
-#        return self.login(authType="local")
-#
-#    @cherrypy.expose
-#    def login(self, **kwargs):
-#        msg, errorMessage, authType, rootURL = ( None, None, None, cherrypy.request.app.config['filelocker']['root_url'])
-#        if kwargs.has_key("msg"):
-#            msg = kwargs['msg']
-#        if kwargs.has_key("authType"):
-#            authType = kwargs['authType']
-#        loginPage = fl.rootURL + "/process_login"
-#        if msg is not None and str(strip_tags(msg))=="1":
-#            errorMessage = "Invalid username or password"
-#        elif msg is not None and str(strip_tags(msg))=="2":
-#            errorMessage = "You have been logged out of the application"
-#        elif msg is not None and str(strip_tags(msg))=="3":
-#            errorMessage = "Password cannot be blank"
-#        if authType is None:
-#            authType = cherrypy.request.app.config['filelocker']['auth_type']
-#        if authType == "cas":
-#            pass
-#        elif authType == "ldap" or authType == "local":
-#            currentYear = datetime.date.today().year
-#            footerText = str(Template(file=get_template_file('footer_text.tmpl'), searchList=[locals(),globals()]))
-#            tpl = Template(file=get_template_file('login.tmpl'), searchList=[locals(),globals()])
-#            return str(tpl)
-#        else:
-#            logging.error("[system] [login] [No authentication variable set in config]")
-#            raise cherrypy.HTTPError(403, "No authentication mechanism")
-#
-#    @cherrypy.expose
-#    @cherrypy.tools.requires_login()
-#    def logout(self):
-#        if cherrypy.request.app.config['filelocker']['auth_type'] == "cas":
-#            casLogoutUrl =  fl.CAS.logout_url()+"?redirectUrl="+fl.rootURL+"/logout_cas"
-#            currentYear = datetime.date.today().year
-#            footerText = str(Template(file=fl.get_template_file('footer_text.tmpl'), searchList=[locals(),globals()]))
-#            tpl = Template(file=fl.get_template_file('cas_logout.tmpl'), searchList=[locals(), globals()])
-#            cherrypy.session['user'], cherrypy.response.cookie['filelocker']['expires'] = None, 0
-#            return str(tpl)
-#        else:
-#            cherrypy.session['user'], cherrypy.response.cookie['filelocker']['expires'] = None, 0
-#            raise cherrypy.HTTPRedirect(fl.rootURL+'/login?msg=2')
-#
+    @cherrypy.expose
+    def local(self, **kwargs):
+        return self.login(authType="local")
+
+    @cherrypy.expose
+    def login(self, **kwargs):
+        msg, errorMessage, authType, rootURL = ( None, None, cherrypy.request.app.config['filelocker']['auth_type'], cherrypy.request.app.config['filelocker']['root_url'])
+        orgURL, orgName = cherrypy.request.app.config['filelocker']['org_url'], cherrypy.request.app.config['filelocker']['org_name']
+        if kwargs.has_key("msg"):
+            msg = kwargs['msg']
+        if kwargs.has_key("authType"):
+            authType = kwargs['authType']
+        print "Auth type %s" % str(cherrypy.request.app.config['filelocker'])
+        loginPage = rootURL + "/process_login"
+        if msg is not None and str(strip_tags(msg))=="1":
+            errorMessage = "Invalid username or password"
+        elif msg is not None and str(strip_tags(msg))=="2":
+            errorMessage = "You have been logged out of the application"
+        elif msg is not None and str(strip_tags(msg))=="3":
+            errorMessage = "Password cannot be blank"
+        if authType is None:
+            authType = cherrypy.request.app.config['filelocker']['auth_type']
+        if authType == "cas":
+            pass
+        elif authType == "ldap" or authType == "local":
+            currentYear = datetime.date.today().year
+            footerText = str(Template(file=get_template_file('footer_text.tmpl'), searchList=[locals(),globals()]))
+            tpl = Template(file=get_template_file('login.tmpl'), searchList=[locals(),globals()])
+            return str(tpl)
+        else:
+            logging.error("[system] [login] [No authentication variable set in config]")
+            raise cherrypy.HTTPError(403, "No authentication mechanism")
+
+    @cherrypy.expose
+    @cherrypy.tools.requires_login()
+    def logout(self):
+        if cherrypy.request.app.config['filelocker']['auth_type'] == "cas":
+            casLogoutUrl =  CAS.logout_url()+"?redirectUrl="+cherrypy.request.app.config['filelocker']['root_url']+"/logout_cas"
+            currentYear = datetime.date.today().year
+            footerText = str(Template(file=get_template_file('footer_text.tmpl'), searchList=[locals(),globals()]))
+            tpl = Template(file=fl.get_template_file('cas_logout.tmpl'), searchList=[locals(), globals()])
+            cherrypy.session['user'], cherrypy.response.cookie['filelocker']['expires'] = None, 0
+            return str(tpl)
+        else:
+            cherrypy.session['user'], cherrypy.response.cookie['filelocker']['expires'] = None, 0
+            raise cherrypy.HTTPRedirect(fl.rootURL+'/login?msg=2')
+
 #    @cherrypy.expose
 #    def logout_cas(self):
 #        from lib.CAS import CAS
@@ -75,53 +79,58 @@ class RootController:
 #        tpl = Template(file=get_template_file('cas_logout_confirmation.tmpl'), searchList=[locals(), globals()])
 #        return str(tpl)
 #
-#    @cherrypy.expose
-#    def process_login(self, username, password, **kwargs):
-#        authType, rootURL = cherrypy.request.app.config['filelocker']['auth_type'], cherrypy.request.app.config['filelocker']['root_url']
-#        if kwargs.has_key("authType"):
-#            authType = kwargs['authType']
-#        username = strip_tags(username)
-#        if authType == "cas":
-#            pass
-#        else:
-#            if password is None or password == "":
-#                raise cherrypy.HTTPRedirect("%s/login?msg=3&authType=%s" % (rootURL, authType))
-#            else:
-#                directory = AccountController.ExternalDirectory(cherrypy.request.app.config['filelocker']['directory_type'])
-#                if directory.authenticate(username, password):
-#                    currentUser = AccountController.get_user(username, True) #if they are authenticated and local, this MUST return a user object
-#                    if currentUser is not None:
-#                        if authType == "local":
-#                            currentUser.isLocal = True #Tags a user if they used a local login, in case we want to use this later
-#                        if currentUser.authorized == False:
-#                            raise cherrypy.HTTPError(403, "You do not have permission to access this system")
-#                        cherrypy.session['user'], cherrypy.session['original_user'], cherrypy.session['sMessages'], cherrypy.session['fMessages'] = currentUser, currentUser, [], []
-#                        session.add(AuditLog(cherrypy.session.get("user").id, "Login", "User %s logged in successfully from IP %s" % (currentUser.id, cherrypy.request.remote.ip)))
-#                        session.commit()
-#                        raise cherrypy.HTTPRedirect(rootURL)
-#                    else: #This should only happen in the case of a user existing in the external directory, but having never logged in before
-#                        try:
-#                            newUser = directory.lookup_user(username)
-#                            AccountController.install_user(newUser)
-#                            currentUser = AccountController.get_user(username, True)
-#                            if currentUser is not None and currentUser.authorized != False:
-#                                cherrypy.session['user'], cherrypy.session['original_user'], cherrypy.session['sMessages'], cherrypy.session['fMessages'] = currentUser, currentUser, [], []
-#                                raise cherrypy.HTTPRedirect(rootURL)
-#                            else:
-#                                raise cherrypy.HTTPError(403, "You do not have permission to access this system")
-#                        except Exception, e:
-#                            return "Unable to install user: %s" % str(e)
-#                else:
-#                    raise cherrypy.HTTPRedirect("%s/login?msg=1&authType=%s" % (rootURL, authType))
-#
-#    @cherrypy.expose
-#    def css(self, style):
-#        rootURL = cherrypy.request.app.config['filelocker']['root_url']
-#        cherrypy.response.headers['Content-Type'] = 'text/css'
-#        staticDir = os.path.join(rootURL,"static")
-#        tplPath = None
-#        return str(Template(file=get_template_path(styleFile), searchList=[locals(),globals()]))
-#
+    @cherrypy.expose
+    def process_login(self, username, password, **kwargs):
+        authType, rootURL = cherrypy.request.app.config['filelocker']['auth_type'], cherrypy.request.app.config['filelocker']['root_url']
+        if kwargs.has_key("authType"):
+            authType = kwargs['authType']
+        username = strip_tags(username)
+        if authType == "cas":
+            pass
+        else:
+            if password is None or password == "":
+                raise cherrypy.HTTPRedirect("%s/login?msg=3&authType=%s" % (rootURL, authType))
+            else:
+                directory = AccountController.ExternalDirectory(cherrypy.request.app.config['filelocker']['directory_type'])
+                if directory.authenticate(username, password):
+                    currentUser = AccountController.get_user(username, True) #if they are authenticated and local, this MUST return a user object
+                    if currentUser is not None:
+                        if authType == "local":
+                            currentUser.isLocal = True #Tags a user if they used a local login, in case we want to use this later
+                        if currentUser.authorized == False:
+                            raise cherrypy.HTTPError(403, "You do not have permission to access this system")
+                        cherrypy.session['user'], cherrypy.session['original_user'], cherrypy.session['sMessages'], cherrypy.session['fMessages'] = currentUser, currentUser, [], []
+                        session.add(AuditLog(cherrypy.session.get("user").id, "Login", "User %s logged in successfully from IP %s" % (currentUser.id, cherrypy.request.remote.ip)))
+                        session.commit()
+                        raise cherrypy.HTTPRedirect(rootURL)
+                    else: #This should only happen in the case of a user existing in the external directory, but having never logged in before
+                        try:
+                            newUser = directory.lookup_user(username)
+                            AccountController.install_user(newUser)
+                            currentUser = AccountController.get_user(username, True)
+                            if currentUser is not None and currentUser.authorized != False:
+                                cherrypy.session['user'], cherrypy.session['original_user'], cherrypy.session['sMessages'], cherrypy.session['fMessages'] = currentUser, currentUser, [], []
+                                raise cherrypy.HTTPRedirect(rootURL)
+                            else:
+                                raise cherrypy.HTTPError(403, "You do not have permission to access this system")
+                        except Exception, e:
+                            return "Unable to install user: %s" % str(e)
+                else:
+                    raise cherrypy.HTTPRedirect("%s/login?msg=1&authType=%s" % (rootURL, authType))
+
+    @cherrypy.expose
+    def css(self, style):
+        rootURL = cherrypy.request.app.config['filelocker']['root_url']
+        cherrypy.response.headers['Content-Type'] = 'text/css'
+        staticDir = os.path.join(rootURL,"static")
+        tplPath = None
+        return str(Template(file=get_template_path(styleFile), searchList=[locals(),globals()]))
+    
+    @cherrypy.expose
+    @cherrypy.tools.requires_login()
+    def index(self, **kwargs):
+        return "Sup homey"
+
 #    @cherrypy.expose
 #    @cherrypy.tools.requires_login()
 #    def index(self, **kwargs):

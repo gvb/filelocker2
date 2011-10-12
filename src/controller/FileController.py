@@ -727,7 +727,8 @@ def clean_temp_files(config, validTempFiles):
 
 def queue_for_deletion(filePath):
     try:
-        self.db.queueForDeletion(filePath)
+        session.add(DeletedFile(file_name=filePath))
+        session.commit()
         logging.info("[system] [queueForDeletion] [File queued for deletion: %s]" % (str(filePath)))
     except Exception, e:
         raise FLError(False, ["Unable to queue file for deletion: %s" % str(e)])

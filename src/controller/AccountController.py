@@ -1,10 +1,10 @@
 import cherrypy
 import logging
-from twisted.plugin import getPlugins, IPlugin
+#from twisted.plugin import getPlugins, IPlugin
 from lib.SQLAlchemyTool import session
 from Cheetah.Template import Template
 from directory import *
-import plugins
+#import plugins
 __author__="wbdavis"
 __date__ ="$Sep 25, 2011 9:37:17 PM$"
 
@@ -217,17 +217,18 @@ class AccountController:
 class ExternalDirectory(object):
     directory = None
     def __init__(self, directoryType):
-        self.directoryType = directoryType
+        directoryType = directoryType
         if directoryType == "ldap":
-            directory = LDAPDirectory.LDAPDirectory()
+            self.directory = LDAPDirectory.LDAPDirectory()
         elif directoryType == "local":
-            directory = LocalDirectory.LocalDirectory()
+            from directory import LocalDirectory
+            self.directory = LocalDirectory.LocalDirectory()
     def lookup_user(self, userId):
-        return directory.lookup_user(userId)
+        return self.directory.lookup_user(userId)
     def authenticate(self, username, password):
-        return directory.authenticate(username, password)
+        return self.directory.authenticate(username, password)
     def get_user_matches(self, firstname, lastname, userId):
-        return directory.get_user_matches(firstname, lastname, userId)
+        return self.directory.get_user_matches(firstname, lastname, userId)
 
 def get_user_roles(user):
     roleUsers = []

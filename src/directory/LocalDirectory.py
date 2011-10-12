@@ -1,5 +1,6 @@
 from lib.SQLAlchemyTool import session
 import lib.Encryption
+from lib.Models import *
 __author__="wbdavis"
 __date__ ="$Oct 5, 2011 2:09:08 AM$"
 

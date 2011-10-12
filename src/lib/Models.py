@@ -1,3 +1,4 @@
+import datetime
 import cherrypy
 try:
     import cPickle as pickle
@@ -12,6 +13,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, backref, sessionmaker
 from sqlalchemy import *
 from lib.SQLAlchemyTool import configure_session_for_app, session, _engines
+from lib.Encryption import hash_password
 __author__="wbdavis"
 __date__ ="$Sep 27, 2011 8:48:55 PM$"
 Base = declarative_base()
@@ -31,7 +33,7 @@ class User(Base):
     first_name = Column(String(100))
     last_name = Column(String(100))
     password = Column(String(72))
-    permissions = relationship("Permission", secondary=user_permissions_table)
+    permissions = relationship("Permission", secondary=lambda: user_permissions_table)
     quota_used = 0
     salt = None
     is_role = False
@@ -71,8 +73,8 @@ class Group(Base):
     name = Column(String(255), nullable=False)
     owner_id = Column(String(30), ForeignKey("users.id"))
     scope = Column(Enum("public", "private", "reserved"), default="private")
-    members = relationship("User", secondary=group_membership_table, backref="groups")
-    permissions = relationship("Permission", secondary=group_permissions_table)
+    members = relationship("User", secondary=lambda: group_membership_table, backref="groups")
+    permissions = relationship("Permission", secondary=lambda: group_permissions_table)
 
 class File(Base):
     __tablename__ = "files"
@@ -211,6 +213,23 @@ class AuditLog(Base):
 
     def get_dict(self):
         return {"initiatorUserId":self.initiator_user_id, "action": self.action, "affectedUserId": self.affected_user_id, "message": self.message, "actionDatetime": self.date.strftime("%m/%d/%Y %H:%M"), "displayClass": self.display_class, "logId": self.id}
+
+def create_admin_user(dburi, password):
+    adminUser = User(id="admin", first_name="Administrator", quota=1024, date_tos_accept=datetime.datetime.now())
+    passHash = hash_password(password)
+    adminUser.password = passHash
+    engine = create_engine(dburi, echo=True)
+    Base.metadata.create_all(engine)
+    Session = sessionmaker(bind=engine)
+    session = Session()
+    adminPermission = session.query(Permission).filter(Permission.id == "admin").one()
+    adminUser.permissions.append(adminPermission)
+    oldAdmin = session.query(User).filter(User.id=="admin").scalar()
+    if oldAdmin is not None:
+        session.delete(oldAdmin)
+    session.add(adminUser)
+    session.commit()
+
 
 def create_database_tables(dburi):
     engine = create_engine(dburi, echo=True)

@@ -1,6 +1,8 @@
 import lib.Models
 import os
 import sys
+import time
+from getpass import getpass
 import signal
 import errno
 import logging
@@ -9,7 +11,7 @@ import cherrypy
 from Cheetah.Template import Template
 from lib.SQLAlchemyTool import configure_session_for_app, session
 from lib.Models import *
-import lib.Formatters as Formatters
+from lib.Formatters import *
 #from dao import dao_creator
 __author__="wbdavis"
 __date__ ="$Sep 25, 2011 9:09:40 PM$"
@@ -50,12 +52,12 @@ def before_upload(**kwargs):
     cherrypy.request.process_request_body = False
     
 def requires_login(permissionId=None, **kwargs):
-    format, rootURL = None, request.app.config['filelocker']['root_url']
+    format, rootURL = None, cherrypy.request.app.config['filelocker']['root_url']
     if cherrypy.request.params.has_key("format"):
         format = cherrypy.request.params['format']
     if cherrypy.session.has_key("user") and cherrypy.session.get('user') is not None:
         if cherrypy.session.get('user').date_tos_accept == None:
-            raise cherrypy.HTTPRedirect(fl.rootURL+"/sign_tos")
+            raise cherrypy.HTTPRedirect(rootURL+"/sign_tos")
         elif permissionId is not None:
             user, hasPermission = cherrypy.session.get('user'), False
             if permissiondId in user.user_permissions:
@@ -70,7 +72,7 @@ def requires_login(permissionId=None, **kwargs):
         else:
             pass
     else:
-        if request.app.config['filelocker']['auth_type'] == "cas":
+        if cherrypy.request.app.config['filelocker']['auth_type'] == "cas":
             if cherrypy.request.params.has_key("ticket"):
                 valid_ticket, userId = lib.CAS.validate_ticket(rootURL, cherrypy.request.params['ticket'])
                 if valid_ticket:
@@ -100,7 +102,7 @@ def requires_login(permissionId=None, **kwargs):
                     raise cherrypy.HTTPError(403, "Invalid CAS Ticket. If you copied and pasted the URL for this server, you might need to remove the 'ticket' parameter from the URL.")
             else:
                 if format == None:
-                    raise cherrypy.HTTPRedirect(fl.CAS.login_url(rootURL))
+                    raise cherrypy.HTTPRedirect(CAS.login_url(rootURL))
                 else:
                     raise cherrypy.HTTPError(401)
         else:
@@ -112,8 +114,8 @@ def requires_login(permissionId=None, **kwargs):
 
 def error(status, message, traceback, version):
     currentYear = datetime.date.today().year
-    footerText = str(Template(file=fl.get_template_file('footer_text.tmpl'), searchList=[locals(),globals()]))
-    tpl = str(Template(file=Formatters.get_template_file('error.tmpl'), searchList=[locals(),globals()]))
+    footerText = str(Template(file=get_template_file('footer_text.tmpl'), searchList=[locals(),globals()]))
+    tpl = str(Template(file=get_template_file('error.tmpl'), searchList=[locals(),globals()]))
     return tpl
 
 def daily_maintenance(config):
@@ -184,6 +186,7 @@ def daily_maintenance(config):
 
 
 def update_config(config):
+    config['filelocker']['version'] = __version__
     parameters = session.query(ConfigParameter).all()
     for parameter in parameters:
         value = None
@@ -191,7 +194,7 @@ def update_config(config):
             value = (parameter.value in ['true','yes','True','Yes'])
         elif parameter.type == "number":
             value = int(parameter.value)
-        elif parameter.type == "test":
+        elif parameter.type == "text":
             value = parameter.value
         elif parameter.type == "datetime":
             value = datetime.datetime.strptime(parameter.value, "%m/%d/%Y %H:%M:%S")
@@ -327,7 +330,7 @@ def start(configfile=None, daemonize=False, pidfile=None):
             for progressFile in cherrypy.file_uploads[key]:
                 validTempFiles.append(progressFile.file_object.name.split(os.path.sep)[-1])
         FileController.clean_temp_files(app.config, validTempFiles)
-#        time.sleep(720) #12 minutes
+        time.sleep(720) #12 minutes
 #    except KeyboardInterrupt, ki:
 #        logging.error("Keyboard interrupt")
 #        engine.exit()
@@ -367,6 +370,25 @@ def build_database(configfile=None):
         dburi = config.as_dict()['/']["tools.SATransaction.dburi"]
         lib.Models.drop_database_tables(dburi)
         lib.Models.create_database_tables(dburi)
+
+def create_admin(configfile=None):
+    config = cherrypy._cpconfig._Parser()
+    cherrypy.config.update({'log.screen': False})
+    if configfile is None:
+        configfile = os.path.join(os.getcwd(),"etc","filelocker.conf")
+    config.read(configfile)
+    if config.as_dict()['/'].has_key("tools.SATransaction.dburi"):
+        dburi = config.as_dict()['/']["tools.SATransaction.dburi"]
+        password = getpass("Enter a password: ")
+        confirmPassword = getpass("Confirm password: ")
+        if password == confirmPassword:
+            lib.Models.create_admin_user(dburi, password)
+            print "New admin user created."
+        else:
+            print "Passwords did not match!"
+    else:
+        print "SATransaction information not specified in config file. Exiting..."
+
     
 if __name__ == '__main__':
     from optparse import OptionParser
@@ -389,6 +411,8 @@ if __name__ == '__main__':
             start(options.configfile, options.daemonize, options.pidfile)
         elif options.action == "init_db":
             build_database(options.configfile)
+        elif options.action == "create_admin":
+            create_admin(options.configfile)
         elif options.action == "reconfig":
             reconfig(options.configfile)
         elif options.action == "start":

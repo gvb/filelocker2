@@ -1,3 +1,5 @@
+import os
+import re
 import json
 import cherrypy
 JSON_WRITE = None
@@ -33,7 +35,7 @@ def fl_response(sMessages, fMessages, format, data=None):
         pass
     elif format=="cli":
         fl = cherrypy.thread_data.flDict['app']
-        tpl = str(Template(file=fl.get_template_file('cli_response.tmpl'), searchList=[locals(),globals()]))
+        tpl = str(Template(file=get_template_file('cli_response.tmpl'), searchList=[locals(),globals()]))
         return str(tpl)
     else:
         return "Successes: %s, Failures: %s" % (str(sMessages), str(fMessages))
