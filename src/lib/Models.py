@@ -39,6 +39,10 @@ class User(Base):
     is_role = False
     attributes = []
     display_name=None
+    
+    def set_password(self, password):
+        self.password = hash_password(password)
+        
     def get_copy(self):
         cUser = User(first_name=self.first_name, last_name=self.last_name, email=self.email, quota=self.quota, last_login_date=self.last_login_date, tos_accept_date=self.tos_accept_date, id=self.id, quota_used=self.quota_used)
         return cUser
@@ -216,8 +220,7 @@ class AuditLog(Base):
 
 def create_admin_user(dburi, password):
     adminUser = User(id="admin", first_name="Administrator", quota=1024, date_tos_accept=datetime.datetime.now())
-    passHash = hash_password(password)
-    adminUser.password = passHash
+    adminUser.set_password(password)
     engine = create_engine(dburi, echo=True)
     Base.metadata.create_all(engine)
     Session = sessionmaker(bind=engine)
@@ -229,6 +232,7 @@ def create_admin_user(dburi, password):
         session.delete(oldAdmin)
     session.add(adminUser)
     session.commit()
+    print "Password after set: %s" % str(adminUser.password)
 
 
 def create_database_tables(dburi):

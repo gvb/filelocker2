@@ -13,6 +13,7 @@ class LocalDirectory(object):
     def authenticate(self, userId, password):
         #We have to support real-time conversion from less-secure MD5 hashed passwords
         passwordHash = session.query(User.password).filter(User.id == userId).scalar()
+        print "Retrieved password: %s" % str(passwordHash)
         isValid = lib.Encryption.compare_password_hash(password, passwordHash)
         if isValid and len(passwordHash) == 32:
             newHash = lib.Encryption.hash_password(password)

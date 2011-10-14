@@ -93,12 +93,11 @@ def hash_password(password, salt=None):
     #TODO: Implement this unicode safely
     sha = SHA256.new()
     if salt is None:
-        saltSha = SHA256.new()
-        saltSha.update(os.urandom(8))
-        salt = saltSha.hexdigest()
+        salt = os.urandom(8).encode('hex')[0:8]
+    print "Generated salt: %s" % str(salt)
     sha.update(salt+password)
     saltedHash = "%s%s" % (salt, sha.hexdigest()) #Yum
-    return saltedHash #8char salt, 64 char hash
+    return saltedHash #8char salt, 64 char hash, 72 chars total
 
 def compare_password_hash(plaintextPassword, saltedHash):
     if len(saltedHash)==32: #Old md5, unsalted
@@ -108,7 +107,9 @@ def compare_password_hash(plaintextPassword, saltedHash):
             return False
     else:
         salt = saltedHash[0:8]
+        print "Salt pulled from hash: %s" % str(salt)
         resultingHash = hash_password(plaintextPassword, salt)
+        print "Resulting hash: %s" % str(resultingHash)
         if resultingHash == saltedHash:
             return True
         else:
