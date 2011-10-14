@@ -1,9 +1,10 @@
+#set $config = $cherrypy.request.app.config['filelocker']
 <!--footer area-->
 
     </div><!--End Wrapper 2 col - Content Area -->
     
 <!-- Begin Lightboxen -->
-#if $fl.check_admin($user)
+#if $AccountController.user_has_permission($user, "admin")
 <div id="updatePasswordBox" class="hidden">
     <div class="popup_wrapper">
         <div class="popup_small">
@@ -32,7 +33,7 @@
             <form action="" name="form" id="uploadForm">
                 <input type="text" style="width: 0; height: 0; top: -100px; position: absolute;"/><!-- jQuery UI dialogs autofocus to the first element. -->
                 <div>
-                    #if $fl.check_permission($user, "expiration_exempt")
+                    #if $AccountController.user_has_permission($user, "expiration_exempt")
                     <label for="expiration">Expiration date (you are expiration exempt):</label>
                     <input type="text" name="expiration" id="uploadExpiration" class="dateFuture" value="$defaultExpiration.strftime('%m/%d/%Y')" />
                     #else
@@ -49,12 +50,12 @@
                     <label for="uploadScanFile">Other options:</label>
                     <input type="checkbox" name="scanFile" id="uploadScanFile" checked="checked" /><span onclick="javascript:check('uploadScanFile');">Scan for viruses?</span>
                 </div>
-                #if $fl.check_admin($user)
+                #if $AccountController.user_has_permission($user, "admin")
                 <div>
                     <input type="checkbox" name="systemUpload" id="systemUpload" /><span onclick="javascript:check('systemUpload');">System upload?</span>
                 </div>
                 #end if
-                #if $fl.geotagging
+                #if $config['geotagging']
                 <div id="uploadGeolocationOption">
                     <input type="checkbox" name="uploadGeolocation" id="uploadGeolocation" onClick="javascript:setGeoData();" /><span onclick="javascript:check('uploadGeolocation');javascript:setGeoData();">Geotag this file upload?</span> <a href="javascript:viewHelp('help_geotag');" class="helpLink">What's this?</a>
                 </div>
@@ -383,7 +384,7 @@
     </div>
 </div>
 
-#if $fl.geotagging
+#if $config['geotagging']
 <div id="fileUploadLocationBox" class="hidden">
     <div class="popup_wrapper">
         <div class="popup_small">
@@ -433,9 +434,9 @@
                     <form action="" name="generalSettingsForm" id="generalSettingsForm">
                         <div>
                             <label for="userEmail">Update Email Address:</label>
-                            <input type="text" name="userEmail" id="userEmail" value="$user.userEmail" />
+                            <input type="text" name="userEmail" id="userEmail" value="$user.email" />
                         </div>
-                        #if $fl.authType == "local"
+                        #if $config['auth_type'] == "local"
                         <div>
                             <label for="userPassword">Update Password:</label>
                             <input type="password" name="userPassword" id="userPassword" value="" />
@@ -446,7 +447,7 @@
                         </div>
                         #end if
                         <div>
-                            <div class="button" id="updateButton"><a href="javascript:updateUser('$user.userId');" title="Save changes to your account settings" class="saveButton"><span>Update Account</span></a></div>
+                            <div class="button" id="updateButton"><a href="javascript:updateUser('$user.id');" title="Save changes to your account settings" class="saveButton"><span>Update Account</span></a></div>
                         </div>
                         <div class="clear"></div>
                     </form>
@@ -487,11 +488,11 @@
                         <div>
                             <label for="clientSelector">Alternative clients:</label>
                             <ul id="clientSelector" class="menu">
-<!--                                 <li><div class="itemTitleMedium"><a href="${fl.rootURL}/download_filelocker_client?platform=windows" title="Download Windows client" class="windows"><span>Download Windows Client</span></a></div></li><br /> -->
-<!--                                 <li><div class="itemTitleMedium"><a href="${fl.rootURL}/download_filelocker_client?platform=macintosh" title="Download Macintosh client" class="macintosh"><span>Download Macintosh Client</span></a></div></li><br /> -->
-                                <li><div class="itemTitleMedium"><a href="${fl.rootURL}/download_filelocker_client?platform=cli" title="Download CLI client" class="script"><span>Download CLI Client</span></a></div></li><br />
-<!--                                 <li><div class="itemTitleMedium"><a href="${fl.rootURL}/download_filelocker_client?platform=ios" title="Download iOS client" class="ios"><span>Download iOS Client</span></a></div></li><br /> -->
-<!--                                 <li><div class="itemTitleMedium"><a href="${fl.rootURL}/download_filelocker_client?platform=android" title="Download Android client" class="android"><span>Download Android Client</span></a></div></li><br /> -->
+<!--                                 <li><div class="itemTitleMedium"><a href="${config['root_url']}/download_filelocker_client?platform=windows" title="Download Windows client" class="windows"><span>Download Windows Client</span></a></div></li><br /> -->
+<!--                                 <li><div class="itemTitleMedium"><a href="${config['root_url']}/download_filelocker_client?platform=macintosh" title="Download Macintosh client" class="macintosh"><span>Download Macintosh Client</span></a></div></li><br /> -->
+                                <li><div class="itemTitleMedium"><a href="${config['root_url']}/download_filelocker_client?platform=cli" title="Download CLI client" class="script"><span>Download CLI Client</span></a></div></li><br />
+<!--                                 <li><div class="itemTitleMedium"><a href="${config['root_url']}/download_filelocker_client?platform=ios" title="Download iOS client" class="ios"><span>Download iOS Client</span></a></div></li><br /> -->
+<!--                                 <li><div class="itemTitleMedium"><a href="${config['root_url']}/download_filelocker_client?platform=android" title="Download Android client" class="android"><span>Download Android Client</span></a></div></li><br /> -->
                                 <li><div class="itemTitleMedium"><a href="javascript:viewHelp('help_cli');" title="View help article for Filelocker CLI" class="help helpLink"><span>How do I use Filelocker CLI?</span></a></div></li>
                             </ul>
                         </div>
@@ -535,11 +536,11 @@
                         </table>
                         <!--<div id="inboxPager" class="pager">
                             <form>
-                                <img src="$fl.rootURL/static/images/icons/first.png" class="first"/>
-                                <img src="$fl.rootURL/static/images/icons/prev.png" class="prev"/>
+                                <img src="$config['root_url']/static/images/icons/first.png" class="first"/>
+                                <img src="$config['root_url']/static/images/icons/prev.png" class="prev"/>
                                 <input type="text" class="pagedisplay" style="width: 60px;"/>
-                                <img src="$fl.rootURL/static/images/icons/next.png" class="next"/>
-                                <img src="$fl.rootURL/static/images/icons/last.png" class="last"/>
+                                <img src="$config['root_url']/static/images/icons/next.png" class="next"/>
+                                <img src="$config['root_url']/static/images/icons/last.png" class="last"/>
                                 <select class="pagesize" style="width: 60px;">
                                     <option selected="selected" value="5">5</option>
                                     <option value="10">10</option>
@@ -588,7 +589,7 @@
             <tr>
             <td>
                 <input type="text" style="width: 0; height: 0; top: -100px; position: absolute;"/><!-- jQuery UI dialogs autofocus to the first element. -->
-                #if $fl.check_permission($user, "expiration_exempt")
+                #if $AccountController.user_has_permission($user, "expiration_exempt")
                 <h4>Expiration date (you are expiration exempt):</h4>
                 <input type="text" name="expiration" id="flMessageExpiration" class="dateFuture" value="$defaultExpiration.strftime('%m/%d/%Y')" />
                 #else
@@ -640,7 +641,7 @@
 <div id="bannerBox" class="hidden">
     <div class="popup_wrapper">
         <div class="popup_small">
-            <div class="notes_box">$strip_tags($fl.banner)</div>
+            <div class="notes_box">$strip_tags($config['banner'])</div>
             <div class="clear"></div>
         </div>
     </div>

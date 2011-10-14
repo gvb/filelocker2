@@ -1,10 +1,12 @@
 import cherrypy
 import logging
-#from twisted.plugin import getPlugins, IPlugin
+from twisted.plugin import getPlugins, IPlugin
 from lib.SQLAlchemyTool import session
 from Cheetah.Template import Template
+from lib.Formatters import *
+from lib.Models import *
 from directory import *
-#import plugins
+import plugins
 __author__="wbdavis"
 __date__ ="$Sep 25, 2011 9:37:17 PM$"
 
@@ -53,10 +55,10 @@ class AccountController:
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def get_search_widget(self, context, **kwargs):
-        user, fl, sMessages, fMessages = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [])
-        groups = fl.get_user_groups(user, user.userId)
-        userShareableAttributes = fl.get_available_attributes_by_user(user)
-        tpl = Template(file=fl.get_template_file('search_widget.tmpl'), searchList=[locals(),globals()])
+        user, sMessages, fMessages = (cherrypy.session.get("user"), [], [])
+        groups = session.query(User).filter(User.id==user.id).one().groups
+        userShareableAttributes = get_available_attributes_by_user(user)
+        tpl = Template(file=get_template_file('search_widget.tmpl'), searchList=[locals(),globals()])
         return str(tpl)
 
     @cherrypy.expose
@@ -233,15 +235,15 @@ class ExternalDirectory(object):
 def get_user_roles(user):
     roleUsers = []
     for permission in user.permissions:
-        if permission.permissionId.startswith("(role)"):
-            roleUserId = permission.permissionId.split("(role)")[1]
-            roleUser = AccountController.get_user(roleUserId)
+        if permission.id.startswith("(role)"):
+            roleUserId = permission.id.split("(role)")[1]
+            roleUser = get_user(roleUserId)
             roleUsers.append(roleUser)
     for group in user.groups:
         for permission in group.permissions:
-            if permission.permissionId.startswith("(role)"):
-                roleUserId = permission.permissionId.split("(role)")[1]
-                roleUser = AccountController.get_user(roleUserId)
+            if permission.id.startswith("(role)"):
+                roleUserId = permission.id.split("(role)")[1]
+                roleUser = get_user(roleUserId)
                 roleUsers.append(roleUser)
     return roleUsers
 
@@ -267,7 +269,7 @@ def install_user(self, user):
 def get_user(userId, login=False):
     import warnings
     warnings.simplefilter("ignore")
-    user = session.query(User).filter(User.id==userId).one()
+    user = session.query(User).filter(User.id==userId).scalar()
     if user is not None:
         attributeList = []
         for permission in user.permissions:
@@ -290,6 +292,23 @@ def get_user(userId, login=False):
                         user.userAttributes.append(attr)
                     uniqueAttributeList.append(attributeId)
     return user
+
+def get_available_attributes_by_user(user):
+    """
+    This function gets the attributes that a user has permission to share with.
+
+    Examples of this would be a teacher for a class being able to share with all users
+    who have the class as an attribute"""
+    attributeList = []
+    allAttributes = session.query(Attribute).all()
+    if user_has_permission(user, "admin"):
+        attributeList = allAttributes
+    else:
+        for attribute in allAttributes:
+            if user_has_permission(user, "(attr)%s" % attribute.id):
+                attributeList.append(attribute)
+    return attributeList
+
 
 
 if __name__ == "__main__":

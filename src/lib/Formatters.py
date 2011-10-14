@@ -19,6 +19,8 @@ def get_template_file(fileName):
         if fileName.endswith(".css"):
             if os.path.exists(os.path.join(vault,"custom", "css",fileName)):
                 filePath = os.path.join(vault,"custom", "css",fileName)
+            else:
+                filePath = os.path.join(templatePath, "css", fileName)
         elif os.path.exists(os.path.join(vault,"custom",fileName)):
             filePath = os.path.join(vault,"custom",fileName)
         else:

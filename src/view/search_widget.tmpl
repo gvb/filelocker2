@@ -28,8 +28,8 @@
             <input type="radio" id="${context}_searchName" name="searchType" onClick="toggleSearchType('${context}','name')" /><label for="${context}_searchName" style="width: 91px;">Name</label>
         </div>
         <div id="${context}_externalSearchSelector" class="hidden">
-        #if $fl.authType != "local"
-            <br /><h4>Can't find who you're looking for?</h4><input type="checkbox" name="${context}_externalSearch" id="${context}_externalSearch" onclick="javascript:updateSearch('${context}');" /><span onclick="javascript:check('${context}_externalSearch');javascript:updateSearch('${context}');">Search the entire ${fl.orgName} directory.</span>
+        #if $cherrypy.request.app.config['filelocker']['auth_type'] != "local"
+            <br /><h4>Can't find who you're looking for?</h4><input type="checkbox" name="${context}_externalSearch" id="${context}_externalSearch" onclick="javascript:updateSearch('${context}');" /><span onclick="javascript:check('${context}_externalSearch');javascript:updateSearch('${context}');">Search the entire ${cherrypy.request.app.config['filelocker']['org_name']} directory.</span>
         #end if
         </div>
         <div>
@@ -46,14 +46,14 @@
         <ul class="menu">
         #if len($groups) > 0
         #for $group in $groups
-            #set $shortenedName = $group.groupName
-            #if $len($group.groupName) > 25
-                #set $shortenedName = $group.groupName[0:17] + "..." + $group.groupName[-5:]
+            #set $shortenedName = $group.name
+            #if $len($group.name) > 25
+                #set $shortenedName = $group.name[0:17] + "..." + $group.name[-5:]
             #end if
             <li>
-                <span class="itemTitleWide"><span class="groupItem memberTitle groupName" title="$group.groupName">$shortenedName</span></span>
+                <span class="itemTitleWide"><span class="groupItem memberTitle groupName" title="$group.name">$shortenedName</span></span>
                 #if $context == "private_sharing"
-                <a href="javascript:privateShareFiles('group', $group.groupId)" title="Share file with '$group.groupName'" class="shareGroup">Share</a>
+                <a href="javascript:privateShareFiles('group', $group.id)" title="Share file with '$group.name'" class="shareGroup">Share</a>
                 #end if
             </li>
         #end for
@@ -72,14 +72,14 @@
         <h3>Your Attributes</h3><br/>
         <ul class="menu">
         #for $attribute in $userShareableAttributes
-            #set $shortenedName = $attribute.attributeName
-            #if $len($attribute.attributeName) > 25
-                #set $shortenedName = $attribute.attributeName[0:17] + "..." + $attribute.attributeName[-5:]
+            #set $shortenedName = $attribute.name
+            #if $len($attribute.name) > 25
+                #set $shortenedName = $attribute.name[0:17] + "..." + $attribute.name[-5:]
             #end if
             <li>
-                <span class="itemTitleWide"><span class="attributeItem memberTitle attributeName" title="$attribute.attributeName">$shortenedName</span></span>
+                <span class="itemTitleWide"><span class="attributeItem memberTitle attributeName" title="$attribute.name">$shortenedName</span></span>
                 #if $context == "private_sharing"
-                <a href="javascript:privateAttributeShareFiles('$attribute.attributeId')" title="Share file with users having the '$attribute.attributeName' attribute" class="shareAttribute">Share</a>
+                <a href="javascript:privateAttributeShareFiles('$attribute.id')" title="Share file with users having the '$attribute.name' attribute" class="shareAttribute">Share</a>
                 #end if
             </li>
         #end for

@@ -1,4 +1,5 @@
 import datetime
+import StringIO
 import cherrypy
 try:
     import cPickle as pickle
@@ -10,7 +11,7 @@ try:
 except ImportError, ie:
     from md5 import md5
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import relationship, backref, sessionmaker
+from sqlalchemy.orm import relationship, backref, sessionmaker, mapper
 from sqlalchemy import *
 from lib.SQLAlchemyTool import configure_session_for_app, session, _engines
 from lib.Encryption import hash_password
@@ -32,11 +33,12 @@ class User(Base):
     email = Column(String(320), default="directory")
     first_name = Column(String(100))
     last_name = Column(String(100))
-    password = Column(String(72))
+    password = Column(String(80))
     permissions = relationship("Permission", secondary=lambda: user_permissions_table)
     quota_used = 0
     salt = None
     is_role = False
+    authorized = True
     attributes = []
     display_name=None
     
@@ -44,12 +46,15 @@ class User(Base):
         self.password = hash_password(password)
         
     def get_copy(self):
-        cUser = User(first_name=self.first_name, last_name=self.last_name, email=self.email, quota=self.quota, last_login_date=self.last_login_date, tos_accept_date=self.tos_accept_date, id=self.id, quota_used=self.quota_used)
+        loadedPermissions = []
+        for permission in self.permissions:
+            loadedPermissions.append(permission.get_copy())
+        cUser = User(first_name=self.first_name, last_name=self.last_name, email=self.email, quota=self.quota, date_last_login=self.date_last_login, date_tos_accept=self.date_tos_accept, id=self.id, quota_used=self.quota_used, permissions=loadedPermissions)
         return cUser
 
     def get_dict(self):
         return {'userFirstName':self.first_name, 'userLastName':self.last_name, 'userDisplayName': self.display_name, 'userEmail': self.email, 'isRole': self.is_role, 'userId': self.id, 'userQuotaUsed': self.quota_used, 'userQuota': self.quota}
-
+#mapper(User, "users", properties={'permissions': relationship("Permission", lazy='joined')})
 class Permission(Base):
     __tablename__ = "permissions"
     id = Column(String(50), primary_key=True)
@@ -58,6 +63,9 @@ class Permission(Base):
 
     def __str__(self):
         return str(self.get_dict())
+
+    def get_copy(self):
+        return Permission(id=self.id, name=self.name, inherited_from=self.inherited_from)
 
     def get_dict(self):
         return {'permissionId': self.id, 'permissionName': self.name, 'inheritedFrom':self.inherited_from}
@@ -87,7 +95,7 @@ class File(Base):
     type = Column(Text)
     size = Column(BigInteger)
     notes = Column(Text)
-    uploaded_date = Column(DateTime)
+    date_uploaded = Column(DateTime)
     owner_id = Column(String(30), ForeignKey('users.id'))
     date_expires = Column(DateTime)
     passed_avscan = Column(Boolean)
@@ -152,7 +160,7 @@ class PublicShare(Base):
     id = Column(String(64), primary_key=True)
     file_id = Column(Integer, ForeignKey("files.id"), nullable=False)
     expiration_date = Column(DateTime)
-    password = Column(String(64))
+    password = Column(String(80))
     reuse = Column(Enum("single", "multi"), default="single")
     flFile = relationship("File")
 
@@ -171,8 +179,9 @@ class UploadRequest(Base):
     id = Column(String(32), primary_key=True)
     owner_id = Column(String(30), ForeignKey("users.id"))
     max_file_size = Column(Float)
+    scan_file = Column(Boolean)
     date_expires = Column(DateTime)
-    password = Column(String(72))
+    password = Column(String(80))
     type = Column(Enum("single", "multi"))
     expired = False
 
@@ -346,12 +355,12 @@ class FilelockerPlugin(Interface):
     Helper functions used by the extensible parts of Filelocker
     """
 
-    def get_user_attributes(userId, fl):
+    def get_user_attributes(userId):
         """
         This function should return a list of attribute IDs that a user possesses.
         """
 
-    def is_authorized(userId, fl):
+    def is_authorized(userId):
         """
         This function should return True unless you want to explicitly deny a user access to Filelocker. You can check a file or a database of unauthorized users
         or maybe check a directory for certain attributes (staff, currentStudent, etc) before granting permission. If any plugins return False, the user will not

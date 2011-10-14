@@ -1,3 +1,4 @@
+#set $config = $cherrypy.request.app.config['filelocker']
 #set $rowId = 0
 <div id="wrapper_col1">
     <div class="section_title">
@@ -32,7 +33,7 @@
             #for $f in $userFiles
                 #set $rowId = $rowId + 1
                 #set $fsSuffix = "B"
-                #set $fileSize = $f.fileSizeBytes
+                #set $fileSize = $f.file_size
                 #if $fileSize > 1024
                     #set $fileSize = $fileSize / 1024
                     #set $fsSuffix = "kB"
@@ -46,9 +47,9 @@
                     #end if
                 #end if
                 <tr id="row_$rowId" class="fileRow">
-                    <td id="fileName_row_$rowId" class="fileNameElement">
-                    #if $f.fileOwnerId == $user.userId
-                        <input type="checkbox" value="$f.fileId" id="checkbox_row_$rowId" name="select_file" class="fileSelectBox" onClick="fileChecked()"/>
+                    <td id="name_row_$rowId" class="nameElement">
+                    #if $f.owner_id == $user.userId
+                        <input type="checkbox" value="$f.id" id="checkbox_row_$rowId" name="select_file" class="fileSelectBox" onClick="fileChecked()"/>
                     #end if
                         <div class="posrel">
                             <div id="menu_row_$rowId" class="menuFiles hidden"><!--add class of hidden to hide this info box-->
@@ -56,23 +57,23 @@
                                 <li>
                                     #if $f.publicShare is not None
                                     <div class="itemTitleMedium"><span class="globe">Public Share:</span>&nbsp;&nbsp;&nbsp;&nbsp;<a href="javascript:viewPublicShareURL('$f.publicShare.shareId')">(view link)</a></div> 
-                                    <input type="checkbox" name="publicShareCheckbox_row_$rowId" value="yes" class="publicShareCheckbox" title="Unshare this file with users outside of $fl.orgName" onClick="javascript:unPublicShareFile('$f.fileId', 'files')" checked="checked" />
+                                    <input type="checkbox" name="publicShareCheckbox_row_$rowId" value="yes" class="publicShareCheckbox" title="Unshare this file with users outside of $config['org_name']" onClick="javascript:unPublicShareFile('$f.id', 'files')" checked="checked" />
                                     #else
                                     #set $fileExpiration = "Never"
-                                    #if $f.fileExpirationDatetime is not None
-                                    #set $fileExpiration = $f.fileExpirationDatetime.strftime("%m/%d/%Y")
+                                    #if $f.date_expires is not None
+                                    #set $fileExpiration = $f.date_expires.strftime("%m/%d/%Y")
                                     #end if
                                     <div class="itemTitleMedium"><span class="globe">Public Share:</span></div>
-                                    <input type="checkbox" name="publicShareCheckbox_$f.fileId" value="no" class="publicShareCheckbox" title="Share this file with users outside of $fl.orgName" onClick="javascript:promptPublicShareFile('$f.fileId', '$f.fileName', '$fileExpiration', 'files')"/>
+                                    <input type="checkbox" name="publicShareCheckbox_$f.id" value="no" class="publicShareCheckbox" title="Share this file with users outside of $config['org_name']" onClick="javascript:promptPublicShareFile('$f.id', '$f.name', '$fileExpiration', 'files')"/>
                                     #end if
                                 </li>
-                                #if $f.fileOwnerId == $user.userId
+                                #if $f.owner_id == $user.userId
                                 <li>
                                     <div class="itemTitleMedium"><span class="notifyOnDownload">Notify Me on Download:</span></div>
                                     #if $f.fileNotifyOnDownload
-                                        <input type="checkbox" name="notifyOnDownload_$f.fileId" id="notifyOnDownloadYes_$f.fileId" class="notifyCheckbox" title="Email me when someone downloads this file" onClick="toggleNotifyOnDownload('$f.fileId', 'no')" checked="checked"/> 
+                                        <input type="checkbox" name="notifyOnDownload_$f.id" id="notifyOnDownloadYes_$f.id" class="notifyCheckbox" title="Email me when someone downloads this file" onClick="toggleNotifyOnDownload('$f.id', 'no')" checked="checked"/>
                                     #else
-                                        <input type="checkbox" name="notifyOnDownload_$f.fileId" id="notifyOnDownloadYes_$f.fileId" class="notifyCheckbox" title="Email me when someone downloads this file" onClick="toggleNotifyOnDownload('$f.fileId', 'yes')"/>
+                                        <input type="checkbox" name="notifyOnDownload_$f.id" id="notifyOnDownloadYes_$f.id" class="notifyCheckbox" title="Email me when someone downloads this file" onClick="toggleNotifyOnDownload('$f.id', 'yes')"/>
                                     #end if
                                 </li>
                                 #end if
@@ -88,14 +89,14 @@
                                     #if $groupCount == 1
                                         #set $groupPlural = ""
                                     #end if
-                                    <div class="itemTitle"><span class="privatelyShared">Shares: </span></div><a href="javascript:promptShareFiles('$f.fileId');">$userCount user$userPlural, $groupCount group$groupPlural</a>
+                                    <div class="itemTitle"><span class="privatelyShared">Shares: </span></div><a href="javascript:promptShareFiles('$f.id');">$userCount user$userPlural, $groupCount group$groupPlural</a>
                                 </li>
                                 #end if
                                 <hr />
-                                <li><div class="itemTitle"><span class="fileID">ID:</span></div>$f.fileId</li>
-                                <li><div class="itemTitle"><span class="ownerItem">Owner:</span></div>$f.fileOwnerId</li>
+                                <li><div class="itemTitle"><span class="id">ID:</span></div>$f.id</li>
+                                <li><div class="itemTitle"><span class="ownerItem">Owner:</span></div>$f.owner_id</li>
                                 <li><div class="itemTitle">
-                                #if $f.filePassedAvScan
+                                #if $f.passed_avscan
                                     <span class="virusPassed">Virus Scan:</span></div>Passed
                                 #else
                                     <span class="virusUnknown">Virus Scan:</span></div>Not scanned!
@@ -103,38 +104,38 @@
                                 </li>
                                 <li>
                                 <div class="itemTitle"><span class="clock">Uploaded:</span></div>
-                                $f.fileUploadedDatetime</li>
-                                #if $f.fileOwnerId == $user.userId
-                                    <li><div class="itemTitleMedium"><span class="cross"><a href="javascript:promptConfirmation('deleteFile', ['$f.fileId']);" title="Permanently delete this file from Filelocker" class="redText">Delete This File</a></span></div></li>
-                                    <li><div class="itemTitleMedium"><span class="save"><a href="$fl.rootURL/file_interface/download?fileId=$f.fileId" title="Download this file from Filelocker">Download This File</a></span></div></li>
-                                    <li><div class="itemTitleMedium"><span class="statistics"><a href="javascript:viewDownloadStatistics('$f.fileId');" title="View a chart of this file's downloads over time">View Download Statistics</a></span></div></li>
-                                    #set $fileNotesStripped = $re.sub(r'\[geo\]-?\d+\.\d+,-?\d+\.\d+\[/geo\]', '', $f.fileNotes)
-                                    #if $fileNotesStripped != ""
-                                        <li><div class="itemTitleMedium"><span class="view"><a href="javascript:viewFileNotes('$fileNotesStripped');" title="View the user-entered notes for this file">View File Notes</a></span></div></li>
+                                $f.date_uploaded</li>
+                                #if $f.owner_id == $user.userId
+                                    <li><div class="itemTitleMedium"><span class="cross"><a href="javascript:promptConfirmation('deleteFile', ['$f.id']);" title="Permanently delete this file from Filelocker" class="redText">Delete This File</a></span></div></li>
+                                    <li><div class="itemTitleMedium"><span class="save"><a href="$config['root_url']/file_interface/download?id=$f.id" title="Download this file from Filelocker">Download This File</a></span></div></li>
+                                    <li><div class="itemTitleMedium"><span class="statistics"><a href="javascript:viewDownloadStatistics('$f.id');" title="View a chart of this file's downloads over time">View Download Statistics</a></span></div></li>
+                                    #set $notesStripped = $re.sub(r'\[geo\]-?\d+\.\d+,-?\d+\.\d+\[/geo\]', '', $f.notes)
+                                    #if $notesStripped != ""
+                                        <li><div class="itemTitleMedium"><span class="view"><a href="javascript:viewnotes('$notesStripped');" title="View the user-entered notes for this file">View File Notes</a></span></div></li>
                                     #end if
-                                    #set $fileGeoData = $re.search(r'.*\[geo\](-?\d+\.\d+),(-?\d+\.\d+)\[/geo\].*', $f.fileNotes)
-                                    #if $fileGeoData and $fl.geotagging
+                                    #set $fileGeoData = $re.search(r'.*\[geo\](-?\d+\.\d+),(-?\d+\.\d+)\[/geo\].*', $f.notes)
+                                    #if $fileGeoData and $config['geotagging']
                                         <li><div class="itemTitleMedium"><span class="map"><a href="http://maps.google.com/maps?q=${fileGeoData.group(1)},${fileGeoData.group(2)}" title="View this file's upload location on Google Maps" target="_blank">View Upload Location</a></span></div></li>
                                     #end if
-                                    <li><div class="button" style="width: 185px;"><a href="javascript:promptShareFiles('$f.fileId');" title="Share this file with Filelocker users and groups" class="shareButton"><span><center>Share This File</center></span></a></div></li>
+                                    <li><div class="button" style="width: 185px;"><a href="javascript:promptShareFiles('$f.id');" title="Share this file with Filelocker users and groups" class="shareButton"><span><center>Share This File</center></span></a></div></li>
                                 #end if
                             </ul>
                             </div>
                         </div>
                     </td>
                     <td onClick="fileRowClick($rowId)">
-                        <a class="$f.documentType" title="$f.fileName">
-                            #if len($f.fileName) > 60
-                                $f.fileName[0:45]...$f.fileName[-10:]
+                        <a class="$f.documentType" title="$f.name">
+                            #if len($f.name) > 60
+                                $f.name[0:45]...$f.name[-10:]
                             #else
-                                $f.fileName
+                                $f.name
                             #end if
                         </a>
                     </td>
                     <td onClick="fileRowClick($rowId)">$fileSize $fsSuffix</td>
                     #set $fileExpiration = "Never"
-                    #if $f.fileExpirationDatetime is not None
-                    #set $fileExpiration = $f.fileExpirationDatetime.strftime("%m/%d/%Y")
+                    #if $f.date_expires is not None
+                    #set $fileExpiration = $f.date_expires.strftime("%m/%d/%Y")
                     #end if
                     <td onClick="fileRowClick($rowId)">$fileExpiration</td>
                     <td onClick="fileRowClick($rowId)" class="dropdownArrow rightborder"></td>
@@ -166,7 +167,7 @@
             #for $f in $systemFiles
                 #set $rowId = $rowId + 1
                 #set $fsSuffix = "B"
-                #set $fileSize = $f.fileSizeBytes
+                #set $fileSize = $f.file_size
                 #if $fileSize > 1024
                     #set $fileSize = $fileSize / 1024
                     #set $fsSuffix = "kB"
@@ -180,26 +181,26 @@
                     #end if
                 #end if
                 <tr id="row_$rowId" class="fileRow">
-                    <td id="fileName_row_$rowId" class="fileNameElement">
-                        <input type="checkbox" value="$f.fileId" id="checkbox_row_$rowId" class="systemFileSelectBox" onClick="fileChecked()"/>
+                    <td id="name_row_$rowId" class="nameElement">
+                        <input type="checkbox" value="$f.id" id="checkbox_row_$rowId" class="systemFileSelectBox" onClick="fileChecked()"/>
                         <div class="posrel">
                             <div id="menu_row_$rowId" class="menuFiles hidden"><!--add class of hidden to hide this info box-->
                             <ul class="menu">
                                 <li>
-                                    #if $f.publicShare is not None
+                                    #if $f.public_shares is not None
                                     <div class="itemTitleMedium"><span class="globe">Public Share:</span>&nbsp;&nbsp;&nbsp;&nbsp;<a href="javascript:viewPublicShareURL('$f.publicShare.shareId')">(view link)</a></div> 
-                                    <input type="checkbox" name="publicShareCheckbox_row_$rowId" value="yes" class="publicShareCheckbox" title="Unshare this file with users outside of $fl.orgName" onClick="javascript:unPublicShareFile('$f.fileId', 'files')" checked="checked" />
+                                    <input type="checkbox" name="publicShareCheckbox_row_$rowId" value="yes" class="publicShareCheckbox" title="Unshare this file with users outside of $config['org_name']" onClick="javascript:unPublicShareFile('$f.id', 'files')" checked="checked" />
                                     #else
                                     #set $fileExpiration = "Never"
-                                    #if $f.fileExpirationDatetime is not None
-                                    #set $fileExpiration = $f.fileExpirationDatetime.strftime("%m/%d/%Y")
+                                    #if $f.date_expires is not None
+                                    #set $fileExpiration = $f.date_expires.strftime("%m/%d/%Y")
                                     #end if
                                     <div class="itemTitleMedium"><span class="globe">Public Share:</span></div>
-                                    <input type="checkbox" name="publicShareCheckbox_$f.fileId" value="no" class="publicShareCheckbox" title="Share this file with users outside of $fl.orgName" onClick="javascript:promptPublicShareFile('$f.fileId', '$f.fileName', '$fileExpiration', 'files')"/>
+                                    <input type="checkbox" name="publicShareCheckbox_$f.id" value="no" class="publicShareCheckbox" title="Share this file with users outside of $config['org_name']" onClick="javascript:promptPublicShareFile('$f.id', '$f.name', '$fileExpiration', 'files')"/>
                                     #end if
                                 </li>
-                                #set $userCount = len($f.shares)
-                                #set $groupCount = len($f.groupShares)
+                                #set $userCount = len($f.private_shares)
+                                #set $groupCount = len($f.private_group_shares)
                                 #if $userCount > 0 or $groupCount > 0
                                 <li>
                                     #set $userPlural = "s"
@@ -214,43 +215,43 @@
                                 </li>
                                 #end if
                                 <hr />
-                                <li><div class="itemTitle"><span class="ownerItem">Owner:</span></div>$f.fileOwnerId</li>
+                                <li><div class="itemTitle"><span class="ownerItem">Owner:</span></div>$f.owner_id</li>
                                 <li><div class="itemTitle">
-                                #if $f.filePassedAvScan
+                                #if $f.passed_avscan
                                     <span class="virusPassed">Virus Scan:</span></div>Passed
                                 #else
                                     <span class="virusUnknown">Virus Scan:</span></div>Not scanned!
                                 #end if
                                 </li>
-                                <li><div class="itemTitle"><span class="clock">Uploaded:</span></div>$f.fileUploadedDatetime</li>
-                                <li><div class="itemTitleMedium"><span class="cross"><a href="javascript:promptConfirmation('deleteFile', ['$f.fileId']);" title="Permanently delete this file from Filelocker" class="redText">Delete This File</a></span></div></li>
-                                <li><div class="itemTitleMedium"><span class="save"><a href="$fl.rootURL/file_interface/download?fileId=$f.fileId" title="Download this file from Filelocker">Download This File</a></span></div></li>
-                                #set $fileNotesStripped = $re.sub(r'\[geo\]-?\d+\.\d+,-?\d+\.\d+\[/geo\]', '', $f.fileNotes)
-                                #if $fileNotesStripped != ""
-                                    <li><div class="itemTitleMedium"><span class="view"><a href="javascript:viewFileNotes('$fileNotesStripped');" title="View the user-entered notes for this file">View File Notes</a></span></div></li>
+                                <li><div class="itemTitle"><span class="clock">Uploaded:</span></div>$f.date_uploaded</li>
+                                <li><div class="itemTitleMedium"><span class="cross"><a href="javascript:promptConfirmation('deleteFile', ['$f.id']);" title="Permanently delete this file from Filelocker" class="redText">Delete This File</a></span></div></li>
+                                <li><div class="itemTitleMedium"><span class="save"><a href="$config['root_url']/file_interface/download?id=$f.id" title="Download this file from Filelocker">Download This File</a></span></div></li>
+                                #set $notesStripped = $re.sub(r'\[geo\]-?\d+\.\d+,-?\d+\.\d+\[/geo\]', '', $f.notes)
+                                #if $notesStripped != ""
+                                    <li><div class="itemTitleMedium"><span class="view"><a href="javascript:viewnotes('$notesStripped');" title="View the user-entered notes for this file">View File Notes</a></span></div></li>
                                 #end if
-                                #set $fileGeoData = $re.search(r'.*\[geo\](-?\d+\.\d+),(-?\d+\.\d+)\[/geo\].*', $f.fileNotes)
-                                #if $fileGeoData and $fl.geotagging
+                                #set $fileGeoData = $re.search(r'.*\[geo\](-?\d+\.\d+),(-?\d+\.\d+)\[/geo\].*', $f.notes)
+                                #if $fileGeoData and $config['geotagging']
                                     <li><div class="itemTitleMedium"><span class="map"><a href="http://maps.google.com/maps?q=${fileGeoData.group(1)},${fileGeoData.group(2)}" title="View this file's upload location on Google Maps" target="_blank">View Upload Location</a></span></div></li>
                                 #end if
-                                <li><div class="button" style="width: 185px;"><a href="javascript:promptShareFiles('$f.fileId');" title="Share this file with Filelocker users and groups" class="shareButton"><span><center>Share This File</center></span></a></div></li>
+                                <li><div class="button" style="width: 185px;"><a href="javascript:promptShareFiles('$f.id');" title="Share this file with Filelocker users and groups" class="shareButton"><span><center>Share This File</center></span></a></div></li>
                             </ul>
                             </div>
                         </div>
                     </td>
                     <td onClick="fileRowClick($rowId)">
-                        <a class="$f.documentType" title="$f.fileName">
-                            #if len($f.fileName) > 60
-                                $f.fileName[0:45]...$f.fileName[-10:]
+                        <a class="$f.documentType" title="$f.name">
+                            #if len($f.name) > 60
+                                $f.name[0:45]...$f.name[-10:]
                             #else
-                                $f.fileName
+                                $f.name
                             #end if
                         </a>
                     </td>
                     <td onClick="fileRowClick($rowId)">$fileSize $fsSuffix</td>
                     #set $fileExpiration = "Never"
-                    #if $f.fileExpirationDatetime is not None
-                    #set $fileExpiration = $f.fileExpirationDatetime.strftime("%m/%d/%Y")
+                    #if $f.date_expires is not None
+                    #set $fileExpiration = $f.date_expires.strftime("%m/%d/%Y")
                     #end if
                     <td onClick="fileRowClick($rowId)">$fileExpiration</td>
                     <td onClick="fileRowClick($rowId)" class="dropdownArrow rightborder"></td>
@@ -282,7 +283,7 @@
                     #for $f in $sharedFiles
                         #set $rowId = $rowId + 1
                         #set $fsSuffix = "B"
-                        #set $fileSize = $f.fileSizeBytes
+                        #set $fileSize = $f.file_size
                         #if $fileSize > 1024
                             #set $fileSize = $fileSize / 1024
                             #set $fsSuffix = "kB"
@@ -296,50 +297,50 @@
                             #end if
                         #end if
                         <tr id="row_$rowId" class="fileRow">
-                        <td onClick="fileRowClick($rowId)" id="fileName_row_$f.fileId" class="fileNameElement spacer">
+                        <td onClick="fileRowClick($rowId)" id="name_row_$f.id" class="nameElement spacer">
                             <div class="posrel">
                                 <div id="menu_row_$rowId" class="menuFiles hidden"><!--add class of hidden to hide this info box-->
                                     <ul class="menu">
                                     <li>
                                         <div class="itemTitle"><span class="ownerItem">Owner:</span></div>
-                                        $f.fileOwnerId</li>
+                                        $f.owner_id</li>
                                     <li>
                                         <div class="itemTitle">
-                                        #if $f.filePassedAvScan
+                                        #if $f.passed_avscan
                                         <span class="virusPassed">Virus Scan:</span></div>Passed
                                         #else
                                         <span class="virusUnknown">Virus Scan:</span></div>Not scanned!
                                         #end if
                                     </li>
-                                    <li><div class="itemTitle"><span class="clock">Uploaded:</span></div>$f.fileUploadedDatetime</li>
-                                    #set $fileNotesStripped = $re.sub(r'\[geo\]-?\d+\.\d+,-?\d+\.\d+\[/geo\]', '', $f.fileNotes)
-                                    #if $fileNotesStripped != ""
-                                        <li><div class="itemTitleMedium"><span class="view"><a href="javascript:viewFileNotes('$fileNotesStripped');" title="View the user-entered notes for this file">View File Notes</a></span></div></li>
+                                    <li><div class="itemTitle"><span class="clock">Uploaded:</span></div>$f.date_uploaded</li>
+                                    #set $notesStripped = $re.sub(r'\[geo\]-?\d+\.\d+,-?\d+\.\d+\[/geo\]', '', $f.notes)
+                                    #if $notesStripped != ""
+                                        <li><div class="itemTitleMedium"><span class="view"><a href="javascript:viewnotes('$notesStripped');" title="View the user-entered notes for this file">View File Notes</a></span></div></li>
                                     #end if
-                                    #set $fileGeoData = $re.search(r'.*\[geo\](-?\d+\.\d+),(-?\d+\.\d+)\[/geo\].*', $f.fileNotes)
-                                    #if $fileGeoData and $fl.geotagging
+                                    #set $fileGeoData = $re.search(r'.*\[geo\](-?\d+\.\d+),(-?\d+\.\d+)\[/geo\].*', $f.notes)
+                                    #if $fileGeoData and $config['geotagging']
                                         <li><div class="itemTitleMedium"><span class="map"><a href="http://maps.google.com/maps?q=${fileGeoData.group(1)},${fileGeoData.group(2)}" title="View this file's upload location on Google Maps" target="_blank">View Upload Location</a></span></div></li>
                                     #end if
-                                    <li><div class="itemTitleMedium"><span class="hide"><a href="javascript:hidePrivateShare('$f.fileId');" title="Hide this share from Filelocker. Unhide shares in Account Settings" class="redText">Hide This Share</a></span></div></li>
-                                    <li><div class="itemTitleWide"><span id="takeOwnership_$f.fileId" class="take_ownership"><a href="javascript:takeFile('$f.fileId');" title="Move this file to 'My Files' for resharing">Take Ownership (to Reshare)</a></span></div></li>
-                                    <li><div class="button" style="width: 185px"><a href="$fl.rootURL/file_interface/download?fileId=$f.fileId" title="Download this file from Filelocker" class="saveButton"><span><center>Download This File</center></span></a></div></li>
+                                    <li><div class="itemTitleMedium"><span class="hide"><a href="javascript:hidePrivateShare('$f.id');" title="Hide this share from Filelocker. Unhide shares in Account Settings" class="redText">Hide This Share</a></span></div></li>
+                                    <li><div class="itemTitleWide"><span id="takeOwnership_$f.id" class="take_ownership"><a href="javascript:takeFile('$f.id');" title="Move this file to 'My Files' for resharing">Take Ownership (to Reshare)</a></span></div></li>
+                                    <li><div class="button" style="width: 185px"><a href="$config['root_url']/file_interface/download?id=$f.id" title="Download this file from Filelocker" class="saveButton"><span><center>Download This File</center></span></a></div></li>
                                     </ul>
                                 </div>
                             </div>
                         </td>
                         <td onClick="fileRowClick($rowId)">
-                            <a class="document_person" title="$f.fileName">
-                                #if len($f.fileName) > 60
-                                    $f.fileName[0:45]...$f.fileName[-10:]
+                            <a class="document_person" title="$f.name">
+                                #if len($f.name) > 60
+                                    $f.name[0:45]...$f.name[-10:]
                                 #else
-                                    $f.fileName
+                                    $f.name
                                 #end if
                             </a>
                         </td>
                         <td onClick="fileRowClick($rowId)">$fileSize $fsSuffix</td>
                         #set $sfExpiration = "Never"
-                        #if $f.fileExpirationDatetime is not None
-                        #set $sfExpiration = $f.fileExpirationDatetime.strftime("%m/%d/%Y")
+                        #if $f.date_expires is not None
+                        #set $sfExpiration = $f.date_expires.strftime("%m/%d/%Y")
                         #end if
                         <td onClick="fileRowClick($rowId)">$sfExpiration</td>
                         <td onClick="fileRowClick($rowId)" class="dropdownArrow rightborder"></td>
@@ -348,10 +349,11 @@
                     </tbody>
                 </table>
             </div>
+            <!-- Attribute Share Section -->
             #if $len($attributeFilesDict) > 0:
-                #for $attributeName in $attributeFilesDict:
-                    #if $len($attributeFilesDict[$attributeName]) > 0:
-                    <h3 tabindex="0" aria-expanded="false" role="tab" class="head ui-accordion-header ui-helper-reset ui-state-default ui-corner-all"><a tabindex="0" href="#">Files Shared with $attributeName ($len($attributeFilesDict[$attributeName]))</a></h3>
+                #for $attributeId in $attributeFilesDict:
+                    #if $len($attributeFilesDict[$attributeId]) > 0:
+                    <h3 tabindex="0" aria-expanded="false" role="tab" class="head ui-accordion-header ui-helper-reset ui-state-default ui-corner-all"><a tabindex="0" href="#">Files Shared with $attributeId ($len($attributeFilesDict[$attributeId]))</a></h3>
                     <div class="ui-accordion-content-main ui-helper-reset ui-widget-content ui-corner-bottom ui-accordion-content-active" style="padding: 0px 0px 0px 0px; overflow: visible">
                     <table class="file_table" id="fileAttributeSharesTableSorter">
                         <thead>
@@ -368,10 +370,10 @@
                             </tr>
                         </thead>
                         <tbody id="fileAttributeSharesTable">
-                            #for $f in $attributeFilesDict[$attributeName]:
+                            #for $f in $attributeFilesDict[$attributeId]:
                                 #set $rowId = $rowId + 1
                                 #set $fsSuffix = "B"
-                                #set $fileSize = $f.fileSizeBytes
+                                #set $fileSize = $f.file_size
                                 #if $fileSize > 1024
                                     #set $fileSize = $fileSize / 1024
                                     #set $fsSuffix = "kB"
@@ -385,48 +387,48 @@
                                     #end if
                                 #end if
                                 <tr id="row_$rowId" class="fileRow">
-                                <td onClick="fileRowClick($rowId)" id="fileName_row_$rowId" class="fileNameElement spacer">
+                                <td onClick="fileRowClick($rowId)" id="name_row_$rowId" class="nameElement spacer">
                                     <div class="posrel">
                                         <div id="menu_row_$rowId" class="menuFiles hidden"><!--add class of hidden to hide this info box-->
                                             <ul class="menu">
                                             <li>
                                                 <div class="itemTitle"><span class="ownerItem">Owner:</span></div>
-                                                $f.fileOwnerId</li>
+                                                $f.owner_id</li>
                                             <li>
                                                 <div class="itemTitle">
-                                                #if $f.filePassedAvScan
+                                                #if $f.passed_avscan
                                                 <span class="virusPassed">Virus Scan:</span></div>Passed
                                                 #else
                                                 <span class="virusUnknown">Virus Scan:</span></div>Not scanned!
                                                 #end if
                                             </li>
-                                            <li><div class="itemTitle"><span class="clock">Uploaded:</span></div>$f.fileUploadedDatetime</li>
-                                            #set $fileNotesStripped = $re.sub(r'\[geo\]-?\d+\.\d+,-?\d+\.\d+\[/geo\]', '', $f.fileNotes)
-                                            #if $fileNotesStripped != ""
-                                                <li><div class="itemTitleMedium"><span class="view"><a href="javascript:viewFileNotes('$fileNotesStripped');" title="View the user-entered notes for this file">View File Notes</a></span></div></li>
+                                            <li><div class="itemTitle"><span class="clock">Uploaded:</span></div>$f.date_uploaded</li>
+                                            #set $notesStripped = $re.sub(r'\[geo\]-?\d+\.\d+,-?\d+\.\d+\[/geo\]', '', $f.notes)
+                                            #if $notesStripped != ""
+                                                <li><div class="itemTitleMedium"><span class="view"><a href="javascript:viewnotes('$notesStripped');" title="View the user-entered notes for this file">View File Notes</a></span></div></li>
                                             #end if
-                                            #set $fileGeoData = $re.search(r'.*\[geo\](-?\d+\.\d+),(-?\d+\.\d+)\[/geo\].*', $f.fileNotes)
-                                            #if $fileGeoData and $fl.geotagging
+                                            #set $fileGeoData = $re.search(r'.*\[geo\](-?\d+\.\d+),(-?\d+\.\d+)\[/geo\].*', $f.notes)
+                                            #if $fileGeoData and $config['geotagging']
                                                 <li><div class="itemTitleMedium"><span class="map"><a href="http://maps.google.com/maps?q=${fileGeoData.group(1)},${fileGeoData.group(2)}" title="View this file's upload location on Google Maps" target="_blank">View Upload Location</a></span></div></li>
                                             #end if
-                                            <li><div class="itemTitleWide"><span id="takeOwnership_$f.fileId" class="take_ownership"><a href="javascript:takeFile('$f.fileId');" title="Move this file to 'My Files' for resharing">Take Ownership (to Reshare)</a></span></div></li>
-                                            <li><div class="button" style="width: 185px"><a href="$fl.rootURL/file_interface/download?fileId=$f.fileId" title="Download this file from Filelocker" class="saveButton"><span><center>Download This File</center></span></a></div></li>
+                                            <li><div class="itemTitleWide"><span id="takeOwnership_$f.id" class="take_ownership"><a href="javascript:takeFile('$f.id');" title="Move this file to 'My Files' for resharing">Take Ownership (to Reshare)</a></span></div></li>
+                                            <li><div class="button" style="width: 185px"><a href="$config['root_url']/file_interface/download?id=$f.id" title="Download this file from Filelocker" class="saveButton"><span><center>Download This File</center></span></a></div></li>
                                             </ul>
                                         </div>
                                     </div>
                                 </td>
                                 <td onClick="fileRowClick($rowId)">
-                                    <a href="#" class="document_attribute" title="$f.fileName">
-                                    #if len($f.fileName) > 50
-                                        $f.fileName[0:28]...$f.fileName[-15:]
+                                    <a href="#" class="document_attribute" title="$f.name">
+                                    #if len($f.name) > 50
+                                        $f.name[0:28]...$f.name[-15:]
                                     #else
-                                        $f.fileName
+                                        $f.name
                                     #end if
                                     </a>
                                 </td>
                                 #set $sfExpiration = "Never"
-                                #if $f.fileExpirationDatetime is not None
-                                #set $sfExpiration = $f.fileExpirationDatetime.strftime("%m/%d/%Y")
+                                #if $f.date_expires is not None
+                                #set $sfExpiration = $f.date_expires.strftime("%m/%d/%Y")
                                 #end if
                                 <td onClick="fileRowClick($rowId)">$fileSize $fsSuffix</td>
                                 <td onClick="fileRowClick($rowId)">$sfExpiration</td>
@@ -439,9 +441,10 @@
                     #end if
                 #end for
             #end if
-            <h3 tabindex="0" aria-expanded="false" role="tab" class="head ui-accordion-header ui-helper-reset ui-state-default ui-corner-all"><a tabindex="0" href="#">Upload Requests ($len($uploadTickets))</a></h3>
+
+            <h3 tabindex="0" aria-expanded="false" role="tab" class="head ui-accordion-header ui-helper-reset ui-state-default ui-corner-all"><a tabindex="0" href="#">Upload Requests ($len($uploadRequests))</a></h3>
             <div class="ui-accordion-content-main ui-helper-reset ui-widget-content ui-corner-bottom ui-accordion-content-active" style="padding: 0px 0px 0px 0px; overflow: visible">
-                <table class="file_table" id="uploadRequestsTableSorter">
+                <table class="file_table" id="fileAttributeSharesTableSorter">
                     <thead>
                         <tr>
                             <th class="spacerCol"></th>
@@ -457,31 +460,31 @@
                             <td colspan="5" class="dotted"></td>
                         </tr>
                     </thead>
-                    <tbody id="uploadRequestsTable">
-                    #for $uploadTicket in $uploadTickets
+                    <tbody id="fileAttributeSharesTable">
+                    #for $uploadRequest in $uploadRequests
                     <tr class="fileRow">
                         <td class="spacer"></td>
-                        <td><a href="javascript:viewUploadRequestLink('$uploadTicket.ticketId')" class="document_alert">View Link</a></td>
-                        <td>$uploadTicket.ticketType.title()</td>
-                        #if $uploadTicket.scanFile
+                        <td><a href="javascript:viewUploadRequestLink('$uploadRequest.id')" class="document_alert">View Link</a></td>
+                        <td>$uploadRequest.type.title()</td>
+                        #if $uploadRequest.scan_file
                         <td>Yes</td>
                         #else
                         <td>No</td>
                         #end if
                         
-                        #if $uploadTicket.maxFileSize is None
+                        #if $uploadRequest.max_file_size is None
                             <!--<td>None</td>-->
                         #else
                             #set $suffix = "MB"
-                            #if $uploadTicket.maxFileSize > 1024
+                            #if $uploadRequest.max_file_size > 1024
                                 #set $suffix = "GB"
-                                #set $uploadTicket.maxFileSize = $uploadTicket.maxFileSize/1024
+                                #set $uploadRequest.max_file_size = $uploadRequest.max_file_size/1024
                             #end if
-                            <!--<td>str($uploadTicket.maxFileSize $suffix</td>-->
+                            <!--<td>str($uploadRequest.max_file_size $suffix</td>-->
                         #end if
                         
-                        <td>$uploadTicket.expiration.strftime("%m/%d/%Y")</td>
-                        <td><a href="javascript:promptConfirmation('deleteUploadRequest', ['$uploadTicket.ticketId']);" class="inlineLink" title="Permanently delete this upload request from Filelocker"><span class="cross">&nbsp;</span></a></td>
+                        <td>$uploadRequest.expiration.strftime("%m/%d/%Y")</td>
+                        <td><a href="javascript:promptConfirmation('deleteUploadRequest', ['$uploadRequest.id']);" class="inlineLink" title="Permanently delete this upload request from Filelocker"><span class="cross">&nbsp;</span></a></td>
                     </tr>
                     #end for
                     </tbody>
@@ -492,16 +495,16 @@
 </div>
 <div id="wrapper_col2">
     <div class="text_col2">
-        <a href="$fl.orgURL" target="_blank" title="Take me to the $fl.orgName home page"><img src="$fl.rootURL/static/images/logos/logo.gif" alt="$fl.orgName" class="orgLogo" /></a>
-        <img src="$fl.rootURL/static/images/page_elements/horizontal_rule.gif" alt="" class="horizontal_rule" />
-        <p><span class="strong">Filelocker</span> allows you to share files with other people both inside and outside of $fl.orgName. It is a temporary and secure storage system for sharing files and data.</p>
-        <img src="$fl.rootURL/static/images/page_elements/horizontal_rule.gif" alt="" class="horizontal_rule" />
+        <a href="$config['org_url']" target="_blank" title="Take me to the $config['org_name'] home page"><img src="$config['root_url']/static/images/logos/logo.gif" alt="$config['org_name']" class="orgLogo" /></a>
+        <img src="$config['root_url']/static/images/page_elements/horizontal_rule.gif" alt="" class="horizontal_rule" />
+        <p><span class="strong">Filelocker</span> allows you to share files with other people both inside and outside of $config['org_name']. It is a temporary and secure storage system for sharing files and data.</p>
+        <img src="$config['root_url']/static/images/page_elements/horizontal_rule.gif" alt="" class="horizontal_rule" />
         <h4>Need a file from someone?</h4>
         <p>If you need a file from someone who doesn't have a Filelocker account, you can email them an Upload Request.</p>
         <div class="button">
-            <a href="javascript:promptRequestUpload();" title="Request a file from a user outside of $fl.orgName" class="uploadRequestButton"><span>Request Upload</span></a>
+            <a href="javascript:promptRequestUpload();" title="Request a file from a user outside of $config['org_name']" class="uploadRequestButton"><span>Request Upload</span></a>
         </div>
-        <img src="$fl.rootURL/static/images/page_elements/horizontal_rule.gif" alt="" class="horizontal_rule" />
+        <img src="$config['root_url']/static/images/page_elements/horizontal_rule.gif" alt="" class="horizontal_rule" />
         <p><strong>Quick Help</strong></p>
         <ul>
             <li><a href="javascript:viewHelp('help_upload');" class="helpLink">How do I upload a file?</a></li>
@@ -511,8 +514,8 @@
         </ul>
         <p><strong>Quick Tip</strong></p>
         <span id="randomTip"></span> <a href="javascript:viewHelp('help_just_the_tips');" class="helpLink">Show all...</a>
-        #if $fl.adminEmail is not None and $fl.adminEmail != ""
-        <p><span class="feedback"><a href="mailto:$fl.adminEmail" title="Send email to $fl.adminEmail, the Filelocker administrator"><strong>Send Feedback</strong></a></span></p>
+        #if $config['admin_email'] is not None and $config['admin_email'] != ""
+        <p><span class="feedback"><a href="mailto:$config['admin_email']" title="Send email to $config['admin_email'], the Filelocker administrator"><strong>Send Feedback</strong></a></span></p>
         #end if
     </div>
 </div>

@@ -3,19 +3,25 @@ import os
 import datetime
 import logging
 import cherrypy
+from lib.SQLAlchemyTool import session
 from Cheetah.Template import Template
+from lib.Models import *
 import AccountController
+import ShareController
+import MessageController
+import FileController
+import AdminController
 
 from lib.Formatters import *
 __author__="wbdavis"
 __date__ ="$Sep 25, 2011 9:36:56 PM$"
 
 class RootController:
-#    share_interface = ShareController
-#    file_interface = FileController
+    share_interface = ShareController
+    file_interface = FileController
     account_interface = AccountController.AccountController()
 #    admin_interface = AdminController
-#    message_interface = MessageController
+    message_interface = MessageController
     #DropPrivileges(cherrypy.engine, umask=077, uid='nobody', gid='nogroup').subscribe()
 
     def __init__(self):
@@ -33,7 +39,6 @@ class RootController:
             msg = kwargs['msg']
         if kwargs.has_key("authType"):
             authType = kwargs['authType']
-        print "Auth type %s" % str(cherrypy.request.app.config['filelocker'])
         loginPage = rootURL + "/process_login"
         if msg is not None and str(strip_tags(msg))=="1":
             errorMessage = "Invalid username or password"
@@ -95,11 +100,9 @@ class RootController:
                 if directory.authenticate(username, password):
                     currentUser = AccountController.get_user(username, True) #if they are authenticated and local, this MUST return a user object
                     if currentUser is not None:
-                        if authType == "local":
-                            currentUser.isLocal = True #Tags a user if they used a local login, in case we want to use this later
                         if currentUser.authorized == False:
                             raise cherrypy.HTTPError(403, "You do not have permission to access this system")
-                        cherrypy.session['user'], cherrypy.session['original_user'], cherrypy.session['sMessages'], cherrypy.session['fMessages'] = currentUser, currentUser, [], []
+                        cherrypy.session['user'], cherrypy.session['original_user'], cherrypy.session['sMessages'], cherrypy.session['fMessages'] = currentUser.get_copy(), currentUser.get_copy(), [], []
                         session.add(AuditLog(cherrypy.session.get("user").id, "Login", "User %s logged in successfully from IP %s" % (currentUser.id, cherrypy.request.remote.ip)))
                         session.commit()
                         raise cherrypy.HTTPRedirect(rootURL)
@@ -123,62 +126,57 @@ class RootController:
         rootURL = cherrypy.request.app.config['filelocker']['root_url']
         cherrypy.response.headers['Content-Type'] = 'text/css'
         staticDir = os.path.join(rootURL,"static")
-        tplPath = None
+        styleFile = "%s.css" % style
         return str(Template(file=get_template_file(styleFile), searchList=[locals(),globals()]))
-    
+
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def index(self, **kwargs):
-        return "Sup homey"
+        user, originalUser, maxDays = (cherrypy.session.get("user"),  cherrypy.session.get("original_user"), cherrypy.request.app.config['filelocker']['max_file_life_days'])
+        roles = AccountController.get_user_roles(user)
+        currentYear = datetime.date.today().year
+        startDateFormatted, endDateFormatted = None, None
+        today = datetime.datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        sevenDays = datetime.timedelta(days=7)
+        sevenDaysAgo = today - sevenDays
+        sevenDaysAgo = sevenDaysAgo.replace(hour=0, minute=0, second=0, microsecond=0)
+        defaultExpiration = datetime.date.today() + (datetime.timedelta(days=maxDays))
+        startDateFormatted = sevenDaysAgo
+        endDateFormatted = today
+        messageSearchWidget = self.account_interface.get_search_widget("messages")
+        header = Template(file=get_template_file('header.tmpl'), searchList=[locals(),globals()])
+        footerText = str(Template(file=get_template_file('footer_text.tmpl'), searchList=[locals(),globals()]))
+        footer = Template(file=get_template_file('footer.tmpl'), searchList=[locals(),globals()])
+        filesSection = self.files()
+        indexHTML = str(header) + str(filesSection) + str(footer)
+        self.saw_banner()
+        return str(indexHTML)
 
-#    @cherrypy.expose
-#    @cherrypy.tools.requires_login()
-#    def index(self, **kwargs):
-#        user, originalUser, maxDays = (cherrypy.session.get("user"),  cherrypy.session.get("original_user"), cherrypy.request.app.config['filelocker']['max_file_life_days'])
-#        roles = AccountController.get_user_roles(user)
-#        currentYear = datetime.date.today().year
-#        startDateFormatted, endDateFormatted = None, None
-#        today = datetime.datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
-#        sevenDays = datetime.timedelta(days=7)
-#        sevenDaysAgo = today - sevenDays
-#        sevenDaysAgo = sevenDaysAgo.replace(hour=0, minute=0, second=0, microsecond=0)
-#        defaultExpiration = datetime.date.today() + (datetime.timedelta(days=maxDays))
-#        startDateFormatted = sevenDaysAgo
-#        endDateFormatted = today
-#        messageSearchWidget = account_interface.get_search_widget(account_interface, "messages")
-#        header = Template(file=get_template_file('header.tmpl'), searchList=[locals(),globals()])
-#        footerText = str(Template(file=get_template_file('footer_text.tmpl'), searchList=[locals(),globals()]))
-#        footer = Template(file=get_template_file('footer.tmpl'), searchList=[locals(),globals()])
-#        filesSection = self.files()
-#        indexHTML = str(header) + str(filesSection) + str(footer)
-#        self.saw_banner()
-#        return str(indexHTML)
-#
-#    @cherrypy.expose
-#    @cherrypy.tools.requires_login()
-#    def saw_banner(self, **kwargs):
-#        cherrypy.session['sawBanner'] = True
-#        return ""
-#
-#    @cherrypy.expose
-#    def sign_tos(self, **kwargs):
-#        rootURL = cherrypy.request.app.confg['filelocker']['root_url']
-#        if cherrypy.session.has_key("user") and cherrypy.session.get("user") is not None:
-#            user = cherrypy.session.get("user")
-#            if kwargs.has_key('action') and kwargs['action']=="sign":
-#                try:
-#                    user.date_tos_accept(datetime.datetime.now())
-#                    session.commit()
-#                    raise cherrypy.HTTPRedirect(rootURL)
-#                except Exception, e:
-#                    logging.error("[%s] [signTos] [Failed to sign TOS: %s]" % (user.userId, str(e)))
-#                    return "Failed to sign TOS: %s. The administrator has been notified of this error." % str(e)
-#            else:
-#                currentYear = datetime.date.today().year
-#                footerText = str(Template(file=get_template_file('footer_text.tmpl'), searchList=[locals(),globals()]))
-#                return str(Template(file=get_template_file('tos.tmpl'), searchList=[locals(),globals()]))
-#        else:
-#            raise cherrypy.HTTPRedirect(rootURL)
+    @cherrypy.expose
+    @cherrypy.tools.requires_login()
+    def saw_banner(self, **kwargs):
+        cherrypy.session['sawBanner'] = True
+        return ""
+
+    @cherrypy.expose
+    def sign_tos(self, **kwargs):
+        rootURL = cherrypy.request.app.confg['filelocker']['root_url']
+        if cherrypy.session.has_key("user") and cherrypy.session.get("user") is not None:
+            user = cherrypy.session.get("user")
+            if kwargs.has_key('action') and kwargs['action']=="sign":
+                try:
+                    user.date_tos_accept(datetime.datetime.now())
+                    session.commit()
+                    raise cherrypy.HTTPRedirect(rootURL)
+                except Exception, e:
+                    logging.error("[%s] [signTos] [Failed to sign TOS: %s]" % (user.userId, str(e)))
+                    return "Failed to sign TOS: %s. The administrator has been notified of this error." % str(e)
+            else:
+                currentYear = datetime.date.today().year
+                footerText = str(Template(file=get_template_file('footer_text.tmpl'), searchList=[locals(),globals()]))
+                return str(Template(file=get_template_file('tos.tmpl'), searchList=[locals(),globals()]))
+        else:
+            raise cherrypy.HTTPRedirect(rootURL)
 #
 #    @cherrypy.expose
 #    @cherrypy.tools.requires_login()
@@ -257,25 +255,25 @@ class RootController:
 #                actionLogJSONlist.append(actionLog.get_dict())
 #            return fl_response(sMessages, fMessages, format, data=actionLogJSONlist)
 #
-#    @cherrypy.expose
-#    @cherrypy.tools.requires_login()
-#    def files(self, **kwargs):
-#        user, systemFiles = (cherrypy.session.get("user"), [])
-#        if AccountController.user_has_permission(user, "admin"):
-#            systemFiles = session.query(File).filter(File.owner_id == "system").all()
-#        defaultExpiration = datetime.date.today() + (datetime.timedelta(days=fl.maxFileLifeDays))
-#        uploadRequests = session.query(UploadRequest).filter(UploadRequest.owner_id==user.id).all()
-#        userFiles = session.query(File).filter(File.owner_id == user.id).all()
-#        userShareableAttributes = ShareController.get_user_shareable_attributes(user)
-#        attributeFilesDict = ShareController.get_files_shared_with_user_by_attribute(user)
-#        sharedFiles = ShareController.get_files_shared_with_user_privately(user)
-#        tpl = Template(file=get_template_file('files.tmpl'), searchList=[locals(),globals()])
-#        return str(tpl)
-#
-#    @cherrypy.expose
-#    def help(self, **kwargs):
-#        tpl = Template(file=get_template_file('halp.tmpl'), searchList=[locals(),globals()])
-#        return str(tpl)
+    @cherrypy.expose
+    @cherrypy.tools.requires_login()
+    def files(self, **kwargs):
+        user, systemFiles = (cherrypy.session.get("user"), [])
+        if AccountController.user_has_permission(user, "admin"):
+            systemFiles = session.query(File).filter(File.owner_id == "system").all()
+        defaultExpiration = datetime.date.today() + (datetime.timedelta(days=cherrypy.request.app.config['filelocker']['max_file_life_days']))
+        uploadRequests = session.query(UploadRequest).filter(UploadRequest.owner_id==user.id).all()
+        userFiles = session.query(File).filter(File.owner_id == user.id).all()
+        userShareableAttributes = ShareController.get_user_shareable_attributes(user)
+        attributeFilesDict = ShareController.get_files_shared_with_user_by_attribute(user)
+        sharedFiles = ShareController.get_files_shared_with_user_privately(user)
+        tpl = Template(file=get_template_file('files.tmpl'), searchList=[locals(),globals()])
+        return str(tpl)
+
+    @cherrypy.expose
+    def help(self, **kwargs):
+        tpl = Template(file=get_template_file('halp.tmpl'), searchList=[locals(),globals()])
+        return str(tpl)
 #
 #    @cherrypy.expose
 #    @cherrypy.tools.requires_login()
@@ -371,20 +369,20 @@ class RootController:
 ##            footerText = str(Template(file=fl.get_template_file('footer_text.tmpl'), searchList=[locals(),globals()]))
 ##            tpl = Template(file=fl.get_template_file('public_download_landing.tmpl'), searchList=[locals(),globals()])
 ##            return str(tpl)
-#
-#    @cherrypy.expose
-#    def get_server_messages(self, format="json", **kwargs):
-#        sMessages, fMessages = [], []
-#        if cherrypy.session.has_key("sMessages") and cherrypy.session.has_key("fMessages"):
-#            for message in cherrypy.session.get("sMessages"):
-#                if message not in sMessages: #Interestingly, either the browser or the ajax upload script tries to re-submit a rejected file a few times resulting in duplicate messages
-#                    sMessages.append(message)
-#            for message in cherrypy.session.get("fMessages"):
-#                if message not in fMessages:
-#                    fMessages.append(message)
-#            (cherrypy.session["sMessages"], cherrypy.session["fMessages"]) = [], []
-#        return fl_response(sMessages, fMessages, format)
-#
+
+    @cherrypy.expose
+    def get_server_messages(self, format="json", **kwargs):
+        sMessages, fMessages = [], []
+        if cherrypy.session.has_key("sMessages") and cherrypy.session.has_key("fMessages"):
+            for message in cherrypy.session.get("sMessages"):
+                if message not in sMessages: #Interestingly, either the browser or the ajax upload script tries to re-submit a rejected file a few times resulting in duplicate messages
+                    sMessages.append(message)
+            for message in cherrypy.session.get("fMessages"):
+                if message not in fMessages:
+                    fMessages.append(message)
+            (cherrypy.session["sMessages"], cherrypy.session["fMessages"]) = [], []
+        return fl_response(sMessages, fMessages, format)
+
 #    @cherrypy.expose
 #    @cherrypy.tools.requires_login()
 #    def download_filelocker_client(self, platform, **kwargs):

@@ -1,6 +1,10 @@
 import cherrypy
 import logging
 from Cheetah.Template import Template
+from lib.SQLAlchemyTool import session
+import AccountController
+from lib.Formatters import *
+from lib.Models import *
 __author__="wbdavis"
 __date__ ="$Sep 25, 2011 9:28:23 PM$"
 class ShareController:
@@ -186,11 +190,15 @@ def get_user_shareable_attributes(user):
     return attributeList
 
 def get_files_shared_with_user_by_attribute(user):
+    """Builds a dictionary keyed by attribute id with values that are lists of files shared by this attribute"""
     attributeShareDictionary = {}
-    for attributeShare in user.private_attribute_shares:
-        if attributeShareDictionary.has_key(attributeShare.attribute_id)==False:
-                attributeShareDictionary[attributeShare.attribute_id] = []
-        attributeShareDictionary[attributeShare.attribute_id].append(attributeShare.flFile)
+    for attributeId in user.attributes:
+        attribute = session.query(Attribute).filter(Attribute.id==attributeId).scalar() #Do this to ensure this attribute is even recognized by the system
+        if attribute is not None:
+            for attributeShare in session.query(PrivateAttributeShare).filter(PrivateAttributeShare.attribute_id==attribute.id).all():
+                if attributeShareDictionary.has_key(attributeShare.attribute_id)==False:
+                    attributeShareDictionary[attributeShare.attribute_id] = []
+                attributeShareDictionary[attributeShare.attribute_id].append(attributeShare.flFile)
     return attributeShareDictionary
     
 def get_files_shared_with_user_privately(user):

@@ -22,7 +22,7 @@ def before_upload(**kwargs):
     user, sMessages, fMessages, uploadTicket = None, None, None, None
     if cherrypy.session.has_key("uploadTicket") and cherrypy.session.get("uploadTicket") is not None:
         uploadTicket = cherrypy.session.get("uploadTicket")
-        user = session.query(User).filter(User.id ==uploadTicket.ownerId).one()
+        user = session.query(User).filter(User.id == uploadTicket.ownerId).one()
     else:
         requires_login()
         user,sMessages, fMessages = cherrypy.session.get("user"), cherrypy.session.get("sMessages"), cherrypy.session.get("fMessages")
@@ -115,6 +115,8 @@ def requires_login(permissionId=None, **kwargs):
 
 def error(status, message, traceback, version):
     currentYear = datetime.date.today().year
+    rootURL = cherrypy.request.app.config['filelocker']['root_url']
+    orgURL, orgName = cherrypy.request.app.config['filelocker']['org_url'], cherrypy.request.app.config['filelocker']['org_name']
     footerText = str(Template(file=get_template_file('footer_text.tmpl'), searchList=[locals(),globals()]))
     tpl = str(Template(file=get_template_file('error.tmpl'), searchList=[locals(),globals()]))
     return tpl
