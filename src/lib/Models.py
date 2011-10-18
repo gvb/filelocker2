@@ -41,7 +41,8 @@ class User(Base):
     authorized = True
     attributes = []
     display_name=None
-    
+    received_messages = relationship("ReceivedMessage", backref="messages")
+
     def set_password(self, password):
         self.password = hash_password(password)
         
@@ -138,10 +139,12 @@ class Message(Base):
             messageDict['messageRecipients'] = self.recipients
         return messageDict
 
-message_recipients_table = Table("message_recipients", Base.metadata,
-    Column("message_id", Integer, ForeignKey("messages.id"), primary_key=True, nullable=False),
-    Column("recipient_id", String(50), ForeignKey("users.id"), primary_key=True, nullable=False),
-    Column("date_viewed", DateTime, nullable=True, default=None))
+class ReceivedMessage(Base):
+    __tablename__ = "message_recipients"
+    message_id = Column(Integer, ForeignKey("messages.id"), primary_key=True)
+    recipient_id = Column(String(30), ForeignKey("users.id"), primary_key=True)
+    date_viewed = Column(DateTime, nullable=True, default=None)
+    message = relationship("Message")
 
 class PrivateShare(Base):
     __tablename__ = "private_shares"

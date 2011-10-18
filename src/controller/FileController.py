@@ -676,14 +676,14 @@ class FileController(object):
         sMessages, fMessages, uploadStats, uploadKey = [], [], [], None
         try:
             if cherrypy.session.has_key("user") and cherrypy.session.get("user") is not None:
-                userId = cherrypy.session.get("user").userId
+                userId = cherrypy.session.get("user").id
                 for key in cherrypy.file_uploads.keys():
-                    if key.split(":")[0] == cherrypy.session.get('user').userId: # This will actually get uploads by the user and uploads using a ticket they generated
+                    if key.split(":")[0] == cherrypy.session.get('user').id: # This will actually get uploads by the user and uploads using a ticket they generated
                         for fileStat in cherrypy.file_uploads[key]:
                             uploadStats.append(fileStat.stat_dict())
             elif cherrypy.session.has_key("uploadTicket"):
                 uploadTicket = cherrypy.session.get("uploadTicket")
-                uploadKey = uploadTicket.ownerId + ":" + uploadTicket.ticketId
+                uploadKey = uploadTicket.owner_id + ":" + uploadTicket.id
                 if cherrypy.file_uploads.has_key(uploadKey):
                     for fileStat in cherrypy.file_uploads[uploadKey]:
                         uploadStats.append(fileStat.stat_dict())

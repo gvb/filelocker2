@@ -17,11 +17,11 @@ __author__="wbdavis"
 __date__ ="$Sep 25, 2011 9:36:56 PM$"
 
 class RootController:
-    share_interface = ShareController
-    file_interface = FileController
+    share_interface = ShareController.ShareController()
+    file_interface = FileController.FileController()
     account_interface = AccountController.AccountController()
 #    admin_interface = AdminController
-    message_interface = MessageController
+    message_interface = MessageController.MessageController()
     #DropPrivileges(cherrypy.engine, umask=077, uid='nobody', gid='nogroup').subscribe()
 
     def __init__(self):
