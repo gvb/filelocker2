@@ -19,6 +19,7 @@ __date__ ="$Sep 25, 2011 9:09:40 PM$"
 __version__ = "2.6"
 
 def before_upload(**kwargs):
+    from controller import FileController
     user, sMessages, fMessages, uploadTicket = None, None, None, None
     if cherrypy.session.has_key("uploadTicket") and cherrypy.session.get("uploadTicket") is not None:
         uploadTicket = cherrypy.session.get("uploadTicket")

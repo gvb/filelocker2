@@ -57,7 +57,7 @@ class AccountController:
     def get_search_widget(self, context, **kwargs):
         user, sMessages, fMessages = (cherrypy.session.get("user"), [], [])
         groups = session.query(User).filter(User.id==user.id).one().groups
-        userShareableAttributes = get_available_attributes_by_user(user)
+        userShareableAttributes = get_shareable_attributes_by_user(user)
         tpl = Template(file=get_template_file('search_widget.tmpl'), searchList=[locals(),globals()])
         return str(tpl)
 
@@ -287,13 +287,13 @@ def get_user(userId, login=False):
             uniqueAttributeList = []
             for attributeId in attributeList:
                 if attributeId not in uniqueAttributeList:
-                    attr = session.query(Attribute).filter(Attribute.id==attributeId).one()
+                    attr = session.query(Attribute).filter(Attribute.id==attributeId).scalar()
                     if attr is not None:
-                        user.userAttributes.append(attr)
+                        user.attributes.append(attr)
                     uniqueAttributeList.append(attributeId)
     return user
 
-def get_available_attributes_by_user(user):
+def get_shareable_attributes_by_user(user):
     """
     This function gets the attributes that a user has permission to share with.
 

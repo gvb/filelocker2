@@ -524,7 +524,7 @@ class Filelocker:
                 attributeShareDictionary = {}
                 for attribute in user.userAttributes:
                     attributeShareDictionary[attribute.attributeName] = self.db.getSharedFilesByAttribute(attribute.attributeId)
-                for attribute in self.get_available_attributes_by_user(user):
+                for attribute in self.get_shareable_attributes_by_user(user):
                     if attributeShareDictionary.has_key(attribute.attributeName) == False: #This will allow users who are admins of attributes but not members to see shares with that attribute
                         attributeShareDictionary[attribute.attributeName] = self.db.getSharedFilesByAttribute(attribute.attributeId)
                 return attributeShareDictionary
@@ -539,7 +539,7 @@ class Filelocker:
         except Exception, e:
             raise FLError(False, ["Could not get attribute: %s" % str(e)])
             
-    def get_available_attributes_by_user(self, user): 
+    def get_shareable_attributes_by_user(self, user):
         """
         This function gets the attributes that a user has permission to share with.
         

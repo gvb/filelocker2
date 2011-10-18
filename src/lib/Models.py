@@ -110,6 +110,21 @@ class File(Base):
     private_group_shares = relationship("PrivateGroupShare", backref="files")
     private_attribute_shares = relationship("PrivateAttributeShare", backref="files")
 
+    def shared_with(self, user):
+        for share in private_shares:
+            if share.user_id == user.id:
+                return True
+        groupIds = []
+        for group in user.groups:
+            groupIds.append(group.id)
+        for share in private_group_shares:
+            if share.group_id in groupIds:
+                return True
+        for share in private_attribute_shares:
+            if share.attribute_id in user.attributes:
+                return True
+        return False
+
 class DeletedFile(Base):
     __tablename__ = "deletion_queue"
     file_name = Column(String(255), primary_key=True)
@@ -151,12 +166,14 @@ class PrivateShare(Base):
     user_id = Column(Integer, ForeignKey("users.id"), primary_key=True)
     file_id = Column(Integer, ForeignKey("files.id"), primary_key=True)
     flFile = relationship("File")
+    user = relationship("User")
 
 class PrivateGroupShare(Base):
     __tablename__ = "private_group_shares"
     group_id = Column(Integer, ForeignKey("groups.id"), primary_key=True)
     file_id = Column(Integer, ForeignKey("files.id"), primary_key=True)
     flFile = relationship("File")
+    group = relationship("Group")
 
 class PublicShare(Base):
     __tablename__="public_shares"
@@ -176,6 +193,7 @@ class PrivateAttributeShare(Base):
     file_id = Column(Integer, ForeignKey("files.id"), primary_key=True)
     attribute_id = Column(String(50), ForeignKey("attributes.id"), primary_key=True)
     flFile = relationship("File")
+    attribute = relationship("Attribute")
 
 class UploadRequest(Base):
     __tablename__ = "upload_requests"

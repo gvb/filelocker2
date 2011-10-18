@@ -9,6 +9,7 @@ from sqlalchemy import *
 from sqlalchemy.sql import select, delete, insert
 from lib.Models import *
 from lib.Formatters import *
+import AccountController
 __author__="wbdavis"
 __date__ ="$Sep 25, 2011 9:28:54 PM$"
 
@@ -16,10 +17,10 @@ class FileController(object):
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def get_quota_usage(self, format="json", **kwargs):
-        user, fl, sMessages, fMessages, quotaMB, quotaUsed = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [], 0, 0)
+        user, sMessages, fMessages, quotaMB, quotaUsedMB = (cherrypy.session.get("user"),[], [], 0, 0)
         try:
             quotaMB = user.quota
-            quotaUsage = self.get_user_quota_usage_bytes(user.id)
+            quotaUsage = get_user_quota_usage_bytes(user.id)
             quotaUsedMB = int(quotaUsage) / 1024 / 1024
         except Exception, e:
             fMessages.append(str(e))
@@ -28,7 +29,7 @@ class FileController(object):
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def get_download_statistics(self, fileId, startDate=None, endDate=None, format="json", **kwargs):
-        user, fl, sMessages, fMessages, stats = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [], None)
+        user, sMessages, fMessages, stats = (cherrypy.session.get("user"),  [], [], None)
         try:
             flFile = session.query(File).filter(File.id == fileId).one()
             startDateFormatted, endDateFormatted = None, None
@@ -119,91 +120,56 @@ class FileController(object):
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def get_user_file_list(self, fileIdList=None, format="json", **kwargs):
-        """Get File List
-
-        Oh god this function makes so many database calls, there may be a more efficient way to do this as the scope
-        of this function kept getting bigger and bigger. Please someone rewrite this!!!"""
-        user, fl, sMessages, fMessages = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [])
-        userId = user.userId
+        """Get File List"""
+        user, sMessages, fMessages = (cherrypy.session.get("user"),  [], [])
+        userId = user.id
         if kwargs.has_key("userId"):
-            userId = kwargs['userId']
+            if AccountController.user_has_permission(user, "admin"):
+                userId = kwargs['userId']
+            else:
+                raise cherrypy.HTTPError(413)
         myFilesList = []
         if fileIdList is None:
-            myFilesList = fl.get_files_by_user(user, userId)
+            myFilesList = session.query(File).filter(File.owner_id == userId).all()
         else:
             fileIdList = split_list_sanitized(fileIdList)
             for fileId in fileIdList:
-                flFile = fl.get_file(user, fileId)
-                myFilesList.append(flFile)
-
-        for flFile in myFilesList: #attachments to the file objects for this function
-            flFile.publicShare = None
-            flFile.shares = []
-            flFile.groupShares = []
-            flFile.documentType = "document"
-
-        #Determine how to display the files in the interface
-        privateSharedList, publicSharedList, bothSharedList = [], [], []
-        for publicShareObject in fl.get_public_shares_by_user(user, userId):
-            publicSharedList.append(publicShareObject.fileId)
-            for flFile in myFilesList:
-                if flFile.fileId == publicShareObject.fileId:
-                    flFile.publicShare = publicShareObject #This implies that there can be only one public share
-                    break
-        for shareObject in fl.get_private_shares_by_user(user, userId):
-            privateSharedList.append(shareObject.fileId)
-            shareObject.user = fl.get_user(shareObject.targetId) #Get the real user object for the share target
-            for flFile in myFilesList:
-                if flFile.fileId == shareObject.fileId:
-                    if shareObject.user is None:
-                        shareObject.user = fl.directory.lookup_user(shareObject.targetId) # In case the user hasn't logged in yet
-                    if shareObject.user is None: #This user doesn't exist anymore
-                        shareObject.user = User("User no longer exists", "", "", None, None, None, shareObject.targetId)
-                    flFile.shares.append(shareObject)
-                    break
-        for groupShareObject in fl.get_private_group_shares_by_user(user, userId):
-            privateSharedList.append(groupShareObject.fileId)
-            groupShareObject.group = fl.get_group(user, groupShareObject.targetId) #Get the info about the group for each group share
-            for flFile in myFilesList:
-                if flFile.fileId == groupShareObject.fileId:
-                    flFile.groupShares.append(groupShareObject)
-                    break
-        bothSharedList = [val for val in publicSharedList if val in privateSharedList]
-
-        for flFile in myFilesList:
-            if flFile.fileId in privateSharedList:
-                flFile.documentType = "document_person"
-            if flFile.fileId in publicSharedList:
-                flFile.documentType = "document_globe"
-            if flFile.fileId in bothSharedList:
+                flFile = session.query(File).filter(File.id==fileId)
+                if flFile.owner_id == userId or flFile.shared_with(user):
+                    myFilesList.append(flFile)
+        for flFile in myFilesList: #attachments to the file objects for this function, purely cosmetic
+            if len(flFile.public_shares) > 0 and (len(flFile.private_shares) > 0 or len(flFile.private_group_shares) > 0):
                 flFile.documentType = "document_both"
-                #TODO: Account for attribute shares here 'document_attribute'
+            elif len(flFile.public_shares) > 0:
+                flFile.documentType = "document_globe"
+            elif len(flFile.public_shares == 0) and (len(flFile.private_shares) > 0 or len(flFile.private_group_shares) > 0):
+                flFile.documentType = "document_person"
+            else:
+                flFile.documentType = "document"
+            #TODO: Account for attribute shares here 'document_attribute'
         if format=="json" or format=="searchbox_html" or format=="cli":
             myFilesJSON = []
-            groups = fl.get_user_groups(user, user.userId)
-            userShareableAttributes = fl.get_available_attributes_by_user(user)
+            userShareableAttributes = AccountController.get_shareable_attributes_by_user(user)
             for flFile in myFilesList:
-                flFile.fileUserShares, flFile.fileGroupShares, flFile.availableGroups, flFile.sharedGroupsList, flFile.fileAttributeShares = ([],[],[],[],[])
-                for sharedFile in flFile.shares:
-                    flFile.fileUserShares.append({'id': sharedFile.targetId, 'name': sharedFile.user.userDisplayName})
-                for sharedFile in flFile.groupShares:
-                    flFile.fileGroupShares.append({'id': sharedFile.targetId, 'name': sharedFile.group.groupName})
-                for attribute in userShareableAttributes:
-                    attrFiles = fl.get_files_shared_by_attribute(user, attribute.attributeId)
-                    for af in attrFiles:
-                        if af.fileId == flFile.fileId:
-                            flFile.fileAttributeShares.append({'id': attribute.attributeId, 'name': attribute.attributeName})
-                for group in groups:
-                    if str(group.groupId) not in flFile.sharedGroupsList:
-                        flFile.availableGroups.append({'id': group.groupId, 'name': group.groupName})
-                if flFile.fileExpirationDatetime is not None:
-                    flFile.fileExpirationDatetime = flFile.fileExpirationDatetime.strftime("%m/%d/%Y")
-                myFilesJSON.append({'fileName': flFile.fileName, 'fileId': flFile.fileId, 'fileOwnerId': flFile.fileOwnerId, 'fileSizeBytes': flFile.fileSizeBytes, 'fileUploadedDatetime': flFile.fileUploadedDatetime.strftime("%m/%d/%Y"), 'fileExpirationDatetime': flFile.fileExpirationDatetime, 'filePassedAvScan':flFile.filePassedAvScan, 'documentType': flFile.documentType, 'fileUserShares': flFile.fileUserShares, 'fileGroupShares': flFile.fileGroupShares, 'availableGroups': flFile.availableGroups, 'fileAttributeShares': flFile.fileAttributeShares})
+                fileUserShares, fileGroupShares, availableGroups, sharedGroupsList, fileAttributeShares = ([],[],[],[],[])
+                for share in flFile.private_shares:
+                    fileUserShares.append({'id': share.user.id, 'name': share.user.display_name})
+                sharedGroupIds = []
+                for share in flFile.private_group_shares:
+                    sharedGroupIds.append(share.group.id)
+                    fileGroupShares.append({'id': share.group.id, 'name': share.group.name})
+                for share in flFile.private_attribute_shares:
+                    fileAttributeShares.append({'id': share.attribute.id, 'name': share.attribute.name})
+                for group in session.query(Group).filter(Group.owner_id==userId):
+                    if group.id not in sharedGroupIds:
+                        flFile.availableGroups.append({'id': group.id, 'name': group.name})
+                myFilesJSON.append({'fileName': flFile.name, 'fileId': flFile.id, 'fileOwnerId': flFile.owner_id, 'fileSizeBytes': flFile.size, 'fileUploadedDatetime': flFile.date_uploaded, 'fileExpirationDatetime': flFile.date_expires, 'filePassedAvScan':flFile.passed_avscan, 'documentType': flFile.documentType, 'fileUserShares': fileUserShares, 'fileGroupShares': fileGroupShares, 'availableGroups': availableGroups, 'fileAttributeShares': fileAttributeShares})
             if format=="json":
                 return fl_response(sMessages, fMessages, format, data=myFilesJSON)
             elif format=="searchbox_html":
                 selectedFileIds = ",".join(fileIdList)
-                searchWidget = str(HTTP_User.get_search_widget(HTTP_User(), "private_sharing"))
+                context = "private_sharing"
+                searchWidget = str(Template(file=get_template_file('search_widget.tmpl'), searchList=[locals(),globals()]))
                 tpl = Template(file=fl.get_template_file('share_files.tmpl'), searchList=[locals(),globals()])
                 return str(tpl)
             elif format=="cli":
@@ -295,14 +261,15 @@ class FileController(object):
     @cherrypy.expose
     @cherrypy.tools.before_upload()
     def upload(self, format="json", **kwargs):
-        fl, user, sMessages, fMessages, uploadTicket, newFile, uploadKey, uploadIndex, uploadTicket, createdFile = cherrypy.thread_data.flDict['app'], None, [], [], None, None, None, None, None, None
+        config = cherrypy.request.app.config['filelocker']
+        user, sMessages, fMessages, uploadTicket, newFile, uploadKey, uploadIndex, uploadTicket, createdFile = None, [], [], None, None, None, None, None, None
         if cherrypy.session.has_key("uploadTicket") and cherrypy.session.get("uploadTicket") is not None:
             uploadTicket = cherrypy.session.get("uploadTicket")
-            user = fl.get_user(uploadTicket.ownerId)
-            uploadKey = user.userId+":"+uploadTicket.ticketId
+            user = AccountController.get_user(uploadTicket.ownerId)
+            uploadKey = user.id+":"+uploadTicket.id
         else:
             user, sMessages, fMessages = cherrypy.session.get("user"), cherrypy.session.get("sMessages"), cherrypy.session.get("fMessages")
-            uploadKey = user.userId
+            uploadKey = user.id
         cherrypy.session.release_lock()
         lcHDRS = {}
         for key, val in cherrypy.request.headers.iteritems():
@@ -348,7 +315,7 @@ class FileController(object):
             if long(os.path.getsize(upFile.file_object.name)) != long(fileSizeBytes): #The file transfer stopped prematurely, take out of transfers and queue partial file for deletion
                 fileUploadComplete = False
                 logging.debug("[system] [upload] [File upload was prematurely stopped, rejected]")
-                fl.queue_for_deletion(tempFileName)
+                queue_for_deletion(tempFileName)
                 fMessages.append("The file %s did not upload completely before the transfer ended" % fileName)
                 if cherrypy.file_uploads.has_key(uploadKey):
                     for fileTransfer in cherrypy.file_uploads[uploadKey]:
@@ -385,41 +352,41 @@ class FileController(object):
             #The file has been successfully uploaded by this point, process the rest of the variables regarding the file
             fileNotes = None
             if kwargs.has_key("fileNotes"):
-                fileNotes = Formatters.strip_tags(kwargs['fileNotes'])
+                fileNotes = strip_tags(kwargs['fileNotes'])
             if fileNotes is None:
                 fileNotes = ""
             else:
-                fileNotes = Formatters.strip_tags(fileNotes)
+                fileNotes = strip_tags(fileNotes)
                 if len(fileNotes) > 256:
                     fileNotes = fileNotes[0:256]
             ownerId = None #Owner ID is a separate variable since uploads can be owned by the system
             try:
-                ownerId = user.userId
+                ownerId = user.id
 
-                if fl.check_admin(user) and (kwargs.has_key('systemUpload') and kwargs['systemUpload'] == "yes"):
+                if AccountController.user_has_permission(user, "admin") and (kwargs.has_key('systemUpload') and kwargs['systemUpload'] == "yes"):
                     ownerId = "system"
                 expiration=None
                 if kwargs.has_key("expiration"):
                     expiration = kwargs['expiration']
                 #Process the expiration data for the file
-                maxExpiration = datetime.datetime.today() + datetime.timedelta(days=fl.maxFileLifeDays)
+                maxExpiration = datetime.datetime.today() + datetime.timedelta(days=config['max_file_life_das'])
                 if (expiration is None or expiration == "" or expiration.lower() =="never"):
-                    if fl.check_permission(user, "expiration_exempt") or fl.check_admin(user): #Check permission before allowing a non-expiring upload
+                    if AccountController.user_has_permission(user,  "expiration_exempt") or AccountController.user_has_permission(user, "admin"): #Check permission before allowing a non-expiring upload
                         expiration = None
                     else:
                         expiration = maxExpiration
                 else:
-                    expiration = datetime.datetime(*time.strptime(Formatters.strip_tags(expiration), "%m/%d/%Y")[0:5])
-                    if maxExpiration < expiration and fl.check_permission(user, "expiration_exempt")==False:
-                        raise FLError(False, ["Expiration date must be between now and %s" % maxExpiration.strftime("%m/%d/%Y")])
+                    expiration = datetime.datetime(*time.strptime(strip_tags(expiration), "%m/%d/%Y")[0:5])
+                    if maxExpiration < expiration and AccountController.user_has_permission(user,  "expiration_exempt")==False:
+                        raise Exception("Expiration date must be between now and %s" % maxExpiration.strftime("%m/%d/%Y"))
 
                 #Virus scanning - Tells check_in whether to scan the file, and delete if infected. For upload tickets, scanning may be set by the requestor.
                 scanFile = ""
                 if kwargs.has_key("scanFile"):
-                    scanFile = Formatters.strip_tags(kwargs['scanFile'])
+                    scanFile = strip_tags(kwargs['scanFile'])
                 if scanFile.lower() == "true":
                     scanFile = True
-                elif uploadTicket is not None and uploadTicket.scanFile:
+                elif uploadTicket is not None and uploadTicket.scan_file:
                     scanFile = True
                 else:
                     scanFile = False
@@ -427,24 +394,27 @@ class FileController(object):
                 #Download notification - if "yes" then the owner will be notified whenever the file is downloaded by other users
                 notifyOnDownload = ""
                 if kwargs.has_key("notifyOnDownload"):
-                    scanFile = Formatters.strip_tags(kwargs['notifyOnDownload'])
+                    scanFile = strip_tags(kwargs['notifyOnDownload'])
                 if notifyOnDownload.lower() == "on":
                     notifyOnDownload = True
                 else:
                     notifyOnDownload = False
 
                 #Build the Filelocker File objects and check them in to Filelocker
+                newFile = File(name=fileName, notes=fileNotes, size=fileSizeBytes, date_uploaded=datetime.datetime.now(), date_expires=expiration, status="Processing File", notify_on_download=notifyOnDownload)
                 if uploadTicket is not None:
-                    newFile = File(fileName, None, fileNotes, fileSizeBytes, datetime.datetime.now(), user.userId, expiration, False, None, None, "Processing File", "local", notifyOnDownload, uploadTicket.ticketId)
+                    newFile.upload_request_id=uploadTicket.id
+                    newFile.owner_id = user.id
                 else:
-                    newFile = File(fileName, None, fileNotes, fileSizeBytes, datetime.datetime.now(), ownerId, expiration, False, None, None, "Processing File", "local", notifyOnDownload, None)
+                    newFile.owner_id = ownerId
                 if cherrypy.file_uploads.has_key(uploadKey):
                     for fileTransfer in cherrypy.file_uploads[uploadKey]:
                         if fileTransfer.file_object.name == upFile.file_object.name:
                             if scanFile == True:
                                 fileTransfer.status = "Scanning and Encrypting"
                             else:fileTransfer.status = "Encrypting"
-                createdFile = fl.check_in_file(user, upFile.file_object.name, newFile, scanFile)
+                #TODO: Start from here
+                createdFile = check_in_file(user, upFile.file_object.name, newFile, scanFile)
                 sMessages.append("File %s uploaded successfully." % str(fileName))
 
                 #If this is an upload request, check to see if it's a single use request and nullify the ticket if so, now that the file has been successfully uploaded
@@ -699,6 +669,7 @@ class FileController(object):
             sMessages = ["No active uploads"]
         yield fl_response(sMessages, fMessages, format, data=uploadStats)
 
+
 def get_upload_ticket_by_password(ticketId, password):
     uploadRequest = session.query(UploadRequest).filter(UploadRequest.id == ticketId)
     if uploadRequest is None:
@@ -715,6 +686,16 @@ def get_upload_ticket_by_password(ticketId, password):
         else:
             raise Exception("You must enter the correct password to access this upload request.")
 
+def get_temp_file():
+    config = cherrypy.request.app.config['filelocker']
+    fileList, filePrefix, fileSuffix = os.listdir(config['vault']), "[%s]fltmp" % str(config['cluster_member_id']), ".tmp"
+    randomNumber = random.randint(1, 1000000)
+    tempFileName = os.path.join(config['vault'], filePrefix + str(randomNumber) + fileSuffix)
+    while tempFileName in fileList:
+        randomNumber = random.randint(1, 1000000)
+        tempFileName = os.path.join(config['vault'], filePrefix + str(randomNumber) + fileSuffix)
+    file_object = open(tempFileName, "wb")
+    return file_object
 
 def clean_temp_files(config, validTempFiles):
     vaultFileList = os.listdir(config['filelocker']['vault'])
@@ -794,11 +775,14 @@ def secure_delete(config, fileName):
        logging.error("[system] [secureDelete] [Couldn't securely delete file: %s]" % str(e))
 
 def get_vault_usage():
-    s = os.statvfs(self.vault)
+    s = os.statvfs(cherrypy.request.app.config['filelocker']['vault'])
     freeSpaceMB = int((s.f_bavail * s.f_frsize) / 1024 / 1024)
     totalSizeMB = int((s.f_blocks * s.f_frsize) / 1024 / 1024 )
     return freeSpaceMB, totalSizeMB
 
 def get_user_quota_usage_bytes(userId):
-        quotaUsage = session.query(func.sum(File.size).filter(File.owner_id==user.id))
+    quotaUsage = session.query(func.sum(File.size)).select_from(File).filter(File.owner_id==userId).scalar()
+    if quotaUsage is None:
+        return 0
+    else:
         return int(quotaUsage)

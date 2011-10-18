@@ -3,8 +3,11 @@ import logging
 import cgi
 from Cheetah.Template import Template
 from lib.SQLAlchemyTool import session
+from sqlalchemy import *
+
 import AccountController
 from lib.Formatters import *
+from lib.Models import *
 __author__="wbdavis"
 __date__ ="$Sep 25, 2011 9:32:23 PM$"
 
@@ -41,7 +44,7 @@ class MessageController:
     def get_new_message_count(self, format="json", **kwargs):
         user, sMessages, fMessages, newMessageCount = cherrypy.session.get("user"), [], [], []
         try:
-            newMessageCount = session.query(func.count(Message.id).filter(user.id in Message.recipients))
+            newMessageCount = session.query(func.count(ReceivedMessage.message_id), ReceivedMessage.recipient_id,).filter(ReceivedMessage.recipient_id==user.id).scalar()
         except Exception,e :
             fMessages.append(str(e))
         return fl_response(sMessages, fMessages, format, data=newMessageCount)
