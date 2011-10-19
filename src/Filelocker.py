@@ -21,36 +21,7 @@ __version__ = "2.6"
 def before_upload(**kwargs):
     from controller import FileController
     user, sMessages, fMessages, uploadTicket = None, None, None, None
-    if cherrypy.session.has_key("uploadTicket") and cherrypy.session.get("uploadTicket") is not None:
-        uploadTicket = cherrypy.session.get("uploadTicket")
-        user = session.query(User).filter(User.id == uploadTicket.ownerId).one()
-    else:
-        requires_login()
-        user,sMessages, fMessages = cherrypy.session.get("user"), cherrypy.session.get("sMessages"), cherrypy.session.get("fMessages")
-    vaultSpaceFreeMB, vaultCapacityMB = FileController.get_vault_usage()
-    cherrypy.response.timeout = 86400
-    lcHDRS = {}
-    for key, val in cherrypy.request.headers.iteritems():
-        lcHDRS[key.lower()] = val
-    # at this point we could limit the upload on content-length...
-    try:
-        fileSizeBytes = int(lcHDRS['content-length'])
-    except KeyError, ke:
-        fMessages.append("Request must have a valid content length")
-        raise HTTPError(411, "Request must have a valid content length")
-    fileSizeMB = ((fileSizeBytes/1024)/1024)
-    quotaSpaceRemainingBytes = (user.quota*1024*1024) - int(FileController.get_user_quota_usage_bytes(user.id))
-    if (fileSizeMB*2) >= vaultSpaceFreeMB:
-        logging.critical("[system] [beforeUpload] [File vault is running out of space and cannot fit this file. Remaining Space is %s MB, fileSizeBytes is %s]" % (vaultSpaceFreeMB, fileSizeBytes))
-        fMessages.append("The server doesn't have enough space left on its drive to fit this file. The administrator has been notified.")
-        raise HTTPError(413, "The server doesn't have enough space left on its drive to fit this file. The administrator has been notified.")
-    #if fileSizeMB > fl.maxFileUploadSize:
-        #logging.debug("[system] [beforeUpload] [File exceeded maximum allowed upload size, rejected]")
-        #fMessages.append("File is too large for server to process.")
-        #raise HTTPError(413, "File is too large for server to process.")
-    if fileSizeBytes > quotaSpaceRemainingBytes:
-        fMessages.append("File size is larger than your quota will accomodate")
-        raise HTTPError(413, "File size is larger than your quota will accomodate")
+    
     cherrypy.request.process_request_body = False
     
 def requires_login(permissionId=None, **kwargs):

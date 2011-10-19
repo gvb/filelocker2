@@ -9,6 +9,7 @@ from sqlalchemy import *
 from sqlalchemy.sql import select, delete, insert
 from lib.Models import *
 from lib.Formatters import *
+from lib import Encryption
 import AccountController
 __author__="wbdavis"
 __date__ ="$Sep 25, 2011 9:28:54 PM$"
@@ -259,42 +260,61 @@ class FileController(object):
         return fl_response(sMessages, fMessages, format)
 
     @cherrypy.expose
-    @cherrypy.tools.before_upload()
     def upload(self, format="json", **kwargs):
-        config = cherrypy.request.app.config['filelocker']
-        user, sMessages, fMessages, uploadTicket, newFile, uploadKey, uploadIndex, uploadTicket, createdFile = None, [], [], None, None, None, None, None, None
+        cherrypy.response.timeout = 86400
+        user, uploadRequest, uploadKey, config, sMessages, fMessages = None, None, None, cherrypy.request.app.config['filelocker'], [], []
+
+        #Check Permission to upload since we can't wrap in requires login for public uploads
         if cherrypy.session.has_key("uploadTicket") and cherrypy.session.get("uploadTicket") is not None:
-            uploadTicket = cherrypy.session.get("uploadTicket")
+            uploadRequest = cherrypy.session.get("uploadTicket")
             user = AccountController.get_user(uploadTicket.ownerId)
             uploadKey = user.id+":"+uploadTicket.id
         else:
+            requires_login()
             user, sMessages, fMessages = cherrypy.session.get("user"), cherrypy.session.get("sMessages"), cherrypy.session.get("fMessages")
             uploadKey = user.id
-        cherrypy.session.release_lock()
+            
+        #Check upload size
         lcHDRS = {}
         for key, val in cherrypy.request.headers.iteritems():
             lcHDRS[key.lower()] = val
+        try:
+            fileSizeBytes = int(lcHDRS['content-length'])
+        except KeyError, ke:
+            fMessages.append("Request must have a valid content length")
+            raise HTTPError(411, "Request must have a valid content length")
+        fileSizeMB = ((fileSizeBytes/1024)/1024)
+        vaultSpaceFreeMB, vaultCapacityMB = get_vault_usage()
+        quotaSpaceRemainingBytes = (user.quota*1024*1024) - int(FileController.get_user_quota_usage_bytes(user.id))
+        if (fileSizeMB*2) >= vaultSpaceFreeMB:
+            logging.critical("[system] [upload] [File vault is running out of space and cannot fit this file. Remaining Space is %s MB, fileSizeBytes is %s]" % (vaultSpaceFreeMB, fileSizeBytes))
+            fMessages.append("The server doesn't have enough space left on its drive to fit this file. The administrator has been notified.")
+            raise HTTPError(413, "The server doesn't have enough space left on its drive to fit this file. The administrator has been notified.")
+        if fileSizeBytes > quotaSpaceRemainingBytes:
+            fMessages.append("File size is larger than your quota will accomodate")
+            raise HTTPError(413, "File size is larger than your quota will accomodate")
+  
+        #The server won't respond to additional user requests (polling) until we release the lock
+        cherrypy.session.release_lock()
+
+        newFile = File()
+        newFile.size = fileSizeBytes
         #Get the file name
-        fileName, tempFileName, fileUploadComplete = None,None,True
+        fileName, tempFileName = None,None
         if fileName is None and lcHDRS.has_key('x-file-name'):
             fileName = lcHDRS['x-file-name']
         if kwargs.has_key("fileName"):
             fileName = kwargs['fileName']
         if fileName is not None and fileName.split("\\")[-1] is not None:
             fileName = fileName.split("\\")[-1]
-        if fileName is None: #This is to accomodate a poorly behaving browser that's not sending the file name
-            fileName = "Unknown"
 
         #Set upload index if it's found in the arguments
         if kwargs.has_key('uploadIndex'):
             uploadIndex = kwargs['uploadIndex']
 
-        fileSizeBytes = int(lcHDRS['content-length'])
+        #Read file from client
         if lcHDRS['content-type'] == "application/octet-stream":
-            #Create the temp file to store the uploaded file
-            file_object = get_temp_file()
-            tempFileName = file_object.name.split(os.path.sep)[-1]
-            #Read the file from the client
+            file_object, tempFileName = get_temp_file(), file_object.name.split(os.path.sep)[-1]
             #Create the progress file object and drop it into the transfer dictionary
             upFile = ProgressFile(8192, fileName, file_object, uploadIndex)
             if cherrypy.file_uploads.has_key(uploadKey): #Drop the transfer into the global transfer list
@@ -313,7 +333,6 @@ class FileController(object):
             upFile.seek(0)
             #If the file didn't get all the way there
             if long(os.path.getsize(upFile.file_object.name)) != long(fileSizeBytes): #The file transfer stopped prematurely, take out of transfers and queue partial file for deletion
-                fileUploadComplete = False
                 logging.debug("[system] [upload] [File upload was prematurely stopped, rejected]")
                 queue_for_deletion(tempFileName)
                 fMessages.append("The file %s did not upload completely before the transfer ended" % fileName)
@@ -323,18 +342,16 @@ class FileController(object):
                             cherrypy.file_uploads[uploadKey].remove(fileTransfer)
                     if len(cherrypy.file_uploads[uploadKey]) == 0:
                         del cherrypy.file_uploads[uploadKey]
+                raise cherrypy.HTTPError("412 Precondition Failed", "The file transfer completed, but the file appears to be missing data. Try re-uploading the file")
         else:
             cherrypy.request.headers['uploadindex'] = uploadIndex
             formFields = myFieldStorage(fp=cherrypy.request.rfile,
                                         headers=lcHDRS,
                                         environ={'REQUEST_METHOD':'POST'},
                                         keep_blank_values=True)
-
-
             upFile = formFields['fileName']
-            if fileName == "Unknown":
+            if fileName is None:
                 fileName = upFile.filename
-            addToUploads = True
             if str(type(upFile.file)) == '<type \'cStringIO.StringO\'>' or isinstance(upFile.file, StringIO.StringIO):
                 newTempFile = get_temp_file()
                 newTempFile.write(str(upFile.file.getvalue()))
@@ -347,107 +364,78 @@ class FileController(object):
             else:
                 upFile = upFile.file
             tempFileName = upFile.file_object.name.split(os.path.sep)[-1]
+        
+        #The file has been successfully uploaded by this point, process the rest of the variables regarding the file
+        newFile.name = fileName
+        fileNotes = strip_tags(kwargs['fileNotes']) if kwargs.has_key("fileNotes") else ""
+        if len(fileNotes) > 256:
+            fileNotes = fileNotes[0:256]
+        newFile.notes = fileNotes
 
-        if fileUploadComplete:
-            #The file has been successfully uploaded by this point, process the rest of the variables regarding the file
-            fileNotes = None
-            if kwargs.has_key("fileNotes"):
-                fileNotes = strip_tags(kwargs['fileNotes'])
-            if fileNotes is None:
-                fileNotes = ""
+        #Owner ID is a separate variable since uploads can be owned by the system
+        newFile.owner_id = "system" if (AccountController.user_has_permission(user, "admin") and (kwargs.has_key('systemUpload') and kwargs['systemUpload'] == "yes") else user.id
+
+        #Process date provided
+        maxExpiration = datetime.datetime.today() + datetime.timedelta(days=config['max_file_life_days'])
+        expiration = kwargs['expiration'] if kwargs.has_key("expiration") else None
+        if (expiration is None or expiration == "" or expiration.lower() =="never"):
+            if AccountController.user_has_permission(user,  "expiration_exempt") or AccountController.user_has_permission(user, "admin"): #Check permission before allowing a non-expiring upload
+                expiration = None
             else:
-                fileNotes = strip_tags(fileNotes)
-                if len(fileNotes) > 256:
-                    fileNotes = fileNotes[0:256]
-            ownerId = None #Owner ID is a separate variable since uploads can be owned by the system
-            try:
-                ownerId = user.id
+                expiration = maxExpiration
+        else:
+            expiration = datetime.datetime(*time.strptime(strip_tags(expiration), "%m/%d/%Y")[0:5])
+            if expiration > maxExpiration and AccountController.user_has_permission(user,  "expiration_exempt")==False:
+                fMessages.append("Expiration date was invalid. Expiration set to %s" % maxExpiration.strftime("%m/%d/%Y"))
+                expiration = maxExpiration
+        newFile.date_expires = expiration
 
-                if AccountController.user_has_permission(user, "admin") and (kwargs.has_key('systemUpload') and kwargs['systemUpload'] == "yes"):
-                    ownerId = "system"
-                expiration=None
-                if kwargs.has_key("expiration"):
-                    expiration = kwargs['expiration']
-                #Process the expiration data for the file
-                maxExpiration = datetime.datetime.today() + datetime.timedelta(days=config['max_file_life_das'])
-                if (expiration is None or expiration == "" or expiration.lower() =="never"):
-                    if AccountController.user_has_permission(user,  "expiration_exempt") or AccountController.user_has_permission(user, "admin"): #Check permission before allowing a non-expiring upload
-                        expiration = None
-                    else:
-                        expiration = maxExpiration
+        scanFile = True if (scanFile.lower() == "true" or (uploadRequest is not None and uploadRequest.scan_file)) else False
+
+        newFile.notify_on_download = True if (kwargs.has_key("notifyOnDownload") and strip_tags(notifyOnDownload.lower()) == "on") else False
+        newFile.date_uploaded = datetime.datetime.now()
+        newFile.status = "Processing"
+        newFile.upload_request_id = None if (uploadRequest is None) else uploadRequest.id
+        session.add(newFile)
+        session.commit()
+        
+        #Set status to scanning
+        if cherrypy.file_uploads.has_key(uploadKey):
+            for fileTransfer in cherrypy.file_uploads[uploadKey]:
+                if fileTransfer.file_object.name == upFile.file_object.name:
+                    fileTransfer.status = "Scanning and Encrypting" if scanFile else "Encrypting"
+        #Check in the file
+        try:
+            check_in_file(tempFileName, newFile)
+            #If this is an upload request, check to see if it's a single use request and nullify the ticket if so, now that the file has been successfully uploaded
+            if uploadRequest is not None:
+                if uploadRequest.type == "single":
+                    session.add(AuditLog(cherrypy.request.remote.ip, "Upload Requested File", "File %s has been uploaded by an external user to your Filelocker account. This was a single user request and the request has now expired." % (newFile.name), uploadRequest.owner_id)
+                    attachedUploadRequest = session.query(UploadRequest).filter(UploadRequest.id == uploadRequest.id).one()
+                    session.delete(attachedUploadRequest)
+                    cherrypy.session['uploadTicket'].expired = True
                 else:
-                    expiration = datetime.datetime(*time.strptime(strip_tags(expiration), "%m/%d/%Y")[0:5])
-                    if maxExpiration < expiration and AccountController.user_has_permission(user,  "expiration_exempt")==False:
-                        raise Exception("Expiration date must be between now and %s" % maxExpiration.strftime("%m/%d/%Y"))
+                    session.add(AuditLog(cherrypy.request.remote.ip, "Upload Requested File", "File %s has been uploaded by an external user to your Filelocker account." % (newFile.name), uploadRequest.owner_id))
+            sMessages.append("File %s uploaded successfully." % str(fileName))
+            session.commit()
+        except Exception, e:
+            logging.error("[%s] [upload] [Couldn't check in file: %s]" % str(e))
+            fMessages.append("File couldn't be checked in to the file repositor: %s" % str(e))
+        
 
-                #Virus scanning - Tells check_in whether to scan the file, and delete if infected. For upload tickets, scanning may be set by the requestor.
-                scanFile = ""
-                if kwargs.has_key("scanFile"):
-                    scanFile = strip_tags(kwargs['scanFile'])
-                if scanFile.lower() == "true":
-                    scanFile = True
-                elif uploadTicket is not None and uploadTicket.scan_file:
-                    scanFile = True
-                else:
-                    scanFile = False
+        #At this point the file upload is done, one way or the other. Remove the ProgressFile from the transfer dictionary
+        try:
+            if cherrypy.file_uploads.has_key(uploadKey):
+                for fileTransfer in cherrypy.file_uploads[uploadKey]:
+                    if fileTransfer.file_object.name == upFile.file_object.name:
+                        cherrypy.file_uploads[uploadKey].remove(fileTransfer)
+                if len(cherrypy.file_uploads[uploadKey]) == 0:
+                    del cherrypy.file_uploads[uploadKey]
+        except KeyError, ke:
+            logging.warning("[%s] [upload] [Key error deleting entry in file_transfer]" % user.userId)
 
-                #Download notification - if "yes" then the owner will be notified whenever the file is downloaded by other users
-                notifyOnDownload = ""
-                if kwargs.has_key("notifyOnDownload"):
-                    scanFile = strip_tags(kwargs['notifyOnDownload'])
-                if notifyOnDownload.lower() == "on":
-                    notifyOnDownload = True
-                else:
-                    notifyOnDownload = False
-
-                #Build the Filelocker File objects and check them in to Filelocker
-                newFile = File(name=fileName, notes=fileNotes, size=fileSizeBytes, date_uploaded=datetime.datetime.now(), date_expires=expiration, status="Processing File", notify_on_download=notifyOnDownload)
-                if uploadTicket is not None:
-                    newFile.upload_request_id=uploadTicket.id
-                    newFile.owner_id = user.id
-                else:
-                    newFile.owner_id = ownerId
-                if cherrypy.file_uploads.has_key(uploadKey):
-                    for fileTransfer in cherrypy.file_uploads[uploadKey]:
-                        if fileTransfer.file_object.name == upFile.file_object.name:
-                            if scanFile == True:
-                                fileTransfer.status = "Scanning and Encrypting"
-                            else:fileTransfer.status = "Encrypting"
-                #TODO: Start from here
-                createdFile = check_in_file(user, upFile.file_object.name, newFile, scanFile)
-                sMessages.append("File %s uploaded successfully." % str(fileName))
-
-                #If this is an upload request, check to see if it's a single use request and nullify the ticket if so, now that the file has been successfully uploaded
-                if uploadTicket is not None:
-                    if uploadTicket.ticketType == "single":
-                        fl.log_action(uploadTicket.ownerId, "Upload Requested File", None, "File %s has been uploaded by an external user to your Filelocker account. This was a single user request and the request has now expired." % (newFile.fileName))
-                        fl.delete_upload_ticket(user, uploadTicket.ticketId)
-                        cherrypy.session['uploadTicket'].expired = True
-                    else:
-                        fl.log_action(uploadTicket.ownerId, "Upload Requested File", None, "File %s has been uploaded by an external user to your Filelocker account." % (newFile.fileName))
-            except ValueError, ve:
-                fMessages.append("Invalid expiration date format. Date must be in mm/dd/yyyy format.")
-            except FLError, fle:
-                fMessages.extend(fle.failureMessages)
-                sMessages.extend(fle.successMessages)
-                logging.error("[%s] [upload] [FL Error uploading file: %s]" % (uploadKey, str(fle.failureMessages)))
-            except Exception, e:
-                fMessages.append("Could not upload file: %s." % str(e))
-                logging.error("[%s] [upload] [Error uploading file: %s]" % (uploadKey, str(e)))
-
-            #At this point the file upload is done, one way or the other. Remove the ProgressFile from the transfer dictionary
-            try:
-                if cherrypy.file_uploads.has_key(uploadKey):
-                    for fileTransfer in cherrypy.file_uploads[uploadKey]:
-                        if fileTransfer.file_object.name == upFile.file_object.name:
-                            cherrypy.file_uploads[uploadKey].remove(fileTransfer)
-                    if len(cherrypy.file_uploads[uploadKey]) == 0:
-                        del cherrypy.file_uploads[uploadKey]
-            except KeyError, ke:
-                logging.warning("[%s] [upload] [Key error deleting entry in file_transfer]" % user.userId)
-
-            #Queue the temp file for secure erasure
-            fl.queue_for_deletion(tempFileName)
+        #Queue the temp file for secure erasure
+        queue_for_deletion(tempFileName)
 
         #Return the response
         if format=="cli":
@@ -669,6 +657,8 @@ class FileController(object):
             sMessages = ["No active uploads"]
         yield fl_response(sMessages, fMessages, format, data=uploadStats)
 
+def read_file_from_client(contentType, uploadKey, uploadIndex):
+    
 
 def get_upload_ticket_by_password(ticketId, password):
     uploadRequest = session.query(UploadRequest).filter(UploadRequest.id == ticketId)
@@ -696,6 +686,100 @@ def get_temp_file():
         tempFileName = os.path.join(config['vault'], filePrefix + str(randomNumber) + fileSuffix)
     file_object = open(tempFileName, "wb")
     return file_object
+
+def check_in_file(filePath, flFile):
+    config = cherrypy.request.app.config['filelocker']
+    tempFileName = filePath.split(os.path.sep)[-1]
+    #Virus scanning if requested
+    avCommandList = config['antivirus_command'].split(" ")
+    avCommandList.append(os.path.join(config['vault'], tempFileName))
+    try:
+        p = subprocess.Popen(avCommandList, stdout=subprocess.PIPE)
+        output = p.communicate()[0]
+        if(p.returncode != 0):
+            logging.warning("[%s] [checkInFile] [File %s did not pass requested virus scan, return code: %s, output: %s]" % (user.userId, flFile.fileName, p.returncode, output))
+            queue_for_deletion(tempFileName)
+            flFile.passed_avscan = False
+        else:
+            flFile.passed_avscan = True
+    except OSError, oe:
+        logging.critical("[%s] [check_in_file] [AVSCAN execution failed: %s]", (user.id, str(oe)))
+        flFile.passed_avscan = False
+
+    md5sum = None
+    try:
+        p = subprocess.Popen(["md5sum",os.path.join(self.vault, tempFileName)], stdout=subprocess.PIPE)
+        md5sum = p.communicate()[0].split(" ")[0]
+    except Exception, e:
+        logging.error("Couldn't calculate file md5sum: %s" % str(e))
+    flFile.md5 = md5sum
+    #Determine file size and check against quota
+    try:
+        flFile.size = os.stat(filePath)[ST_SIZE]
+        if (user.id != "system"):
+            user = session.query(User).filter(User.id == flFile.owner_id).one()
+            if (get_user_quota_usage_bytes(user.id) + flFile.size) >= (user.quota*1024*1024):
+                logging.warning("[%s] [check_in_file] [User has insufficient quota space remaining to check in file: %s]" % (user.id, flFile.name))
+                raise Exception("You may not upload this file as doing so would exceed your quota")
+    except Exception, e:
+        logging.critical("[%s] [check_in_file] [Couldn't determine file size, using one set from content-length: %s]" % (user.id, str(e)))
+
+    #determine file type
+    flFile.type = "Unknown"
+    try:
+        fileres = os.popen("%s %s" % (config['file_command'], filePath), "r")
+        data = fileres.read().strip()
+        fileres.close()
+        if data.find(";") >= 0:
+            (ftype, lo) = data.split(";")
+            del(lo)
+            flFile.fileType = ftype.strip()
+        else:
+            flFile.fileType = data.strip()
+    except Exception, e:
+        logging.error("[%s] [checkInFile] [Unable to determine file type: %s]" % (user.id, str(e)))
+
+    #Logic is a little strange here - if the user supplied an encryptionKey, then don't save it with the file
+    encryptionKey = None
+    flFile.encryption_key = Encryption.generatePassword()
+    encryptionKey = flFile.encryption_key
+    os.umask(077)
+    newFile = open(filePath, "rb")
+    f = open(os.path.join(config['vault'], str(flFile.id)), "wb")
+    encrypter, salt = Encryption.new_encrypter(encryptionKey)
+    padding, endOfFile = (0, False)
+    f.write(salt)
+    data = newFile.read(1024*8)
+    #If File is only one block long, handle it here
+    if len(data) < (1024*8):
+        padding = 16-(len(data)%16)
+        if padding == 16:
+            paddingByte = "%X" % 0
+        else:
+            paddingByte = "%X" % padding
+        for i in range(padding): data+=paddingByte
+        f.write(encrypter.encrypt(data))
+    else:
+        while 1:
+            if endOfFile: break
+            else:
+                next_data = newFile.read(1024*8)
+                #this only happens if we are at the end, meaning the next block is the last
+                #so we have to handle the padding by aggregating the two blocks and determining pad
+                if len(next_data) < (1024*8):
+                    data+=next_data
+                    padding = 16-(len(data)%16)
+                    if padding == 16: paddingByte = "%X" % 0
+                    else: paddingByte = "%X" % padding
+                    for i in range(padding): data+=paddingByte
+                    endOfFile = True
+            f.write(encrypter.encrypt(data))
+            data = next_data
+
+        newFile.close()
+        f.close()
+        flFile.status = "Checked In"
+        logging.info("[%s] [check_in_file] [User checked in a new file %s]" % (user.id, flFile.name))
 
 def clean_temp_files(config, validTempFiles):
     vaultFileList = os.listdir(config['filelocker']['vault'])

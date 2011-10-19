@@ -103,6 +103,7 @@ class File(Base):
     encryption_key = Column(String(64))
     status = Column(String(255))
     notify_on_download = Column(Boolean)
+    md5 = Column(String(64), nullable=True)
     upload_request_id = Column(String(64), ForeignKey("upload_requests.id"))
 
     private_shares = relationship("PrivateShare", backref="files")
