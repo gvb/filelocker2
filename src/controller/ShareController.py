@@ -11,98 +11,112 @@ class ShareController:
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def create_private_share(self, fileIds, targetId=None, groupId=None, notify="yes", format="json", **kwargs):
-        user, fl, sMessages, fMessages  = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [])
+        user, sMessages, fMessages  = (cherrypy.session.get("user"), [], [])
         fileIds = split_list_sanitized(fileIds)
-        if targetId == "":
-            targetId = None
-        if targetId is not None:
-            targetId = strip_tags(targetId)
-        if groupId == "":
-            groupId = None
-        if groupId is not None:
-            groupId = strip_tags(groupId)
-        if notify != "yes":
-            notify = False
-        else:
-            notify = True
+        targetId = strip_tags(targetId) if targetId is not None and targetId != "" else None
+        groupId = strip_tags(groupId) if groupId is not None and groupId != "" else None
+        notify = True if notify.lower() == "yes" else False
         try:
             if targetId is not None:
-                fl.private_share_files_user(user, fileIds, targetId, notify)
+                for fileId in fileIds:
+                    session.add(PrivateShare(user_id=targetId, file_id=fileId))
                 sMessages.append("Shared file(s) successfully")
             if groupId is not None:
-                fl.private_share_files_group(user, fileIds, groupId, notify)
+                for fileId in fileIds:
+                    session.add(PrivateGroupShare(group_id=groupId, file_id=fileId))
                 sMessages.append("Shared file(s) successfully")
-        except FLError, fle:
-            sMessages.extend(fle.successMessages)
-            fMessages.extend(fle.failureMessages)
+        except Exception, e:
+            fMessages.append(str(e))
         return fl_response(sMessages, fMessages, format)
 
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def create_private_attribute_shares(self, fileIds, attributeId, format="json", **kwargs):
-        user, fl, sMessages, fMessages  = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [])
+        user, sMessages, fMessages  = (cherrypy.session.get("user"), [], [])
         try:
-            fileIds = split_list_sanitized(fileIds)
-            for fileId in fileIds:
-                fl.private_attribute_share_file(user, fileId, attributeId)
-            sMessages.append("Successfully shared file(s) with users having the %s attribute" % attributeId )
-        except FLError, fle:
-            sMessages.extend(fle.successMessages)
-            fMessages.extend(fle.failureMessages)
+            userShareableAttributes, permission = AccountController.get_shareable_attributes_by_user(user), False
+            for attribute in userShareableAttributes:
+                if attributeId == attribute.id:
+                    permission = True
+                    break
+            if permission:
+                fileIds = split_list_sanitized(fileIds)
+                for fileId in fileIds:
+                    session.add(PrivateAttributeShare(file_id=fileId, attributeId=attributeId))
+                sMessages.append("Successfully shared file(s) with users having the %s attribute" % attributeId )
+            else:
+                fMessages.append("You do not have permission to share with this attribute")
+        except Exception, e:
+            fMessages.append(str(e))
         return fl_response(sMessages, fMessages, format)
 
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def delete_private_attribute_shares(self, fileIds, attributeId, format="json", **kwargs):
-        user, fl, sMessages, fMessages  = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [])
+        user, sMessages, fMessages  = (cherrypy.session.get("user"), [], [])
         try:
-            fileIdList = split_list_sanitized(fileIds)
-            for fileId in fileIdList:
-                fl.delete_private_attribute_share(user, fileId, attributeId)
-            sMessages.append("Successfully unshared file(s) with users having the %s attribute") % attributeId
-        except FLError, fle:
-            sMessages.extend(fle.successMessages)
-            fMessages.extend(fle.failureMessages)
+            userShareableAttributes, permission = AccountController.get_shareable_attributes_by_user(user), False
+            for attribute in userShareableAttributes:
+                if attributeId == attribute.id:
+                    permission = True
+                    break
+            if permission:
+                fileIdList = split_list_sanitized(fileIds)
+                for fileId in fileIdList:
+                    pas = session.query(PrivateAttributeShare).filter(PrivateAttributeShare.attribute_id==attributeId and PrivateAttributeShare.fileId==fileId).one()
+                    session.delete(pas)
+                sMessages.append("Successfully unshared file(s) with users having the %s attribute") % attributeId
+            else:
+                fMessages.append("You do not have permission to delete attribute shares for this attribute")
+        except Exception, e:
+            fMessages.append(str(e))
         return fl_response(sMessages, fMessages, format)
 
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def create_public_share(self, fileId, expiration, shareType, notifyEmails, format="json", **kwargs):
-        user, fl, sMessages, fMessages, shareId = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [], None)
+        user, sMessages, fMessages, shareId = (cherrypy.session.get("user"), [], [], None)
         fileId = strip_tags(fileId)
         try:
-            expiration = datetime.datetime(*(time.strptime(strip_tags(expiration), "%m/%d/%Y")[0:6]))
+            flFile = session.query(File).filter(File.id==fileId).one()
             try:
+                expiration = datetime.datetime(*(time.strptime(strip_tags(expiration), "%m/%d/%Y")[0:6]))
+            except Exception, e:
+                raise Exception("Invalid expiration date format. Date must be in mm/dd/yyyy format.")
+            if expiration is None or expiration == "":
+                raise Exception("Public shares must have a valid expiration date")
+            if flFile.owner_id == user.id or AccountController.user_has_permission(user, "admin"):
                 notifyEmailList = split_list_sanitized(notifyEmails)
                 password = None
                 if shareType != "multi":
                     shareType = "single"
                 if kwargs.has_key("password") and kwargs['password']!="":
                     password = kwargs['password']
-                shareId = fl.public_share_file(user, fileId, password, expiration, shareType, notifyEmailList)
+                ps = PublicShare(file_id=flFile.id, date_expires=expiration, reuse=shareType)
+                ps.id = ps.generate_share_id()
+                ps.set_password(password)
+                session.add(ps)
+                session.commit()
                 sMessages.append("File shared successfully")
-            except FLError, fle:
-                sMessages.extend(fle.successMessages)
-                fMessages.extend(fle.failureMessages)
-        except Exception, e:
-            if expiration is None or expiration == "":
-                fMessages.append("Public shares must have an expiration date.")
             else:
-                fMessages.append("Invalid expiration date format. Date must be in mm/dd/yyyy format.")
-            logging.error("[%s] [createPublicShare] [Unable to create public share: %s]" % (user.userId, str(e)))
+                fMessages.append("You do not have permission to publicly share this file")
+        except Exception, e:
+            fMessages.append(str(e))
+            logging.error("[%s] [create_public_share] [Unable to create public share: %s]" % (user.id, str(e)))
         return fl_response(sMessages, fMessages, format, data=shareId)
 
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def delete_public_share(self, fileId, format="json", **kwargs):
-        user, fl, sMessages, fMessages = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [])
+        #TODO: Public sharing has to be redone to accomodate multi-shares
+        user, sMessages, fMessages = (cherrypy.session.get("user"), [], [])
         fileId = strip_tags(fileId)
         try:
             fl.delete_public_share(user, fileId)
+            ps = session.query(PublicShare).all()
             sMessages.append("Successfully unshared file")
-        except FLError, fle:
-            sMessages.extend(fle.successMessages)
-            fMessages.extend(fle.failureMessages)
+        except Exception, e:
+            fMessags.append(str(e))
         return fl_response(sMessages, fMessages, format)
 
     @cherrypy.expose

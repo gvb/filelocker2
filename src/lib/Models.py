@@ -181,14 +181,20 @@ class PublicShare(Base):
     __tablename__="public_shares"
     id = Column(String(64), primary_key=True)
     file_id = Column(Integer, ForeignKey("files.id"), nullable=False)
-    expiration_date = Column(DateTime)
+    date_expires = Column(DateTime)
     password = Column(String(80))
     reuse = Column(Enum("single", "multi"), default="single")
     flFile = relationship("File")
 
-    def generateShareId(self):
+    def generate_share_id(self):
         import random
-        return md5(str(random.random())).hexdigest()
+        shareId = md5(str(random.random())).hexdigest()
+        while session.query(PublicShare).filter(PublicShare.id == shareId).scalar() is not None:
+            shareId = md5(str(random.random())).hexdigest()
+        return shareId
+
+    def set_password(self, password):
+        self.password = hash_password(password)
 
 class PrivateAttributeShare(Base):
     __tablename__ = "private_attribute_shares"
