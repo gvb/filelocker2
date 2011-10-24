@@ -33,7 +33,7 @@
             #for $f in $userFiles
                 #set $rowId = $rowId + 1
                 #set $fsSuffix = "B"
-                #set $fileSize = $f.file_size
+                #set $fileSize = $f.size
                 #if $fileSize > 1024
                     #set $fileSize = $fileSize / 1024
                     #set $fsSuffix = "kB"
@@ -48,16 +48,18 @@
                 #end if
                 <tr id="row_$rowId" class="fileRow">
                     <td id="name_row_$rowId" class="nameElement">
-                    #if $f.owner_id == $user.userId
+                    #if $f.owner_id == $user.id
                         <input type="checkbox" value="$f.id" id="checkbox_row_$rowId" name="select_file" class="fileSelectBox" onClick="fileChecked()"/>
                     #end if
                         <div class="posrel">
                             <div id="menu_row_$rowId" class="menuFiles hidden"><!--add class of hidden to hide this info box-->
                             <ul class="menu">
                                 <li>
-                                    #if $f.publicShare is not None
-                                    <div class="itemTitleMedium"><span class="globe">Public Share:</span>&nbsp;&nbsp;&nbsp;&nbsp;<a href="javascript:viewPublicShareURL('$f.publicShare.shareId')">(view link)</a></div> 
-                                    <input type="checkbox" name="publicShareCheckbox_row_$rowId" value="yes" class="publicShareCheckbox" title="Unshare this file with users outside of $config['org_name']" onClick="javascript:unPublicShareFile('$f.id', 'files')" checked="checked" />
+                                    #if $f.public_shares is not None and $len($f.public_shares) > 0
+                                        #for $publicShare in $f.public_shares
+                                            <div class="itemTitleMedium"><span class="globe">Public Share:</span>&nbsp;&nbsp;&nbsp;&nbsp;<a href="javascript:viewPublicShareURL('$publicShare.id')">(view link)</a></div>
+                                            <input type="checkbox" name="publicShareCheckbox_row_$rowId" value="yes" class="publicShareCheckbox" title="Unshare this file with users outside of $config['org_name']" onClick="javascript:unPublicShareFile('$f.id', 'files')" checked="checked" />
+                                        #end for
                                     #else
                                     #set $fileExpiration = "Never"
                                     #if $f.date_expires is not None
@@ -67,18 +69,18 @@
                                     <input type="checkbox" name="publicShareCheckbox_$f.id" value="no" class="publicShareCheckbox" title="Share this file with users outside of $config['org_name']" onClick="javascript:promptPublicShareFile('$f.id', '$f.name', '$fileExpiration', 'files')"/>
                                     #end if
                                 </li>
-                                #if $f.owner_id == $user.userId
+                                #if $f.owner_id == $user.id
                                 <li>
                                     <div class="itemTitleMedium"><span class="notifyOnDownload">Notify Me on Download:</span></div>
-                                    #if $f.fileNotifyOnDownload
+                                    #if $f.notify_on_download
                                         <input type="checkbox" name="notifyOnDownload_$f.id" id="notifyOnDownloadYes_$f.id" class="notifyCheckbox" title="Email me when someone downloads this file" onClick="toggleNotifyOnDownload('$f.id', 'no')" checked="checked"/>
                                     #else
                                         <input type="checkbox" name="notifyOnDownload_$f.id" id="notifyOnDownloadYes_$f.id" class="notifyCheckbox" title="Email me when someone downloads this file" onClick="toggleNotifyOnDownload('$f.id', 'yes')"/>
                                     #end if
                                 </li>
                                 #end if
-                                #set $userCount = len($f.shares)
-                                #set $groupCount = len($f.groupShares)
+                                #set $userCount = len($f.private_shares)
+                                #set $groupCount = len($f.private_group_shares)
                                 #if $userCount > 0 or $groupCount > 0
                                 <li>
                                     #set $userPlural = "s"
@@ -105,7 +107,7 @@
                                 <li>
                                 <div class="itemTitle"><span class="clock">Uploaded:</span></div>
                                 $f.date_uploaded</li>
-                                #if $f.owner_id == $user.userId
+                                #if $f.owner_id == $user.id
                                     <li><div class="itemTitleMedium"><span class="cross"><a href="javascript:promptConfirmation('deleteFile', ['$f.id']);" title="Permanently delete this file from Filelocker" class="redText">Delete This File</a></span></div></li>
                                     <li><div class="itemTitleMedium"><span class="save"><a href="$config['root_url']/file_interface/download?id=$f.id" title="Download this file from Filelocker">Download This File</a></span></div></li>
                                     <li><div class="itemTitleMedium"><span class="statistics"><a href="javascript:viewDownloadStatistics('$f.id');" title="View a chart of this file's downloads over time">View Download Statistics</a></span></div></li>
@@ -167,7 +169,7 @@
             #for $f in $systemFiles
                 #set $rowId = $rowId + 1
                 #set $fsSuffix = "B"
-                #set $fileSize = $f.file_size
+                #set $fileSize = $f.size
                 #if $fileSize > 1024
                     #set $fileSize = $fileSize / 1024
                     #set $fsSuffix = "kB"
@@ -187,9 +189,11 @@
                             <div id="menu_row_$rowId" class="menuFiles hidden"><!--add class of hidden to hide this info box-->
                             <ul class="menu">
                                 <li>
-                                    #if $f.public_shares is not None
-                                    <div class="itemTitleMedium"><span class="globe">Public Share:</span>&nbsp;&nbsp;&nbsp;&nbsp;<a href="javascript:viewPublicShareURL('$f.publicShare.shareId')">(view link)</a></div> 
-                                    <input type="checkbox" name="publicShareCheckbox_row_$rowId" value="yes" class="publicShareCheckbox" title="Unshare this file with users outside of $config['org_name']" onClick="javascript:unPublicShareFile('$f.id', 'files')" checked="checked" />
+                                    #if $f.public_shares is not None and $len($f.public_shares) > 0
+                                    #for $publicShare in $f.public_shares
+                                        <div class="itemTitleMedium"><span class="globe">Public Share:</span>&nbsp;&nbsp;&nbsp;&nbsp;<a href="javascript:viewPublicShareURL('$publicShare.id')">(view link)</a></div>
+                                        <input type="checkbox" name="publicShareCheckbox_row_$rowId" value="yes" class="publicShareCheckbox" title="Unshare this file with users outside of $config['org_name']" onClick="javascript:unPublicShareFile('$f.id', 'files')" checked="checked" />
+                                    #end for
                                     #else
                                     #set $fileExpiration = "Never"
                                     #if $f.date_expires is not None
@@ -283,7 +287,7 @@
                     #for $f in $sharedFiles
                         #set $rowId = $rowId + 1
                         #set $fsSuffix = "B"
-                        #set $fileSize = $f.file_size
+                        #set $fileSize = $f.size
                         #if $fileSize > 1024
                             #set $fileSize = $fileSize / 1024
                             #set $fsSuffix = "kB"
@@ -373,7 +377,7 @@
                             #for $f in $attributeFilesDict[$attributeId]:
                                 #set $rowId = $rowId + 1
                                 #set $fsSuffix = "B"
-                                #set $fileSize = $f.file_size
+                                #set $fileSize = $f.size
                                 #if $fileSize > 1024
                                     #set $fileSize = $fileSize / 1024
                                     #set $fsSuffix = "kB"
@@ -472,15 +476,15 @@
                         <td>No</td>
                         #end if
                         
-                        #if $uploadRequest.max_file_size is None
+                        #if $uploadRequest.max_size is None
                             <!--<td>None</td>-->
                         #else
                             #set $suffix = "MB"
-                            #if $uploadRequest.max_file_size > 1024
+                            #if $uploadRequest.max_size > 1024
                                 #set $suffix = "GB"
-                                #set $uploadRequest.max_file_size = $uploadRequest.max_file_size/1024
+                                #set $uploadRequest.max_size = $uploadRequest.max_size/1024
                             #end if
-                            <!--<td>str($uploadRequest.max_file_size $suffix</td>-->
+                            <!--<td>str($uploadRequest.max_size $suffix</td>-->
                         #end if
                         
                         <td>$uploadRequest.expiration.strftime("%m/%d/%Y")</td>

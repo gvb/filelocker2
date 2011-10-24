@@ -1,6 +1,5 @@
 import os
 import random
-import time
 import cherrypy
 import logging
 import datetime
@@ -141,11 +140,11 @@ class FileController(object):
                 if flFile.owner_id == userId or flFile.shared_with(user):
                     myFilesList.append(flFile)
         for flFile in myFilesList: #attachments to the file objects for this function, purely cosmetic
-            if len(flFile.public_shares) > 0 and (len(flFile.private_shares) > 0 or len(flFile.private_group_shares) > 0):
+            if (len(flFile.public_shares) > 0) and (len(flFile.private_shares) > 0 or len(flFile.private_group_shares) > 0 ):
                 flFile.documentType = "document_both"
             elif len(flFile.public_shares) > 0:
                 flFile.documentType = "document_globe"
-            elif len(flFile.public_shares == 0) and (len(flFile.private_shares) > 0 or len(flFile.private_group_shares) > 0):
+            elif len(flFile.public_shares) == 0 and (len(flFile.private_shares) > 0 or len(flFile.private_group_shares) > 0):
                 flFile.documentType = "document_person"
             else:
                 flFile.documentType = "document"
@@ -166,7 +165,7 @@ class FileController(object):
                 for group in session.query(Group).filter(Group.owner_id==userId):
                     if group.id not in sharedGroupIds:
                         flFile.availableGroups.append({'id': group.id, 'name': group.name})
-                myFilesJSON.append({'fileName': flFile.name, 'fileId': flFile.id, 'fileOwnerId': flFile.owner_id, 'fileSizeBytes': flFile.size, 'fileUploadedDatetime': flFile.date_uploaded, 'fileExpirationDatetime': flFile.date_expires, 'filePassedAvScan':flFile.passed_avscan, 'documentType': flFile.documentType, 'fileUserShares': fileUserShares, 'fileGroupShares': fileGroupShares, 'availableGroups': availableGroups, 'fileAttributeShares': fileAttributeShares})
+                myFilesJSON.append({'fileName': flFile.name, 'fileId': flFile.id, 'fileOwnerId': flFile.owner_id, 'fileSizeBytes': flFile.size, 'fileUploadedDatetime': flFile.date_uploaded.strftime("%m/%d/%Y"), 'fileExpirationDatetime': flFile.date_expires.strftime("%m/%d/%Y") if flFile.date_expires is not None else "Never", 'filePassedAvScan':flFile.passed_avscan, 'documentType': flFile.documentType, 'fileUserShares': fileUserShares, 'fileGroupShares': fileGroupShares, 'availableGroups': availableGroups, 'fileAttributeShares': fileAttributeShares})
             if format=="json":
                 return fl_response(sMessages, fMessages, format, data=myFilesJSON)
             elif format=="searchbox_html":
@@ -222,20 +221,22 @@ class FileController(object):
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def delete_files(self, fileIds=None, format="json", **kwargs):
-        user, fl, sMessages, fMessages = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [])
+        user, sMessages, fMessages = (cherrypy.session.get("user"), [], [])
         fileIds = split_list_sanitized(fileIds)
         for fileId in fileIds:
             try:
-                fileId = int(Formatters.strip_tags(str(fileId)))
-                flFile = fl.get_file(user, fileId)
-                if flFile.fileOwnerId == user.userId or fl.check_admin(user):
-                    fl.delete_file(user, fileId)
-                    sMessages.append("File %s deleted successfully" % flFile.fileName)
+                fileId = int(strip_tags(str(fileId)))
+                flFile = session.query(File).filter(File.id == fileId).one()
+                if flFile.owner_id == user.id or AccountController.user_has_permission(user, "admin"):
+                    queue_for_deletion(flFile.id)
+                    session.delete(flFile)
+                    session.commit()
+                    sMessages.append("File %s deleted successfully" % flFile.name)
                 else:
-                    fMessages.append("You do not have permission to delete file %s" % flFile.fileName)
-            except FLError, fle:
-                fMessages.extend(fle.failureMessages)
-                sMessages.extend(fle.successMessages)
+                    fMessages.append("You do not have permission to delete file %s" % flFile.name)
+            except Exception, e:
+                session.rollback()
+                fMessages.append("File not deleted: %s" % str(e))
         return fl_response(sMessages, fMessages, format)
 
     @cherrypy.expose
@@ -262,6 +263,7 @@ class FileController(object):
         return fl_response(sMessages, fMessages, format)
 
     @cherrypy.expose
+    @cherrypy.tools.before_upload()
     def upload(self, format="json", **kwargs):
         cherrypy.response.timeout = 86400
         user, uploadRequest, uploadKey, config, sMessages, fMessages = None, None, None, cherrypy.request.app.config['filelocker'], [], []
@@ -325,12 +327,18 @@ class FileController(object):
             else:
                 cherrypy.file_uploads[uploadKey] = [upFile,]
             bytesRemaining = fileSizeBytes
+            print "Bytes remaining: %s" % fileSizeBytes
             while True:
+                print "reading block"
                 if bytesRemaining >= 8192:
+                    print "BigBytes"
                     block = cherrypy.request.rfile.read(8192)
                 else:
+                    print "LittleBytes"
                     block = cherrypy.request.rfile.read(bytesRemaining)
+                print "Writing bytes"
                 upFile.write(block)
+                print "decrementing bytes"
                 bytesRemaining -= 8192
                 if bytesRemaining <= 0: break
             upFile.seek(0)
@@ -393,7 +401,7 @@ class FileController(object):
                 expiration = maxExpiration
         newFile.date_expires = expiration
 
-        scanFile = True if (scanFile.lower() == "true" or (uploadRequest is not None and uploadRequest.scan_file)) else False
+        scanFile = True if ((kwargs.has_key("scanFile") and kwargs['scanFile'].lower() == "true") or (uploadRequest is not None and uploadRequest.scan_file)) else False
 
         newFile.notify_on_download = True if (kwargs.has_key("notifyOnDownload") and strip_tags(notifyOnDownload.lower()) == "on") else False
         newFile.date_uploaded = datetime.datetime.now()
@@ -422,8 +430,8 @@ class FileController(object):
             sMessages.append("File %s uploaded successfully." % str(fileName))
             session.commit()
         except Exception, e:
-            logging.error("[%s] [upload] [Couldn't check in file: %s]" % str(e))
-            fMessages.append("File couldn't be checked in to the file repositor: %s" % str(e))
+            logging.error("[%s] [upload] [Couldn't check in file: %s]" % (user.id, str(e)))
+            fMessages.append("File couldn't be checked in to the file repository: %s" % str(e))
         
 
         #At this point the file upload is done, one way or the other. Remove the ProgressFile from the transfer dictionary
@@ -698,18 +706,18 @@ def check_in_file(filePath, flFile):
         p = subprocess.Popen(avCommandList, stdout=subprocess.PIPE)
         output = p.communicate()[0]
         if(p.returncode != 0):
-            logging.warning("[%s] [checkInFile] [File %s did not pass requested virus scan, return code: %s, output: %s]" % (user.userId, flFile.fileName, p.returncode, output))
+            logging.warning("[%s] [checkInFile] [File %s did not pass requested virus scan, return code: %s, output: %s]" % (flFile.owner_id, flFile.name, p.returncode, output))
             queue_for_deletion(tempFileName)
             flFile.passed_avscan = False
         else:
             flFile.passed_avscan = True
     except OSError, oe:
-        logging.critical("[%s] [check_in_file] [AVSCAN execution failed: %s]", (user.id, str(oe)))
+        logging.critical("[%s] [check_in_file] [AVSCAN execution failed: %s]", (flFile.owner_id, str(oe)))
         flFile.passed_avscan = False
 
     md5sum = None
     try:
-        p = subprocess.Popen(["md5sum",os.path.join(self.vault, tempFileName)], stdout=subprocess.PIPE)
+        p = subprocess.Popen(["md5sum",os.path.join(config['vault'], tempFileName)], stdout=subprocess.PIPE)
         md5sum = p.communicate()[0].split(" ")[0]
     except Exception, e:
         logging.error("Couldn't calculate file md5sum: %s" % str(e))
@@ -717,13 +725,13 @@ def check_in_file(filePath, flFile):
     #Determine file size and check against quota
     try:
         flFile.size = os.stat(filePath)[ST_SIZE]
-        if (user.id != "system"):
+        if (flFile.owner_id != "system"):
             user = session.query(User).filter(User.id == flFile.owner_id).one()
             if (get_user_quota_usage_bytes(user.id) + flFile.size) >= (user.quota*1024*1024):
                 logging.warning("[%s] [check_in_file] [User has insufficient quota space remaining to check in file: %s]" % (user.id, flFile.name))
                 raise Exception("You may not upload this file as doing so would exceed your quota")
     except Exception, e:
-        logging.critical("[%s] [check_in_file] [Couldn't determine file size, using one set from content-length: %s]" % (user.id, str(e)))
+        logging.critical("[%s] [check_in_file] [Couldn't determine file size, using one set from content-length: %s]" % (flFile.owner_id, str(e)))
 
     #determine file type
     flFile.type = "Unknown"

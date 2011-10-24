@@ -19,9 +19,6 @@ __date__ ="$Sep 25, 2011 9:09:40 PM$"
 __version__ = "2.6"
 
 def before_upload(**kwargs):
-    from controller import FileController
-    user, sMessages, fMessages, uploadTicket = None, None, None, None
-    
     cherrypy.request.process_request_body = False
     
 def requires_login(permissionId=None, **kwargs):
