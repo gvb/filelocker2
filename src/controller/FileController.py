@@ -1,6 +1,12 @@
 import os
+import stat
 import random
 import cherrypy
+from cherrypy.lib import cptools, http, file_generator_limited
+import mimetypes
+mimetypes.init()
+mimetypes.types_map['.dwg']='image/x-dwg'
+mimetypes.types_map['.ico']='image/x-icon'
 import logging
 import datetime
 import subprocess
@@ -459,19 +465,23 @@ class FileController(object):
     @cherrypy.tools.requires_login()
     def download(self, fileId, **kwargs):
         cherrypy.response.timeout = 36000
-        user, fl, sMessages, fMessages = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [])
+        user, sMessages, fMessages = (cherrypy.session.get("user"), [], [])
         cherrypy.session.release_lock()
         try:
-            flFile = fl.get_file(user, fileId)
+            flFile = session.query(File).filter(File.id==fileId).one()
+            if flFile.owner_id == user.id or AccountController.user_has_permission(user, "admin"):
+                return self.serve_file(flFile)
+            else:
+                raise cherrypy.HTTPError(403, "You do not have access to this file")
+
             #if kwargs.has_key("encryptionKey") and kwargs['encryptionKey'] !="" and kwargs['encryptionKey'] is not None:
                 #flFile.fileEncryptionKey = kwargs['encryptionKey']
             #if flFile.fileEncryptionKey is None:
                 #raise HTTPError(412, "This file requires you to supply an encryption key to decrypt the file.")
-            return self.serve_file(flFile)
-        except FLError, fle:
-            logging.error("[%s] [download] [Error while trying to initiate download: %s]" % (user.userId, str(fle.failureMessages)))
-            cherrypy.session['fMessages'].append("Unable to download: %s" % str(fle.failureMessages))
-            raise HTTPError(404, "Unable to download: %s" % str(fle.failureMessages))
+        except Exception, e:
+            logging.error("[%s] [download] [Error while trying to initiate download: %s]" % (user.id, str(e)))
+            cherrypy.session['fMessages'].append("Unable to download: %s" % str(e))
+            raise cherrypy.HTTPError(404, "Unable to download: %s" % str(e))
 
     @cherrypy.expose
     @cherrypy.tools.requires_login()
@@ -536,10 +546,11 @@ class FileController(object):
             fMessages.extend(fle.failureMessages)
         return fl_response(sMessages, fMessages, format)
 
-    def serve_file(self, flFile, fl=None, user=None, content_type=None, publicShareId=None):
+    def serve_file(self, flFile, user=None, content_type=None, publicShareId=None):
+        config = cherrypy.request.app.config['filelocker']
         cherrypy.response.headers['Pragma']="cache"
         cherrypy.response.headers['Cache-Control']="private"
-        cherrypy.response.headers['Content-Length'] = flFile.fileSizeBytes
+        cherrypy.response.headers['Content-Length'] = flFile.size
         cherrypy.response.stream = True
         """Set status, headers, and body in order to serve the given file.
 
@@ -553,12 +564,10 @@ class FileController(object):
         header will be written.
         """
         success, message = (True, "")
-        if fl is None:
-            fl = cherrypy.thread_data.flDict['app']
         if user is None:
             user = cherrypy.session.get("user")
         disposition = "attachment"
-        path = os.path.join(fl.vault, str(flFile.fileId))
+        path = os.path.join(config['vault'], str(flFile.id))
         response = cherrypy.response
         try:
             st = os.stat(path)
@@ -583,7 +592,7 @@ class FileController(object):
             content_type = mimetypes.types_map.get(ext, "text/plain")
         response.headers['Content-Type'] = content_type
         if disposition is not None:
-            cd = '%s; filename="%s"' % (disposition, flFile.fileName)
+            cd = '%s; filename="%s"' % (disposition, flFile.name)
             response.headers["Content-Disposition"] = cd
 
         # Set Content-Length and use an iterable (file object)
@@ -591,15 +600,14 @@ class FileController(object):
         c_len = st.st_size
         bodyfile = open(path, 'rb')
         salt = bodyfile.read(16)
-        decrypter = encryption.new_decrypter(flFile.fileEncryptionKey, salt)
+        decrypter = Encryption.new_decrypter(flFile.encryption_key, salt)
         try:
-            response.body = self.enc_file_generator(user, decrypter, bodyfile, flFile.fileId, publicShareId)
+            response.body = self.enc_file_generator(user, decrypter, bodyfile, flFile.id, publicShareId)
             return response.body
         except HTTPError, he:
             raise he
 
     def enc_file_generator(self, user, decrypter, dFile, fileId=None, publicShareId=None):
-        fl = cherrypy.thread_data.flDict['app']
         endOfFile = False
         readData = dFile.read(1024*8)
         data = decrypter.decrypt(readData)
@@ -611,13 +619,13 @@ class FileController(object):
             if padding==0:
                 padding=16
             endOfFile = True
-            fl.file_download_complete(user, fileId, publicShareId)
+            file_download_complete(user, fileId, publicShareId)
             yield data[:len(data)-padding]
         else:
             #For multiblock files
             while True:
                 if endOfFile:
-                    fl.file_download_complete(user, fileId, publicShareId)
+                    file_download_complete(user, fileId, publicShareId)
                     break
                 next_data = decrypter.decrypt(dFile.read(1024*8))
                 if (next_data is not None and next_data != "") and not len(next_data)<(1024*8):
@@ -668,6 +676,35 @@ class FileController(object):
             sMessages = ["No active uploads"]
         yield fl_response(sMessages, fMessages, format, data=uploadStats)
 
+def file_download_complete(user, fileId, publicShareId=None):
+    try:
+        flFile = session.query(File).filter(File.id==fileId).one()
+        if user.id != flFile.owner_id and flFile.notify_on_download:
+            try:
+                owner = session.query(User).filter(User.id==flFile.owner_id).one()
+                if owner.email is not None and owner.email != "":
+                    self.mail.notify(self.get_template_file('download_notification.tmpl'),{'sender': None, 'recipient': owner.email, 'fileName': flFile.name, 'downloadUserId': user.id, 'downloadUserName': user.display_name})
+            except Exception, e:
+                logging.error("[%s] [file_download_complete] [Unable to notify user %s of download completion: %s]" % (user.id, owner.id, str(e)))
+
+        if publicShareId is not None:
+            publicShare = session.query(PublicShare).filter(PublicShare.id == publicShareId).one()
+            session.add(AuditLog(flFile.owner_id,"Download File", "File %s downloaded via Public Share. [File ID: %s]" % (flFile.name, flFile.id)))
+            if flFile.notify_on_download:
+                try:
+                    owner = session.query(User).filter(User.id == flFile.owner_id).one()
+                    if owner.email is not None and owner.email != "":
+                        Mail.notify(get_template_file('public_download_notification.tmpl'),{'sender': None, 'recipient': owner.email, 'fileName': flFile.name})
+                except Exception, e:
+                    logging.error("[%s] [file_download_complete] [Unable to notify user %s of download completion: %s]" % (user.id, owner.id, str(e)))
+            if publicShare.type == "single":
+                session.delete(publicShare)
+                session.add(AuditLog(flFile.owner_id, "Delete Public Share", "File %s downloaded via single use public share. File is no longer publicly shared. [File ID: %s]" % (flFile.name, flFile.id)))
+        else:
+            session.add(AuditLog(user.id, "Download File", "File %s downloaded by user %s. [File ID: %s]" % (flFile.name, user.id, flFile.id)))
+        session.commit()
+    except Exception, e:
+        logging.error("[%s] [file_download_complete] [Unable to finish download completion: %s]" % (user.id, str(e)))
 
 def get_upload_ticket_by_password(ticketId, password):
     uploadRequest = session.query(UploadRequest).filter(UploadRequest.id == ticketId)
@@ -696,17 +733,17 @@ def get_temp_file():
     file_object = open(tempFileName, "wb")
     return file_object
 
-def check_in_file(filePath, flFile):
+def check_in_file(tempFileName, flFile):
     config = cherrypy.request.app.config['filelocker']
-    tempFileName = filePath.split(os.path.sep)[-1]
+    filePath = os.path.join(config['vault'], tempFileName)
     #Virus scanning if requested
     avCommandList = config['antivirus_command'].split(" ")
-    avCommandList.append(os.path.join(config['vault'], tempFileName))
+    avCommandList.append(filePath)
     try:
         p = subprocess.Popen(avCommandList, stdout=subprocess.PIPE)
         output = p.communicate()[0]
         if(p.returncode != 0):
-            logging.warning("[%s] [checkInFile] [File %s did not pass requested virus scan, return code: %s, output: %s]" % (flFile.owner_id, flFile.name, p.returncode, output))
+            logging.warning("[%s] [check_in_file] [File %s did not pass requested virus scan, return code: %s, output: %s]" % (flFile.owner_id, flFile.name, p.returncode, output))
             queue_for_deletion(tempFileName)
             flFile.passed_avscan = False
         else:
@@ -717,7 +754,7 @@ def check_in_file(filePath, flFile):
 
     md5sum = None
     try:
-        p = subprocess.Popen(["md5sum",os.path.join(config['vault'], tempFileName)], stdout=subprocess.PIPE)
+        p = subprocess.Popen(["md5sum",filePath], stdout=subprocess.PIPE)
         md5sum = p.communicate()[0].split(" ")[0]
     except Exception, e:
         logging.error("Couldn't calculate file md5sum: %s" % str(e))

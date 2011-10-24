@@ -109,7 +109,7 @@
                                 $f.date_uploaded</li>
                                 #if $f.owner_id == $user.id
                                     <li><div class="itemTitleMedium"><span class="cross"><a href="javascript:promptConfirmation('deleteFile', ['$f.id']);" title="Permanently delete this file from Filelocker" class="redText">Delete This File</a></span></div></li>
-                                    <li><div class="itemTitleMedium"><span class="save"><a href="$config['root_url']/file_interface/download?id=$f.id" title="Download this file from Filelocker">Download This File</a></span></div></li>
+                                    <li><div class="itemTitleMedium"><span class="save"><a href="$config['root_url']/file_interface/download?fileId=$f.id" title="Download this file from Filelocker">Download This File</a></span></div></li>
                                     <li><div class="itemTitleMedium"><span class="statistics"><a href="javascript:viewDownloadStatistics('$f.id');" title="View a chart of this file's downloads over time">View Download Statistics</a></span></div></li>
                                     #set $notesStripped = $re.sub(r'\[geo\]-?\d+\.\d+,-?\d+\.\d+\[/geo\]', '', $f.notes)
                                     #if $notesStripped != ""
@@ -229,7 +229,7 @@
                                 </li>
                                 <li><div class="itemTitle"><span class="clock">Uploaded:</span></div>$f.date_uploaded</li>
                                 <li><div class="itemTitleMedium"><span class="cross"><a href="javascript:promptConfirmation('deleteFile', ['$f.id']);" title="Permanently delete this file from Filelocker" class="redText">Delete This File</a></span></div></li>
-                                <li><div class="itemTitleMedium"><span class="save"><a href="$config['root_url']/file_interface/download?id=$f.id" title="Download this file from Filelocker">Download This File</a></span></div></li>
+                                <li><div class="itemTitleMedium"><span class="save"><a href="$config['root_url']/file_interface/download?fileId=$f.id" title="Download this file from Filelocker">Download This File</a></span></div></li>
                                 #set $notesStripped = $re.sub(r'\[geo\]-?\d+\.\d+,-?\d+\.\d+\[/geo\]', '', $f.notes)
                                 #if $notesStripped != ""
                                     <li><div class="itemTitleMedium"><span class="view"><a href="javascript:viewnotes('$notesStripped');" title="View the user-entered notes for this file">View File Notes</a></span></div></li>
@@ -327,7 +327,7 @@
                                     #end if
                                     <li><div class="itemTitleMedium"><span class="hide"><a href="javascript:hidePrivateShare('$f.id');" title="Hide this share from Filelocker. Unhide shares in Account Settings" class="redText">Hide This Share</a></span></div></li>
                                     <li><div class="itemTitleWide"><span id="takeOwnership_$f.id" class="take_ownership"><a href="javascript:takeFile('$f.id');" title="Move this file to 'My Files' for resharing">Take Ownership (to Reshare)</a></span></div></li>
-                                    <li><div class="button" style="width: 185px"><a href="$config['root_url']/file_interface/download?id=$f.id" title="Download this file from Filelocker" class="saveButton"><span><center>Download This File</center></span></a></div></li>
+                                    <li><div class="button" style="width: 185px"><a href="$config['root_url']/file_interface/download?fileId=$f.id" title="Download this file from Filelocker" class="saveButton"><span><center>Download This File</center></span></a></div></li>
                                     </ul>
                                 </div>
                             </div>
@@ -416,7 +416,7 @@
                                                 <li><div class="itemTitleMedium"><span class="map"><a href="http://maps.google.com/maps?q=${fileGeoData.group(1)},${fileGeoData.group(2)}" title="View this file's upload location on Google Maps" target="_blank">View Upload Location</a></span></div></li>
                                             #end if
                                             <li><div class="itemTitleWide"><span id="takeOwnership_$f.id" class="take_ownership"><a href="javascript:takeFile('$f.id');" title="Move this file to 'My Files' for resharing">Take Ownership (to Reshare)</a></span></div></li>
-                                            <li><div class="button" style="width: 185px"><a href="$config['root_url']/file_interface/download?id=$f.id" title="Download this file from Filelocker" class="saveButton"><span><center>Download This File</center></span></a></div></li>
+                                            <li><div class="button" style="width: 185px"><a href="$config['root_url']/file_interface/download?fileId=$f.id" title="Download this file from Filelocker" class="saveButton"><span><center>Download This File</center></span></a></div></li>
                                             </ul>
                                         </div>
                                     </div>
