@@ -1,4 +1,6 @@
 import os
+import random
+import time
 import cherrypy
 import logging
 import datetime
@@ -270,7 +272,7 @@ class FileController(object):
             user = AccountController.get_user(uploadTicket.ownerId)
             uploadKey = user.id+":"+uploadTicket.id
         else:
-            requires_login()
+            cherrypy.tools.requires_login()
             user, sMessages, fMessages = cherrypy.session.get("user"), cherrypy.session.get("sMessages"), cherrypy.session.get("fMessages")
             uploadKey = user.id
             
@@ -285,7 +287,7 @@ class FileController(object):
             raise HTTPError(411, "Request must have a valid content length")
         fileSizeMB = ((fileSizeBytes/1024)/1024)
         vaultSpaceFreeMB, vaultCapacityMB = get_vault_usage()
-        quotaSpaceRemainingBytes = (user.quota*1024*1024) - int(FileController.get_user_quota_usage_bytes(user.id))
+        quotaSpaceRemainingBytes = (user.quota*1024*1024) - get_user_quota_usage_bytes(user.id)
         if (fileSizeMB*2) >= vaultSpaceFreeMB:
             logging.critical("[system] [upload] [File vault is running out of space and cannot fit this file. Remaining Space is %s MB, fileSizeBytes is %s]" % (vaultSpaceFreeMB, fileSizeBytes))
             fMessages.append("The server doesn't have enough space left on its drive to fit this file. The administrator has been notified.")
@@ -314,7 +316,8 @@ class FileController(object):
 
         #Read file from client
         if lcHDRS['content-type'] == "application/octet-stream":
-            file_object, tempFileName = get_temp_file(), file_object.name.split(os.path.sep)[-1]
+            file_object = get_temp_file()
+            tempFileName = file_object.name.split(os.path.sep)[-1]
             #Create the progress file object and drop it into the transfer dictionary
             upFile = ProgressFile(8192, fileName, file_object, uploadIndex)
             if cherrypy.file_uploads.has_key(uploadKey): #Drop the transfer into the global transfer list
@@ -373,7 +376,7 @@ class FileController(object):
         newFile.notes = fileNotes
 
         #Owner ID is a separate variable since uploads can be owned by the system
-        newFile.owner_id = "system" if (AccountController.user_has_permission(user, "admin") and (kwargs.has_key('systemUpload') and kwargs['systemUpload'] == "yes") else user.id
+        newFile.owner_id = "system" if (AccountController.user_has_permission(user, "admin") and (kwargs.has_key('systemUpload') and kwargs['systemUpload'] == "yes")) else user.id
 
         #Process date provided
         maxExpiration = datetime.datetime.today() + datetime.timedelta(days=config['max_file_life_days'])
@@ -410,7 +413,7 @@ class FileController(object):
             #If this is an upload request, check to see if it's a single use request and nullify the ticket if so, now that the file has been successfully uploaded
             if uploadRequest is not None:
                 if uploadRequest.type == "single":
-                    session.add(AuditLog(cherrypy.request.remote.ip, "Upload Requested File", "File %s has been uploaded by an external user to your Filelocker account. This was a single user request and the request has now expired." % (newFile.name), uploadRequest.owner_id)
+                    session.add(AuditLog(cherrypy.request.remote.ip, "Upload Requested File", "File %s has been uploaded by an external user to your Filelocker account. This was a single user request and the request has now expired." % (newFile.name), uploadRequest.owner_id))
                     attachedUploadRequest = session.query(UploadRequest).filter(UploadRequest.id == uploadRequest.id).one()
                     session.delete(attachedUploadRequest)
                     cherrypy.session['uploadTicket'].expired = True
@@ -657,8 +660,6 @@ class FileController(object):
             sMessages = ["No active uploads"]
         yield fl_response(sMessages, fMessages, format, data=uploadStats)
 
-def read_file_from_client(contentType, uploadKey, uploadIndex):
-    
 
 def get_upload_ticket_by_password(ticketId, password):
     uploadRequest = session.query(UploadRequest).filter(UploadRequest.id == ticketId)
