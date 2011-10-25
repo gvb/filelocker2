@@ -107,22 +107,22 @@ class File(Base):
     md5 = Column(String(64), nullable=True)
     upload_request_id = Column(String(64), ForeignKey("upload_requests.id"))
 
-    private_shares = relationship("PrivateShare", backref="files")
-    public_shares = relationship("PublicShare", backref="files")
-    private_group_shares = relationship("PrivateGroupShare", backref="files")
-    private_attribute_shares = relationship("PrivateAttributeShare", backref="files")
+    user_shares = relationship("UserShare", backref="files")
+    #public_shares = relationship("PublicShare", backref="files")
+    group_shares = relationship("GroupShare", backref="files")
+    attribute_shares = relationship("AttributeShare", backref="files")
 
     def shared_with(self, user):
-        for share in private_shares:
+        for share in user_shares:
             if share.user_id == user.id:
                 return True
         groupIds = []
         for group in user.groups:
             groupIds.append(group.id)
-        for share in private_group_shares:
+        for share in group_shares:
             if share.group_id in groupIds:
                 return True
-        for share in private_attribute_shares:
+        for share in attribute_shares:
             if share.attribute_id in user.attributes:
                 return True
         return False
@@ -163,41 +163,53 @@ class ReceivedMessage(Base):
     date_viewed = Column(DateTime, nullable=True, default=None)
     message = relationship("Message")
 
-class PrivateShare(Base):
-    __tablename__ = "private_shares"
+class UserShare(Base):
+    __tablename__ = "user_shares"
     user_id = Column(Integer, ForeignKey("users.id"), primary_key=True)
     file_id = Column(Integer, ForeignKey("files.id"), primary_key=True)
     flFile = relationship("File")
     user = relationship("User")
 
-class PrivateGroupShare(Base):
-    __tablename__ = "private_group_shares"
+class GroupShare(Base):
+    __tablename__ = "group_shares"
     group_id = Column(Integer, ForeignKey("groups.id"), primary_key=True)
     file_id = Column(Integer, ForeignKey("files.id"), primary_key=True)
     flFile = relationship("File")
     group = relationship("Group")
 
+public_share_files = Table("public_share_files", Base.metadata,
+    Column("share_id", String(64), ForeignKey("public_shares.id")),
+    Column("file_id", Integer, ForeignKey("files.id")))
+    
 class PublicShare(Base):
     __tablename__="public_shares"
     id = Column(String(64), primary_key=True)
-    file_id = Column(Integer, ForeignKey("files.id"), nullable=False)
+    owner_id = Column(String(30, ForeignKey("users.id")), nullable=False)
     date_expires = Column(DateTime)
     password = Column(String(80))
     reuse = Column(Enum("single", "multi"), default="single")
-    flFile = relationship("File")
+    files = relationship("File", secondary=public_share_files, backref="public_shares")
 
     def generate_share_id(self):
         import random
         shareId = md5(str(random.random())).hexdigest()
-        while session.query(PublicShare).filter(PublicShare.id == shareId).scalar() is not None:
+        tryCount = 0
+        existing = session.query(PublicShare).filter(PublicShare.id == shareId).scalar()
+        while existing is not None and tryCount < 5:
+            tryCount += 1
             shareId = md5(str(random.random())).hexdigest()
+            existing = session.query(PublicShare).filter(PublicShare.id == shareId).scalar()
+        if existing is not None:
+            raise Exception("Could not create a unique share ID")
         return shareId
 
     def set_password(self, password):
         self.password = hash_password(password)
 
-class PrivateAttributeShare(Base):
-    __tablename__ = "private_attribute_shares"
+
+
+class AttributeShare(Base):
+    __tablename__ = "attribute_shares"
     file_id = Column(Integer, ForeignKey("files.id"), primary_key=True)
     attribute_id = Column(String(50), ForeignKey("attributes.id"), primary_key=True)
     flFile = relationship("File")

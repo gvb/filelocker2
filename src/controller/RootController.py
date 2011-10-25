@@ -17,11 +17,11 @@ __author__="wbdavis"
 __date__ ="$Sep 25, 2011 9:36:56 PM$"
 
 class RootController:
-    share_interface = ShareController.ShareController()
-    file_interface = FileController.FileController()
-    account_interface = AccountController.AccountController()
-#    admin_interface = AdminController
-    message_interface = MessageController.MessageController()
+    share_ = ShareController.ShareController()
+    file = FileController.FileController()
+    account = AccountController.AccountController()
+    admin = AdminController
+    message = MessageController.MessageController()
     #DropPrivileges(cherrypy.engine, umask=077, uid='nobody', gid='nogroup').subscribe()
 
     def __init__(self):
@@ -143,7 +143,7 @@ class RootController:
         defaultExpiration = datetime.date.today() + (datetime.timedelta(days=maxDays))
         startDateFormatted = sevenDaysAgo
         endDateFormatted = today
-        messageSearchWidget = self.account_interface.get_search_widget("messages")
+        messageSearchWidget = self.account.get_search_widget("messages")
         header = Template(file=get_template_file('header.tmpl'), searchList=[locals(),globals()])
         footerText = str(Template(file=get_template_file('footer_text.tmpl'), searchList=[locals(),globals()]))
         footer = Template(file=get_template_file('footer.tmpl'), searchList=[locals(),globals()])
@@ -263,10 +263,10 @@ class RootController:
             systemFiles = session.query(File).filter(File.owner_id == "system").all()
         defaultExpiration = datetime.date.today() + (datetime.timedelta(days=cherrypy.request.app.config['filelocker']['max_file_life_days']))
         uploadRequests = session.query(UploadRequest).filter(UploadRequest.owner_id==user.id).all()
-        userFiles = self.file_interface.get_user_file_list(format="list")
+        userFiles = self.file.get_user_file_list(format="list")
         userShareableAttributes = ShareController.get_user_shareable_attributes(user)
         attributeFilesDict = ShareController.get_files_shared_with_user_by_attribute(user)
-        sharedFiles = ShareController.get_files_shared_with_user_privately(user)
+        sharedFiles = ShareController.get_files_shared_with_user(user)
         tpl = Template(file=get_template_file('files.tmpl'), searchList=[locals(),globals()])
         return str(tpl)
 

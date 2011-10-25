@@ -5,33 +5,121 @@ from lib.SQLAlchemyTool import session
 import AccountController
 from lib.Formatters import *
 from lib.Models import *
+from lib import Mail
 __author__="wbdavis"
 __date__ ="$Sep 25, 2011 9:28:23 PM$"
+
 class ShareController:
+
     @cherrypy.expose
     @cherrypy.tools.requires_login()
-    def create_private_share(self, fileIds, targetId=None, groupId=None, notify="yes", format="json", **kwargs):
+    def create_user_shares(self, fileIds, userId=None, notify="no", cc="no", format="json", **kwargs):
         user, sMessages, fMessages  = (cherrypy.session.get("user"), [], [])
         fileIds = split_list_sanitized(fileIds)
-        targetId = strip_tags(targetId) if targetId is not None and targetId != "" else None
-        groupId = strip_tags(groupId) if groupId is not None and groupId != "" else None
+        userId = strip_tags(userId) if targetId is not None and targetId != "" else None
         notify = True if notify.lower() == "yes" else False
         try:
-            if targetId is not None:
-                for fileId in fileIds:
-                    session.add(PrivateShare(user_id=targetId, file_id=fileId))
-                sMessages.append("Shared file(s) successfully")
-            if groupId is not None:
-                for fileId in fileIds:
-                    session.add(PrivateGroupShare(group_id=groupId, file_id=fileId))
-                sMessages.append("Shared file(s) successfully")
+            sharedFiles = []
+            for fileId in fileIds:
+                flFile = session.query(File).filter(File.id==fileId).one()
+                shareUser = AccountController.get_user(userId)
+                if flFile.owner_id == user.id or AccountController.user_has_permission(user, "admin"):
+                    session.add(UserShare(user_id=userId, file_id=fileId))
+                    session.commit()
+                    sharedFiles.append(flFile)
+                else:
+                    fMessages.append("You do not have permission to share file with ID: %s" % str(flFile.id))
+            if notify:
+                Mail.notify(get_template_file('share_notification.tmpl'),{'sender':user.email,'recipient':shareUser.email, 'ownerId':user.id, 'ownerName':user.display_name, 'files':sharedFiles, 'filelockerURL': config['root_url']})
+                session.add(AuditLog(user.userId, "Sent Email", "%s has been notified via email that you have shared a file with him or her." % (shareUser.email)))
+                session.commit()
+            sMessages.append("Shared file(s) successfully")
         except Exception, e:
             fMessages.append(str(e))
         return fl_response(sMessages, fMessages, format)
 
     @cherrypy.expose
     @cherrypy.tools.requires_login()
-    def create_private_attribute_shares(self, fileIds, attributeId, format="json", **kwargs):
+    def delete_user_shares(self, fileIds, userId, format="json"):
+        user, sMessages, fMessages = (cherrypy.session.get("user"), [], [])
+        fileIds = split_list_sanitized(fileIds)
+        for fileId in fileIds:
+            try:
+                flFile = session.query(File).filter(File.id==fileId).one()
+                if flFile.owner_id == user.id or AccountController.user_has_permission(user, "admin"):
+                    ps = session.query(UserShare).filter(UserShare.user_id == userId and UserShare.file_id == flFile.id).scalar()
+                    if ps is not None:
+                        session.delete(ps)
+                        session.add(AuditLog(user.id, "Delete User Share", "You stopped sharing file %s with %s" % (flFile.name, userId)))
+                        session.commit()
+                else:
+                    fMessages.append("You do not have permission to modify shares for file with ID: %s" % str(flFile.id))
+            except Exception, e:
+                session.rollback()
+                fMessages.append("Problem deleting share for file: %s" % str(e))
+        return fl_response(sMessages, fMessages, format)
+
+    @cherrypy.expose
+    @cherrypy.tools.requires_login()
+    def create_group_shares(self, fileIds, groupId, notify="no", format="json"):
+        user, sMessages, fMessages  = (cherrypy.session.get("user"), [], [])
+        fileIds = split_list_sanitized(fileIds)
+        groupId = strip_tags(groupId) if groupId is not None and groupId != "" else None
+        notify = True if notify.lower() == "yes" else False
+        try:
+            if groupId is not None:
+                group = session.query(Group).filter(Group.id==groupId).one()
+                if group.owner_id == user.id or AccountController.user_has_permission(user, "admin"):
+                    sharedFiles = []
+                    for fileId in fileIds:
+                        flFile = session.query(File).filter(File.id == fileId).one()
+                        if flFile.owner_id == user.id or AccountController.user_has_permission(user, "admin"):
+                            session.add(GroupShare(group_id=groupId, file_id=fileId))
+                            sharedFiles.append(flFile)
+                        else:
+                            fMessages.append("You do not have permission to share file with ID: %s" % fileId)
+                    sMessages.append("Shared file(s) successfully")
+                else:
+                    fMessages.append("You do not have permission to share with this group")
+                session.commit()
+                if notify:
+                    for groupMember in group.members:
+                        Mail.notify(get_template_file('share_notification.tmpl'),{'sender':user.email,'recipient':shareUser.email, 'ownerId':user.id, 'ownerName':user.display_name, 'files':sharedFiles, 'filelockerURL': config['root_url']})
+                        session.add(AuditLog(user.id, "Sent Email", "%s has been notified via email that you have shared a file with him or her." % (shareUser.email)))
+                        session.commit()
+        except Exception, e:
+            session.rollback
+            fMessages.append(str(e))
+        return fl_response(sMessages, fMessages, format)
+
+    @cherrypy.expose
+    @cherrypy.tools.requires_login()
+    def delete_group_shares(self, fileIds, groupId, format="json"):
+        user, sMessages, fMessages = (cherrypy.session.get("user"), [], [])
+        fileIds = split_list_sanitized(fileIds)
+        for fileId in fileIds:
+            try:
+                group = session.query(Group).filter(Group.id==groupId).one()
+                if group.owner_id == user.id or AccountController.user_has_permission(user, "admin"):
+                    flFile = session.query(File).filter(File.id==fileId).one()
+                    if flFile.owner_id == user.id or AccountController.user_has_permission(user, "admin"):
+                        share = session.query(GroupShare).filter(GroupShare.group_id == groupId and GroupShare.file_id == flFile.id).scalar()
+                        if share is not None:
+                            session.delete(share)
+                            session.add(AuditLog(user.id, "Delete Group Share", "You stopped sharing file %s with group %s" % (flFile.name, group.name)))
+                            session.commit()
+                    else:
+                        fMessages.append("You do not have permission to modify shares for file with ID: %s" % str(flFile.id))
+                else:
+                    fMessages.append("You do not have permission delete shares with this group")
+            except Exception, e:
+                session.rollback()
+                fMessages.append("Problem deleting share for file: %s" % str(e))
+        return fl_response(sMessages, fMessages, format)
+
+    @cherrypy.expose
+    @cherrypy.tools.requires_login()
+    def create_attribute_shares(self, fileIds, attributeId, format="json", **kwargs):
         user, sMessages, fMessages  = (cherrypy.session.get("user"), [], [])
         try:
             userShareableAttributes, permission = AccountController.get_shareable_attributes_by_user(user), False
@@ -42,7 +130,7 @@ class ShareController:
             if permission:
                 fileIds = split_list_sanitized(fileIds)
                 for fileId in fileIds:
-                    session.add(PrivateAttributeShare(file_id=fileId, attributeId=attributeId))
+                    session.add(AttributeShare(file_id=fileId, attribute_id=attributeId))
                 sMessages.append("Successfully shared file(s) with users having the %s attribute" % attributeId )
             else:
                 fMessages.append("You do not have permission to share with this attribute")
@@ -52,7 +140,7 @@ class ShareController:
 
     @cherrypy.expose
     @cherrypy.tools.requires_login()
-    def delete_private_attribute_shares(self, fileIds, attributeId, format="json", **kwargs):
+    def delete_attribute_shares(self, fileIds, attributeId, format="json", **kwargs):
         user, sMessages, fMessages  = (cherrypy.session.get("user"), [], [])
         try:
             userShareableAttributes, permission = AccountController.get_shareable_attributes_by_user(user), False
@@ -63,8 +151,8 @@ class ShareController:
             if permission:
                 fileIdList = split_list_sanitized(fileIds)
                 for fileId in fileIdList:
-                    pas = session.query(PrivateAttributeShare).filter(PrivateAttributeShare.attribute_id==attributeId and PrivateAttributeShare.fileId==fileId).one()
-                    session.delete(pas)
+                    share = session.query(AttributeShare).filter(AttributeShare.attribute_id==attributeId and rivateAttributeShare.fileId==fileId).one()
+                    session.delete(share)
                 sMessages.append("Successfully unshared file(s) with users having the %s attribute") % attributeId
             else:
                 fMessages.append("You do not have permission to delete attribute shares for this attribute")
@@ -74,90 +162,70 @@ class ShareController:
 
     @cherrypy.expose
     @cherrypy.tools.requires_login()
-    def create_public_share(self, fileId, expiration, shareType, notifyEmails, format="json", **kwargs):
+    def create_public_share(self, fileIds, expiration, shareType, notifyEmails, cc="no", format="json", **kwargs):
         user, sMessages, fMessages, shareId = (cherrypy.session.get("user"), [], [], None)
-        fileId = strip_tags(fileId)
+        config = cherrypy.request.app.config['filelocker']
+        fileIds = split_list_sanitized(fileIds)
+        cc = True if cc == "yes" else False
         try:
-            flFile = session.query(File).filter(File.id==fileId).one()
             try:
                 expiration = datetime.datetime(*(time.strptime(strip_tags(expiration), "%m/%d/%Y")[0:6]))
             except Exception, e:
                 raise Exception("Invalid expiration date format. Date must be in mm/dd/yyyy format.")
             if expiration is None or expiration == "":
                 raise Exception("Public shares must have a valid expiration date")
-            if flFile.owner_id == user.id or AccountController.user_has_permission(user, "admin"):
-                notifyEmailList = split_list_sanitized(notifyEmails)
-                password = None
-                if shareType != "multi":
-                    shareType = "single"
-                if kwargs.has_key("password") and kwargs['password']!="":
-                    password = kwargs['password']
-                ps = PublicShare(file_id=flFile.id, date_expires=expiration, reuse=shareType)
-                ps.id = ps.generate_share_id()
+
+            shareType != "single" if shareType != "multi" else "multi"
+            ps = PublicShare(date_expires=expiration, reuse=shareType)
+            if shareType == "single" or (kwargs.has_key("password") and kwargs['password']!=""):
+                password = kwargs['password']
                 ps.set_password(password)
-                session.add(ps)
-                session.commit()
-                sMessages.append("File shared successfully")
             else:
-                fMessages.append("You do not have permission to publicly share this file")
+                ps.password = None
+            ps.id = ps.generate_share_id()
+            session.add(ps)
+            sharedFiles = []
+            for fileId in fileIds:
+                flFile = session.query(File).filter(File.id==fileId).one()
+                if flFile.owner_id == user.id or AccountController.user_has_permission(user, "admin"):
+                    ps.files.append(flFile)
+                    session.commit()
+                    sharedFiles.append(flFile)
+                else:
+                    fMessages.append("You do not have permission to share file with ID: %s" % str(flFile.id))
+            notifyEmailList = split_list_sanitized(notifyEmails)
+            if cc:
+                notifyEmailList.append(user.email)
+            for recipient in notifyEmailList:
+                Mail.notify(get_template_file('public_share_notification.tmpl'), {'sender':user.email, 'recipient':recipient, 'files':sharedFiles, 'ownerId':user.id, 'ownerName': user.display_name, 'shareId':ps.id, 'filelockerURL':config['root_url']})
+            if len(notifyEmailList) > 0:
+                session.add(AuditLog(user.id, "Email Sent", "Email notifications about a public share were sent to the following addresses: %s" % str(",".join(notifyEmailList))))
+            session.add(AuditLog(user.id, "Create Public Share", "File(s) publicly shared."))
+            session.commit()
+            sMessages.append("Files shared successfully")
         except Exception, e:
+            session.rollback()
             fMessages.append(str(e))
             logging.error("[%s] [create_public_share] [Unable to create public share: %s]" % (user.id, str(e)))
-        return fl_response(sMessages, fMessages, format, data=shareId)
+        return fl_response(sMessages, fMessages, format, data=ps.id)
 
     @cherrypy.expose
     @cherrypy.tools.requires_login()
-    def delete_public_share(self, fileId, format="json", **kwargs):
+    def delete_public_share(self, shareId, format="json", **kwargs):
         #TODO: Public sharing has to be redone to accomodate multi-shares
         user, sMessages, fMessages = (cherrypy.session.get("user"), [], [])
-        fileId = strip_tags(fileId)
+        shareId = strip_tags(shareId)
         try:
-            fl.delete_public_share(user, fileId)
-            ps = session.query(PublicShare).all()
-            sMessages.append("Successfully unshared file")
+            ps = session.query(PublicShare).filter(PublicShare.id == shareId).one()
+            if ps.owner_id == user.id or AccountController.user_has_permission(user, "admin"):
+                session.delete(ps)
+                session.add(AuditLog(user.id, "Delete Public Share", "You stopped sharing files publicly via URL using share ID: %s" % str(ps.id)))
+                session.commit()
+                sMessages.append("Successfully unshared files")
+            else:
+                fMessages.append("You do not have permission to modify share ID: %s" % str(ps.id))
         except Exception, e:
             fMessags.append(str(e))
-        return fl_response(sMessages, fMessages, format)
-
-    @cherrypy.expose
-    @cherrypy.tools.requires_login()
-    def delete_share(self, fileIds, targetId=None, shareType="private", format="json"):
-        user, fl, sMessages, fMessages = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [])
-        shareType = strip_tags(shareType.lower())
-        fileIds = split_list_sanitized(fileIds)
-        for fileId in fileIds:
-            flFile = fl.get_file(user, fileId)
-            try:
-                if shareType == "private" or shareType =="private_group":
-                    if targetId is not None:
-                        if shareType == "private":
-                            targetName = "User not found"
-                            targetUser = fl.directory.lookup_user(targetId)
-                            fl.delete_private_share(user, fileId, targetId)
-                            if(targetUser is not None):
-                                targetName = targetUser.userDisplayName
-                            sMessages.append("Successfully unshared file %s with user %s" % (flFile.fileName, targetName))
-                        elif shareType == "private_group":
-                            group = fl.get_group(user, targetId)
-                            fl.delete_private_group_share(user, fileId, targetId)
-                            sMessages.append("Successfully unshared file %s with group %s" % (flFile.fileName, group.groupName))
-                    else:
-                        fMessages.append("A user, group, or share ID must be specified in order to delete a share")
-                elif shareType == "all":
-                    fl.delete_all_shares(user, fileId)
-                    sMessages.append("Successfully deleted all shares for the file %s" % flFile.fileName)
-                elif shareType=="private_attribute":
-                    if targetId is not None:
-                        for fileId in fileIds:
-                            fl.delete_private_attribute_share(user, fileId, targetId)
-                        sMessages.append("Successfully unshared file(s) with users having the %s attribute" % targetId)
-                    else:
-                        fMessages.append("An attribute ID must be specified in order to delete a share")
-                else:
-                    fMessages.append("Unrecognized share type: %s" % shareType)
-            except FLError, fle:
-                fMessages.extend(fle.failureMessages)
-                sMessages.extend(fle.successMessages)
         return fl_response(sMessages, fMessages, format)
 
     @cherrypy.expose
@@ -209,15 +277,15 @@ def get_files_shared_with_user_by_attribute(user):
     for attributeId in user.attributes:
         attribute = session.query(Attribute).filter(Attribute.id==attributeId).scalar() #Do this to ensure this attribute is even recognized by the system
         if attribute is not None:
-            for attributeShare in session.query(PrivateAttributeShare).filter(PrivateAttributeShare.attribute_id==attribute.id).all():
+            for attributeShare in session.query(AttributeShare).filter(AttributeShare.attribute_id==attribute.id).all():
                 if attributeShareDictionary.has_key(attributeShare.attribute_id)==False:
                     attributeShareDictionary[attributeShare.attribute_id] = []
                 attributeShareDictionary[attributeShare.attribute_id].append(attributeShare.flFile)
     return attributeShareDictionary
     
-def get_files_shared_with_user_privately(user):
+def get_files_shared_with_user(user):
     fileList = []
-    userShares = session.query(PrivateShare).filter(PrivateShare.user_id == user.id)
+    userShares = session.query(UserShare).filter(UserShare.user_id == user.id)
     for share in userShares:
         fileList.append(share.flFile)
     return fileList
