@@ -1,5 +1,7 @@
 import os
 import re
+import datetime
+import time
 import json
 import cherrypy
 JSON_WRITE = None
@@ -44,6 +46,8 @@ def fl_response(sMessages, fMessages, format, data=None):
 
 def strip_tags(value, message=False):
     """Return the given HTML with all tags stripped."""
+    if value is None:
+        return None
     if message:
         p = re.compile(r'<.*?>')
         return p.sub('',value)
@@ -89,4 +93,17 @@ def split_list_sanitized(cs_list):
         for listItem in cs_list.split(','):
             if listItem is not None and listItem !="":
                 cleanList.append(strip_tags(listItem))
-    return cleanList 
+    return cleanList
+
+def parse_date(stringDate, minDate=None, maxDate=None):
+    if stringDate is None or stringDate == "" or stringDate.lower()=="never":
+        return None
+    try:
+        parsedDate = datetime.datetime(*time.strptime(strip_tags(stringDate), "%m/%d/%Y")[0:5])
+        if parsedDate > minDate:
+                raise Exception("Date cannot be after %s" % maxDate.strftime("%m/%d/%Y"))
+        if parsedDate < minDate:
+            raise Exception("Date date cannot be before %s" % minDate.strftime("%m/%d/%Y"))
+        return parsedDate
+    except:
+        raise Exception("Invalid expiration date format. Date must be in mm/dd/yyyy format.")

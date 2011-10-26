@@ -1,5 +1,6 @@
 import os
 import stat
+import shutil
 import random
 import cherrypy
 from cherrypy.lib import cptools, http, file_generator_limited
@@ -45,85 +46,74 @@ class FileController(object):
             today = datetime.datetime.now()
             thirtyDaysAgo = today - thirtyDays
             if startDate is not None:
-                startDateFormatted = datetime.datetime(*time.strptime(Formatters.strip_tags(startDate), "%m/%d/%Y")[0:5])
+                startDateFormatted = datetime.datetime(*time.strptime(strip_tags(startDate), "%m/%d/%Y")[0:5])
             else:
                 startDateFormatted =  thirtyDaysAgo
             if endDate is not None:
-                endDateFormatted = datetime.datetime(*time.strptime(Formatters.strip_tags(endDate), "%m/%d/%Y")[0:5])
+                endDateFormatted = datetime.datetime(*time.strptime(strip_tags(endDate), "%m/%d/%Y")[0:5])
             else:
                 endDateFormatted = today
-            flFile = self.get_file(user, fileId)
             if flFile.owner_id == user.id or self.check_admin(user):
                 if endDate is not None:
                     endDate = endDate + datetime.timedelta(days=1)
-                stats = self.db.getDownloadStatistics(fileId, startDate, endDate)
+                     #for row in results:
+
+                uniqueDownloads = session.query(func.date(AuditLog.date), func.count(distinct(AuditLog.initiator_user_id))).\
+                filter(AuditLog.action=='Download File').\
+                filter(AuditLog.message.like('%%[File ID: %d]' % flFile.id)).\
+                group_by(func.date(AuditLog.date)).all()
+                print "Unique Downloads:%s" % str(uniqueDownloads)
+                uniqueDownloadStats = []
+                for row in uniqueDownloads:
+                    uniqueDownloadStats.append((row[0].strftime("%m/%d/%Y"), row[1]))
+
+                totalDownloads = session.query(func.date(AuditLog.date), func.count(AuditLog.initiator_user_id)).\
+                filter(AuditLog.action=='Download File').\
+                filter(AuditLog.message.like('%%[File ID: %d]' % flFile.id)).\
+                group_by(func.date(AuditLog.date)).all()
+                totalDownloadStats = []
+                for row in totalDownloads:
+                    totalDownloadStats.append((row[0].strftime("%m/%d/%Y"), row[1]))
+                stats = {"total":totalDownloadStats, "unique":uniqueDownloadStats}
+        except sqlalchemy.orm.exc.NoResultFound, nrf:
+            fMessages.append("Could not find file with ID: %s" % str(fileId))
         except Exception, e:
             fMessages.append(str(e))
         return fl_response(sMessages, fMessages, format, data=stats)
         
-            #def getDownloadStatistics(self, fileId, startDate=None, endDate=None):
-        #totalDownloadSql = "SELECT DATE(audit_log_datetime) AS 'day', count(*) AS 'Downloads' FROM audit_log WHERE audit_log_action = 'Download File' AND audit_log_message LIKE '%%[File ID: %s]'"
-        #uniqueDownloadSql = "SELECT audit_log_datetime AS 'day', count(*) AS 'Unique User Downloads' FROM (SELECT DISTINCT audit_log_initiator_user_id, DATE(audit_log_datetime) AS audit_log_datetime FROM audit_log WHERE audit_log_action = 'Download File' AND audit_log_message LIKE '%%[File ID: %s]') AS t1"
-        #fileIdInt = int(fileId)
-        #sql_args = [fileIdInt]
-        #if startDate is not None:
-            #totalDownloadSql += " AND audit_log_datetime >= %s"
-            #uniqueDownloadSql += " WHERE audit_log_datetime >= %s"
-            #sql_args.append(startDate)
-        #if endDate is not None:
-            #totalDownloadSql += " AND audit_log_datetime <= %s"
-            #if startDate is not None:
-                #uniqueDownloadSql += " AND"
-            #else:
-                #uniqueDownloadSql += " WHERE"
-            #uniqueDownloadSql += " audit_log_datetime <= %s"
-            #sql_args.append(endDate)
-        #totalDownloadSql +=" GROUP BY DATE(audit_log_datetime) ORDER BY audit_log_datetime"
-        #uniqueDownloadSql +=" GROUP BY DATE(audit_log_datetime) ORDER BY audit_log_datetime"
-        #results = self.execute(totalDownloadSql, sql_args)
-        #totalDownloadStats = []
-        #for row in results:
-            #stat = (str(row['day']), row['Downloads'])
-            #totalDownloadStats.append(stat)
-        #uniqueDownloadStats = []
-        #results = self.execute(uniqueDownloadSql, sql_args)
-        #for row in results:
-            #stat = (str(row['day']), row['Unique User Downloads'])
-            #uniqueDownloadStats.append(stat)
-        #return {"total":totalDownloadStats, "unique":uniqueDownloadStats}
-
-    @cherrypy.expose
-    @cherrypy.tools.requires_login()
-    def get_hourly_statistics(self, format="json", **kwargs):
-        user, fl, sMessages, fMessages, stats = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [], None)
-        try:
-            stats = fl.get_hourly_statistics(user)
-        except FLError, fle:
-            fMessages.extend(fle.failureMessages)
-            sMessages.extend(fle.successMessages)
-        return fl_response(sMessages, fMessages, format, data=stats)
-
-    @cherrypy.expose
-    @cherrypy.tools.requires_login()
-    def get_daily_statistics(self, format="json", **kwargs):
-        user, fl, sMessages, fMessages, stats = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [], None)
-        try:
-            stats = fl.get_daily_statistics(user)
-        except FLError, fle:
-            fMessages.extend(fle.failureMessages)
-            sMessages.extend(fle.successMessages)
-        return fl_response(sMessages, fMessages, format, data=stats)
-
-    @cherrypy.expose
-    @cherrypy.tools.requires_login()
-    def get_monthly_statistics(self, format="json", **kwargs):
-        user, fl, sMessages, fMessages, stats = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [], None)
-        try:
-            stats = fl.get_monthly_statistics(user)
-        except FLError, fle:
-            fMessages.extend(fle.failureMessages)
-            sMessages.extend(fle.successMessages)
-        return fl_response(sMessages, fMessages, format, data=stats)
+#    TODO: Refactor
+#    @cherrypy.expose
+#    @cherrypy.tools.requires_login()
+#    def get_hourly_statistics(self, format="json", **kwargs):
+#        user, fl, sMessages, fMessages, stats = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [], None)
+#        try:
+#            stats = fl.get_hourly_statistics(user)
+#        except FLError, fle:
+#            fMessages.extend(fle.failureMessages)
+#            sMessages.extend(fle.successMessages)
+#        return fl_response(sMessages, fMessages, format, data=stats)
+#
+#    @cherrypy.expose
+#    @cherrypy.tools.requires_login()
+#    def get_daily_statistics(self, format="json", **kwargs):
+#        user, fl, sMessages, fMessages, stats = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [], None)
+#        try:
+#            stats = fl.get_daily_statistics(user)
+#        except FLError, fle:
+#            fMessages.extend(fle.failureMessages)
+#            sMessages.extend(fle.successMessages)
+#        return fl_response(sMessages, fMessages, format, data=stats)
+#
+#    @cherrypy.expose
+#    @cherrypy.tools.requires_login()
+#    def get_monthly_statistics(self, format="json", **kwargs):
+#        user, fl, sMessages, fMessages, stats = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [], None)
+#        try:
+#            stats = fl.get_monthly_statistics(user)
+#        except FLError, fle:
+#            fMessages.extend(fle.failureMessages)
+#            sMessages.extend(fle.successMessages)
+#        return fl_response(sMessages, fMessages, format, data=stats)
 
     @cherrypy.expose
     @cherrypy.tools.requires_login()
@@ -146,11 +136,11 @@ class FileController(object):
                 if flFile.owner_id == userId or flFile.shared_with(user):
                     myFilesList.append(flFile)
         for flFile in myFilesList: #attachments to the file objects for this function, purely cosmetic
-            if (len(flFile.public_shares) > 0) and (len(flFile.private_shares) > 0 or len(flFile.private_group_shares) > 0 ):
+            if (len(flFile.public_shares) > 0) and (len(flFile.user_shares) > 0 or len(flFile.group_shares) > 0 ):
                 flFile.documentType = "document_both"
             elif len(flFile.public_shares) > 0:
                 flFile.documentType = "document_globe"
-            elif len(flFile.public_shares) == 0 and (len(flFile.private_shares) > 0 or len(flFile.private_group_shares) > 0):
+            elif len(flFile.public_shares) == 0 and (len(flFile.user_shares) > 0 or len(flFile.group_shares) > 0):
                 flFile.documentType = "document_person"
             else:
                 flFile.documentType = "document"
@@ -160,13 +150,13 @@ class FileController(object):
             userShareableAttributes = AccountController.get_shareable_attributes_by_user(user)
             for flFile in myFilesList:
                 fileUserShares, fileGroupShares, availableGroups, sharedGroupsList, fileAttributeShares = ([],[],[],[],[])
-                for share in flFile.private_shares:
+                for share in flFile.user_shares:
                     fileUserShares.append({'id': share.user.id, 'name': share.user.display_name})
                 sharedGroupIds = []
-                for share in flFile.private_group_shares:
+                for share in flFile.group_shares:
                     sharedGroupIds.append(share.group.id)
                     fileGroupShares.append({'id': share.group.id, 'name': share.group.name})
-                for share in flFile.private_attribute_shares:
+                for share in flFile.attribute_shares:
                     fileAttributeShares.append({'id': share.attribute.id, 'name': share.attribute.name})
                 for group in session.query(Group).filter(Group.owner_id==userId):
                     if group.id not in sharedGroupIds:
@@ -193,35 +183,32 @@ class FileController(object):
 
     @cherrypy.expose
     @cherrypy.tools.requires_login()
-    def get_files_shared_with_user_list(self, fileIdList=None, format="json", **kwargs):
-        #Determine which files are shared with the user
-        user, fl, sMessages, fMessages = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [])
-        sharedFilesList = []
-        for sharedFile in fl.get_files_shared_with_user(user, user.userId):
-            sharedFile.documentType = "document_shared_in"
-            if fl.is_share_hidden(user, sharedFile.fileId) is False:
-                sharedFilesList.append(sharedFile)
-        if format=="json":
-            sharedFilesJSON = []
-            for flFile in sharedFilesList:
-                sharedFilesJSON.append({'fileName': flFile.fileName, 'fileId': flFile.fileId, 'fileOwnerId': flFile.fileOwnerId, 'fileSizeBytes': flFile.fileSizeBytes, 'fileUploadedDatetime': flFile.fileUploadedDatetime.strftime("%m/%d/%Y"), 'fileExpirationDatetime': flFile.fileExpirationDatetime.strftime("%m/%d/%Y"), 'filePassedAvScan':flFile.filePassedAvScan, 'documentType': flFile.documentType})
-            return fl_response(sMessags, fMessages, format, data=sharedFilesJSON)
-        elif format=="list":
-            return sharedFilesList
-        else:
-            return str(sharedFilesList)
-
-    @cherrypy.expose
-    @cherrypy.tools.requires_login()
     def take_file(self, fileId, format="json", **kwargs):
-        user, fl, sMessages, fMessages = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [])
+        user, sMessages, fMessages = (cherrypy.session.get("user"), [], [])
+        config = cherrypy.request.app.config['filelocker']
         try:
-            fl.duplicate_and_take_file(user, fileId)
-            flFile = fl.get_file(user, fileId)
-            sMessages.append("Successfully took ownership of file %s. This file can now be shared with other users just as if you had uploaded it. " % flFile.fileName)
-        except FLError, fle:
-            fMessages.extend(fle.failureMessages)
-            sMessages.extend(fle.successMessages)
+            flFile = session.query(File).filter(File.id==fileId).one()
+            if flFile.owner_id == user.id:
+                fMessages.append("You cannot take your owne file")
+            elif flFile.shared_with(user) or AccountController.user_has_permission(user, "admin"):
+                if (get_user_quota_usage_bytes(user) + flFile.size) >= (user.quota*1024*1024):
+                    logging.warning("[%s] [take_file] [User has insufficient quota space remaining to check in file: %s]" % (user.id, flFile.name))
+                    raise Exception("You may not copy this file because doing so would exceed your quota")
+                takenFile = flFile.get_copy()
+                takenFile.owner_id = user.id
+                takenFile.date_uploaded = datetime.datetime.now()
+                takenFile.notify_on_download = False
+                session.add(takenFile)
+                session.commit()
+                shutil.copy(os.path.join(config['vault'],str(flFile.id)), os.path.join(config['vault'],str(takenFile.id)))
+                sMessages.append("Successfully took ownership of file %s. This file can now be shared with other users just as if you had uploaded it. " % flFile.name)
+            else:
+                fMessages.append("You do not have permission to take this file")
+        except sqlalchemy.orm.exc.NoResultFound, nrf:
+            fMessages.append("Could not find file with ID: %s" % str(fileId))
+        except Except, e:
+            session.rollback()
+            fMessages.append(str(e))
         return fl_response(sMessages, fMessages, format)
 
     @cherrypy.expose
@@ -240,6 +227,8 @@ class FileController(object):
                     sMessages.append("File %s deleted successfully" % flFile.name)
                 else:
                     fMessages.append("You do not have permission to delete file %s" % flFile.name)
+            except sqlalchemy.orm.exc.NoResultFound, nrf:
+                fMessages.append("Could not find file with ID: %s" % str(fileId))
             except Exception, e:
                 session.rollback()
                 fMessages.append("File not deleted: %s" % str(e))
@@ -248,24 +237,25 @@ class FileController(object):
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def update_file(self, fileId, format="json", **kwargs):
-        user, fl, sMessages, fMessages = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [])
-        fileId = Formatters.strip_tags(fileId)
+        user,  sMessages, fMessages = (cherrypy.session.get("user"), [], [])
+        fileId = strip_tags(fileId)
         try:
-            flFile = fl.get_file(user, fileId)
-            if kwargs.has_key("fileName"):
-                flFile.fileName = Formatters.strip_tags(kwargs['fileName'])
-            if kwargs.has_key('notifyOnDownload'):
-                if kwargs['notifyOnDownload'] == "true":
-                    flFile.fileNotifyOnDownload = True
-                elif kwargs['notifyOnDownload'] == "false":
-                    flFile.fileNotifyOnDownload = False
-            if kwargs.has_key('fileNotes'):
-                flFile.fileNotes = Formatters.strip_tags(kwargs['fileNotes'])
-            fl.update_file(user, flFile)
-            sMessages.append("Successfully updated file %s" % flFile.fileName)
-        except FLError, fle:
-            fMessages.extend(fle.failureMessages)
-            sMessages.extend(fle.successMessages)
+            flFile = session.query(File).filter(File.id==fileId).one()
+            if flFile.owner_id == user.id or AccountController.user_has_permission(user, "admin"):
+                if kwargs.has_key("fileName"):
+                    flFile.name = strip_tags(kwargs['fileName'])
+                if kwargs.has_key('notifyOnDownload'):
+                    flFile.notify_on_download = True if kwargs['notifyOnDownload'].lower()=="true" else False
+                if kwargs.has_key('fileNotes'):
+                    flFile.notes = strip_tags(kwargs['fileNotes'])
+                session.commit()
+                sMessages.append("Successfully updated file %s" % flFile.name)
+            else:
+                fMessages.append("You do not have permission to update file with ID: %s" % str(flFile.id))
+        except sqlalchemy.orm.exc.NoResultFound, nrf:
+            fMessages.append("Could not find file with ID: %s" % str(fileId))
+        except Exception, e:
+            fMessages.append(str(e))
         return fl_response(sMessages, fMessages, format)
 
     @cherrypy.expose
@@ -435,6 +425,8 @@ class FileController(object):
                     session.add(AuditLog(cherrypy.request.remote.ip, "Upload Requested File", "File %s has been uploaded by an external user to your Filelocker account." % (newFile.name), uploadRequest.owner_id))
             sMessages.append("File %s uploaded successfully." % str(fileName))
             session.commit()
+        except sqlalchemy.orm.exc.NoResultFound, nrf:
+            fMessages.append("Could not find upload request with ID: %s" % str(uploadRequest.id))
         except Exception, e:
             logging.error("[%s] [upload] [Couldn't check in file: %s]" % (user.id, str(e)))
             fMessages.append("File couldn't be checked in to the file repository: %s" % str(e))
@@ -465,19 +457,20 @@ class FileController(object):
     @cherrypy.tools.requires_login()
     def download(self, fileId, **kwargs):
         cherrypy.response.timeout = 36000
-        user, sMessages, fMessages = (cherrypy.session.get("user"), [], [])
+        user = cherrypy.session.get("user")
         cherrypy.session.release_lock()
         try:
             flFile = session.query(File).filter(File.id==fileId).one()
-            if flFile.owner_id == user.id or AccountController.user_has_permission(user, "admin"):
+            if flFile.owner_id == user.id or flFile.shared_with(user) or AccountController.user_has_permission(user, "admin"):
                 return self.serve_file(flFile)
             else:
                 raise cherrypy.HTTPError(403, "You do not have access to this file")
-
             #if kwargs.has_key("encryptionKey") and kwargs['encryptionKey'] !="" and kwargs['encryptionKey'] is not None:
                 #flFile.fileEncryptionKey = kwargs['encryptionKey']
             #if flFile.fileEncryptionKey is None:
                 #raise HTTPError(412, "This file requires you to supply an encryption key to decrypt the file.")
+        except sqlalchemy.orm.exc.NoResultFound, nrf:
+            raise cherrypy.HTTPError(404, "Couldn't find file with ID: %s" % str(fileId))
         except Exception, e:
             logging.error("[%s] [download] [Error while trying to initiate download: %s]" % (user.id, str(e)))
             cherrypy.session['fMessages'].append("Unable to download: %s" % str(e))
@@ -485,65 +478,51 @@ class FileController(object):
 
     @cherrypy.expose
     @cherrypy.tools.requires_login()
-    def generate_upload_ticket(self, password, expiration, scanFile, requestType, maxFileSize=None, emailAddresses=None, personalMessage=None, format="json", **kwargs):
-        fl, user, uploadURL, sMessages, fMessages = cherrypy.thread_data.flDict['app'], cherrypy.session.get("user"), "", [], []
+    def create_upload_request(self, password, expiration, scanFile, requestType, maxFileSize=None, emailAddresses=None, personalMessage=None, format="json", **kwargs):
+        uploadURL, sMessages, fMessages = "", [], []
         try:
-            expiration = datetime.datetime(*time.strptime(Formatters.strip_tags(expiration), "%m/%d/%Y")[0:5])
-            if expiration < datetime.datetime.now():
-                raise FLError(False, ["Expiration date cannot be before today"])
-            #maxFileSize = Formatters.strip_tags(maxFileSize)
-            #if maxFileSize == "" or maxFileSize=="0" or maxFileSize == 0:
-                #maxFileSize = None
-            #else:
-                #maxFileSize = int(Formatters.strip_tags(maxFileSize))
-            scanFile = Formatters.strip_tags(scanFile)
-            scanFile = scanFile.lower()
-            if password == "":
-                password = None
-            if scanFile == "true":
-                scanFile = True
-            else:
-                scanFile = False
-            if emailAddresses is not None and emailAddresses != "":
-                emailAddresses = emailAddresses.replace(";", ",")
-                emailAddresses = split_list_sanitized(emailAddresses)
-            else:
-                emailAddress = []
-            if personalMessage is not None:
-                personalMessage = Formatters.strip_tags(personalMessage)
-            requestType = Formatters.strip_tags(requestType.lower())
-            if requestType != "multi" and requestType != "single": #Complete failure conditions
-                fMessages.append("Request type must be specified as either 'single' or 'multi'");
-            #elif maxFileSize is not None and maxFileSize < 1: #Complete failure condition
-                #fMessages.append("Max file size for upload tickets must be a positive whole number")
-            else:
-                try:
-                    ticketId = fl.generate_upload_ticket(user, password, None, expiration, scanFile, requestType, emailAddresses, personalMessage)
-                    uploadURL = fl.rootURL+"/public_upload?ticketId=%s" % str(ticketId)
-                    sMessages.append("Successfully generated upload ticket")
-                except FLError, fle:
-                    fMessages.extend(fle.failureMessages)
-        except FLError, fle:
-            fMessages.extend(fle.failureMessages)
-            sMessages.extend(fle.successMessages)
+            expiration = parse_date(expiration, datetime.date.today())
         except Exception, e:
-            if expiration is None or expiration == "":
-                fMessages.append("Upload requests must have an expiration date.")
+            fMessages.append(str(e))
+        try:
+            maxFileSize = int(strip_tags(maxFileSize)) if (maxFileSize == "" or maxFileSize=="0" or maxFileSize == 0) else None
+            if maxFileSize is not None and maxFileSize < 0:
+                fMessages.append("Max file size must be a positive number")
+            scanFile = True if scanFile.lower()=="true" else False
+            password = None if password == "" else password
+            emailAddresses = emailAddresses.replace(";", ",") if (emailAddresses is not None and emailAddresses != "") else []
+            personalMessage = strip_tags(personalMessage)
+            requestType = "multi" if requestType.lower() == "multi" else "single"
+            uploadRequest = UploadRequest(date_expires=expiration, max_file_size=maxFileSize, scan_file=scanFile, type=requestType)
+            if password is not None:
+                uploadRequest.set_password(password)
             else:
-                fMessages.append("Invalid expiration date format. Date must be in mm/dd/yyyy format.")
+                fMessages.append("You must specify a password for upload requests that allow more than 1 file to be uploaded")
+            if len(fMessages):
+                uploadRequest.generate_share_id()
+                session.add(uploadRequest)
+                session.commit()
+                uploadURL = fl.rootURL+"/public_upload?ticketId=%s" % str(ticketId)
+                sMessages.append("Successfully generated upload ticket")
+        except Exception, e:
+            fMessages.append(str(e))
         return fl_response(sMessages, fMessages, format, data=uploadURL)
 
     @cherrypy.expose
     @cherrypy.tools.requires_login()
-    def delete_upload_ticket(self, ticketId, format="json"):
-        fl, user, uploadURL, sMessages, fMessages = cherrypy.thread_data.flDict['app'], cherrypy.session.get("user"), "", [], []
+    def delete_upload_request(self, ticketId, format="json"):
+        user,  sMessages, fMessages = cherrypy.session.get("user"), [], []
         try:
-            ticketId = Formatters.strip_tags(ticketId)
-            fl.delete_upload_ticket(user, ticketId)
-            sMessages.append("Upload ticket deleted")
-        except FLError, fle:
-            sMessages.extend(fle.successMessages)
-            fMessages.extend(fle.failureMessages)
+            ticketId = strip_tags(ticketId)
+            uploadRequest = session.query(UploadRequest).filter(UploadRequest.id == ticketId).one()
+            if uploadRequest.owner_id == user.id or AccountController.user_has_permission(user, "admin"):
+                session.delete(uploadRequest)
+                session.commit()
+                sMessages.append("Upload ticket deleted")
+            else:
+                fMessages.append("You do not have permission to delete this upload request")
+        except Exception, e:
+            fMessages.append(str(e))
         return fl_response(sMessages, fMessages, format)
 
     def serve_file(self, flFile, user=None, content_type=None, publicShareId=None):

@@ -70,7 +70,7 @@ class Permission(Base):
         return Permission(id=self.id, name=self.name, inherited_from=self.inherited_from)
 
     def get_dict(self):
-        return {'permissionId': self.id, 'permissionName': self.name, 'inheritedFrom':self.inherited_from}
+        return {'id': self.id, 'name': self.name, 'inherited_from':self.inherited_from}
 
 
 group_membership_table = Table("group_membership", Base.metadata,
@@ -106,6 +106,7 @@ class File(Base):
     notify_on_download = Column(Boolean)
     md5 = Column(String(64), nullable=True)
     upload_request_id = Column(String(64), ForeignKey("upload_requests.id"))
+    document_type = None
 
     user_shares = relationship("UserShare", backref="files")
     #public_shares = relationship("PublicShare", backref="files")
@@ -126,6 +127,19 @@ class File(Base):
             if share.attribute_id in user.attributes:
                 return True
         return False
+
+    def get_copy(self):
+        return File(name = self.name, type = self.type, size = self.size, notes=self.notes,\
+                    date_uploaded=self.date_uploaded, owner_id = self.owner_id, date_expires=self.date_expires,\
+                    passed_avscan = self.passed_avscan, encryption_key=self.encryption_key, status=self.status,\
+                    notify_on_download=self.notify_on_download, md5=self.md5,\
+                    upload_request_id=self.upload_request_id)
+
+    def get_dict(self):
+        return {'name': self.name, 'id': self.id, 'owner_id': self.owner_id,\
+        'size': self.size, 'date_uploaded': self.date_uploaded.strftime("%m/%d/%Y"),\
+        'date_expires': self.date_expires.strftime("%m/%d/%Y"), 'passed_avscan':self.passed_avscan,\
+        'document_type': self.document_type}
 
 class DeletedFile(Base):
     __tablename__ = "deletion_queue"
@@ -201,7 +215,7 @@ class PublicShare(Base):
             existing = session.query(PublicShare).filter(PublicShare.id == shareId).scalar()
         if existing is not None:
             raise Exception("Could not create a unique share ID")
-        return shareId
+        self.id = shareId
 
     def set_password(self, password):
         self.password = hash_password(password)
@@ -226,9 +240,21 @@ class UploadRequest(Base):
     type = Column(Enum("single", "multi"))
     expired = False
 
-    def generateTicketId(self):
+    def generate_share_id(self):
         import random
-        return md5(str(random.random())).hexdigest()
+        shareId = md5(str(random.random())).hexdigest()
+        tryCount = 0
+        existing = session.query(UploadRequest).filter(UploadRequest.id == shareId).scalar()
+        while existing is not None and tryCount < 5:
+            tryCount += 1
+            shareId = md5(str(random.random())).hexdigest()
+            existing = session.query(UploadRequest).filter(UploadRequest.id == shareId).scalar()
+        if existing is not None:
+            raise Exception("Could not create a unique share ID")
+        self.id = shareId
+
+    def set_password(self, password):
+        self.password = hash_password(password)
 
 class ConfigParameter(Base):
     __tablename__ = "config"
@@ -272,7 +298,7 @@ def create_admin_user(dburi, password):
     adminUser = User(id="admin", first_name="Administrator", quota=1024, date_tos_accept=datetime.datetime.now())
     adminUser.set_password(password)
     engine = create_engine(dburi, echo=True)
-    Base.metadata.create_all(engine)
+    #Base.metadata.create_all(engine)
     Session = sessionmaker(bind=engine)
     session = Session()
     adminPermission = session.query(Permission).filter(Permission.id == "admin").one()

@@ -248,13 +248,15 @@ def get_user_roles(user):
     return roleUsers
 
 def user_has_permission(user, permissionId):
-    if permissionId in user.permissions:
-        return True
-    else:
-        for group in user.groups:
-            if permissionId in group.permissions:
+    #print "User Permissions: %s" % str(user.permissions)
+    for permission in user.permissions:
+        if permission.id == permissionId:
+            return True
+    for group in user.groups:
+        for permission in group.permissions:
+            if permission.id == permissionId:
                 return True
-        return False
+    return False
 
 def install_user(self, user):
     if user is not None:

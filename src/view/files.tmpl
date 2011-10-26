@@ -9,7 +9,7 @@
         <div class="button"><a href="javascript:promptUpload();" title="Upload a new file to Filelocker" class="uploadButton"><span>Upload</span></a></div>
         <div class="button hidden" id="multiShare"><a href="javascript:dismissStatusMessage();javascript:promptShareFiles();" title="Manage shares for the selected files" class="shareButton"><span>Manage Shares</span></a></div>
         <div class="button"><a href="javascript:dismissStatusMessage();javascript:loadManageGroups();" title="Manage my groups of Filelocker users" class="manageGroupsButton"><span>Manage Groups</span></a></div>
-        <div class="button"><a href="javascript:deleteFiles();" title="Permanently delete the selected files from Filelocker" class="deleteButton"><span>Delete</span></a></div>
+        <div class="button"><a href="privjavascript:deleteFiles();" title="Permanently delete the selected files from Filelocker" class="deleteButton"><span>Delete</span></a></div>
     </div>
     
     <div class="file_list"> <!--Files content area-->
@@ -79,8 +79,8 @@
                                     #end if
                                 </li>
                                 #end if
-                                #set $userCount = len($f.private_shares)
-                                #set $groupCount = len($f.private_group_shares)
+                                #set $userCount = len($f.user_shares)
+                                #set $groupCount = len($f.group_shares)
                                 #if $userCount > 0 or $groupCount > 0
                                 <li>
                                     #set $userPlural = "s"
@@ -203,8 +203,8 @@
                                     <input type="checkbox" name="publicShareCheckbox_$f.id" value="no" class="publicShareCheckbox" title="Share this file with users outside of $config['org_name']" onClick="javascript:promptPublicShareFile('$f.id', '$f.name', '$fileExpiration', 'files')"/>
                                     #end if
                                 </li>
-                                #set $userCount = len($f.private_shares)
-                                #set $groupCount = len($f.private_group_shares)
+                                #set $userCount = len($f.user_shares)
+                                #set $groupCount = len($f.group_shares)
                                 #if $userCount > 0 or $groupCount > 0
                                 <li>
                                     #set $userPlural = "s"

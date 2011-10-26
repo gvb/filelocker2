@@ -119,6 +119,24 @@ class ShareController:
 
     @cherrypy.expose
     @cherrypy.tools.requires_login()
+    def get_files_shared_with_user(self, fileIdList=None, format="json", **kwargs):
+        #Determine which files are shared with the user
+        user, sMessages, fMessages, sharedFiles = (cherrypy.session.get("user"), [], [], [])
+        try:
+            fileIds = []
+            for flFile in ShareController.get_files_shared_with_user(user):
+                if flFile.id not in fileIds:
+                    sharedFiles.append(flFile.get_dict())
+                    fileIds.append(flFile.id)
+#             TODO: Implement Share Hiding
+#            if fl.is_share_hidden(user, sharedFile.fileId) is False:
+#                sharedFilesList.append(sharedFile)
+        except Exception, e:
+            fMessages.append(str(e))
+        return fl_response(sMessags, fMessages, format, data=sharedFiles)
+
+    @cherrypy.expose
+    @cherrypy.tools.requires_login()
     def create_attribute_shares(self, fileIds, attributeId, format="json", **kwargs):
         user, sMessages, fMessages  = (cherrypy.session.get("user"), [], [])
         try:
@@ -177,12 +195,11 @@ class ShareController:
 
             shareType != "single" if shareType != "multi" else "multi"
             ps = PublicShare(date_expires=expiration, reuse=shareType)
-            if shareType == "single" or (kwargs.has_key("password") and kwargs['password']!=""):
-                password = kwargs['password']
-                ps.set_password(password)
-            else:
-                ps.password = None
-            ps.id = ps.generate_share_id()
+            if (kwargs.has_key("password") and kwargs['password']!=""):
+                ps.set_password(kwargs['password'])
+            elif shareType=="multi":
+                raise Exception("You must specify a password for public shares that don't expire after 1 use")
+            ps.generate_share_id()
             session.add(ps)
             sharedFiles = []
             for fileId in fileIds:
@@ -254,6 +271,17 @@ class ShareController:
                 sMessages.extend(fle.successMessages)
         return fl_response(sMessages, fMessages, format)
 
+
+def get_files_shared_with_user(user):
+    sharedFiles = []
+    for share in session.query(UserShare).filter(UserShare.user_id==user.id).all():
+        for flFile in share.files:
+            sharedFiles.append(flFile)
+    for group in user.groups:
+        for share in group.group_shares:
+            for flFile in share.files:
+                sharedFiles.append(flFile)
+    return sharedFiles
 def get_user_shareable_attributes(user):
     """
     This function gets the attributes that a user has permission to share with.
