@@ -487,9 +487,8 @@ class Filelocker:
                 shareId = self.db.createPublicShare(ps)
                 for recipient in notifyEmailList:
                     if recipient is not None and recipient != "":
-                        self.mail.notify(self.get_template_file('public_share_notification.tmpl'), {'sender':user.userEmail, 'recipient':recipient, 'fileName':flFile.fileName, 'ownerId':user.userId, 'ownerName': user.userDisplayName, 'shareId':shareId, 'filelockerURL':self.rootURL})
+
                 logging.info("[%s] [createPublicShare] [User shared file %s (id: %s) publicly]" % (user.userId, flFile.fileName, flFile.fileId))
-                self.log_action(user.userId, "Create Public Share", None, "File %s (%s) has been shared publicly" % (flFile.fileName, flFile.fileId))
                 return shareId
             else:
                 logging.warning("[%s] [createPublicShare] [User tried to share an unowned file: %s - %s]" % (user.userId, flFile.fileName, flFile.fileId))
