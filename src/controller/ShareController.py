@@ -124,7 +124,7 @@ class ShareController:
         user, sMessages, fMessages, sharedFiles = (cherrypy.session.get("user"), [], [], [])
         try:
             fileIds = []
-            for flFile in ShareController.get_files_shared_with_user(user):
+            for flFile in get_files_shared_with_user(user):
                 if flFile.id not in fileIds:
                     sharedFiles.append(flFile.get_dict())
                     fileIds.append(flFile.id)
@@ -311,14 +311,5 @@ def get_files_shared_with_user_by_attribute(user):
                 attributeShareDictionary[attributeShare.attribute_id].append(attributeShare.flFile)
     return attributeShareDictionary
     
-def get_files_shared_with_user(user):
-    fileList = []
-    userShares = session.query(UserShare).filter(UserShare.user_id == user.id)
-    for share in userShares:
-        fileList.append(share.flFile)
-    return fileList
-
-
-
 if __name__ == "__main__":
     print "Hello";
