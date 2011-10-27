@@ -1,5 +1,6 @@
 import os
 import re
+import types
 import datetime
 import time
 import json
@@ -8,7 +9,7 @@ JSON_WRITE = None
 
 try: #This bit here is to handle backwards compatibility with python-json modules. The .write and .dumps methods work analagously as far as I can tell
     json.write("test")
-    JSON_WRITE = json.write
+    JSON_WRITE = json_parse
 except AttributeError, ae:
     JSON_WRITE = json.dumps
 __author__="wbdavis"
@@ -29,16 +30,25 @@ def get_template_file(fileName):
             filePath = os.path.join(templatePath, fileName)
         return filePath
 
+class FL_Object_Encoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, User):
+            return obj.get_dict()
+        elif isinstance(obj, Group):
+            return obj.get_dict()
+        elif isinstance(obj, File):
+            return obj.get_dict()
+        return json.JSONEncoder.default(self, obj)
+
 def fl_response(sMessages, fMessages, format, data=None):
     if format=="json":
         global JSON_WRITE
         jsonDict = {'sMessages': sMessages, 'fMessages': fMessages}
         if data is not None: jsonDict['data'] = data
-        return str(JSON_WRITE(jsonDict))
+        return str(JSON_WRITE(jsonDict, cls=FL_Object_Encoder))
     elif format=="autocomplete":
         pass
     elif format=="cli":
-        fl = cherrypy.thread_data.flDict['app']
         tpl = str(Template(file=get_template_file('cli_response.tmpl'), searchList=[locals(),globals()]))
         return str(tpl)
     else:
@@ -52,7 +62,8 @@ def strip_tags(value, message=False):
         p = re.compile(r'<.*?>')
         return p.sub('',value)
     else:
-        return re.sub(r'[^a-zA-Z0-9\.@_+:;=,\s\'/\\\[\]-]', '', value)
+        cleanText = re.sub(r'[^a-zA-Z0-9\.@_+:;=,\s\'/\\\[\]-]', '', value)
+        return cleanText if cleanText != "" else None
 
 def tail( f, window=20 ):
     try:
@@ -107,3 +118,16 @@ def parse_date(stringDate, minDate=None, maxDate=None):
         return parsedDate
     except:
         raise Exception("Invalid expiration date format. Date must be in mm/dd/yyyy format.")
+
+def json_parse(obj):
+    ty = type(obj)
+    if ty is types.ListType or ty is types.TupleType:
+        results = []
+        for val in obj:
+            if isinstance(val, User) or isinstance(val, Group) or isinstance(val, File):
+                results.append(val.get_dict())
+            else:
+                results.append(val)
+        json.write(results)
+    else:
+        json.write(obj)

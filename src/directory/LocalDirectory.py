@@ -6,7 +6,6 @@ __date__ ="$Oct 5, 2011 2:09:08 AM$"
 
 class LocalDirectory(object):
 
-
     def lookup_user(self, userId):
         return session.query(User).filter(User.id == userid).one()
 

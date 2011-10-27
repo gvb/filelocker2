@@ -97,7 +97,7 @@ class RootController:
             if password is None or password == "":
                 raise cherrypy.HTTPRedirect("%s/login?msg=3&authType=%s" % (rootURL, authType))
             else:
-                directory = AccountController.ExternalDirectory(cherrypy.request.app.config['filelocker']['directory_type'])
+                directory = AccountController.ExternalDirectory(cherrypy.request.app.config['filelocker'])
                 if directory.authenticate(username, password):
                     currentUser = AccountController.get_user(username, True) #if they are authenticated and local, this MUST return a user object
                     if currentUser is not None:

@@ -132,7 +132,7 @@ class FileController(object):
         else:
             fileIdList = split_list_sanitized(fileIdList)
             for fileId in fileIdList:
-                flFile = session.query(File).filter(File.id==fileId)
+                flFile = session.query(File).filter(File.id==fileId).one()
                 if flFile.owner_id == userId or flFile.shared_with(user):
                     myFilesList.append(flFile)
         for flFile in myFilesList: #attachments to the file objects for this function, purely cosmetic
@@ -149,26 +149,27 @@ class FileController(object):
             myFilesJSON = []
             userShareableAttributes = AccountController.get_shareable_attributes_by_user(user)
             for flFile in myFilesList:
-                fileUserShares, fileGroupShares, availableGroups, sharedGroupsList, fileAttributeShares = ([],[],[],[],[])
+                flFile.fileUserShares, flFile.fileGroupShares, flFile.availableGroups, sharedGroupsList, flFile.fileAttributeShares = ([],[],[],[],[])
                 for share in flFile.user_shares:
-                    fileUserShares.append({'id': share.user.id, 'name': share.user.display_name})
+                    flFile.fileUserShares.append({'id': share.user.id, 'name': share.user.display_name})
                 sharedGroupIds = []
                 for share in flFile.group_shares:
                     sharedGroupIds.append(share.group.id)
-                    fileGroupShares.append({'id': share.group.id, 'name': share.group.name})
+                    flFile.fileGroupShares.append({'id': share.group.id, 'name': share.group.name})
                 for share in flFile.attribute_shares:
-                    fileAttributeShares.append({'id': share.attribute.id, 'name': share.attribute.name})
+                    flFile.fileAttributeShares.append({'id': share.attribute.id, 'name': share.attribute.name})
                 for group in session.query(Group).filter(Group.owner_id==userId):
                     if group.id not in sharedGroupIds:
                         flFile.availableGroups.append({'id': group.id, 'name': group.name})
-                myFilesJSON.append({'fileName': flFile.name, 'fileId': flFile.id, 'fileOwnerId': flFile.owner_id, 'fileSizeBytes': flFile.size, 'fileUploadedDatetime': flFile.date_uploaded.strftime("%m/%d/%Y"), 'fileExpirationDatetime': flFile.date_expires.strftime("%m/%d/%Y") if flFile.date_expires is not None else "Never", 'filePassedAvScan':flFile.passed_avscan, 'documentType': flFile.documentType, 'fileUserShares': fileUserShares, 'fileGroupShares': fileGroupShares, 'availableGroups': availableGroups, 'fileAttributeShares': fileAttributeShares})
+                myFilesJSON.append({'fileName': flFile.name, 'fileId': flFile.id, 'fileOwnerId': flFile.owner_id, 'fileSizeBytes': flFile.size, 'fileUploadedDatetime': flFile.date_uploaded.strftime("%m/%d/%Y"), 'fileExpirationDatetime': flFile.date_expires.strftime("%m/%d/%Y") if flFile.date_expires is not None else "Never", 'filePassedAvScan':flFile.passed_avscan, 'documentType': flFile.documentType, 'fileUserShares': flFile.fileUserShares, 'fileGroupShares': flFile.fileGroupShares, 'availableGroups': flFile.availableGroups, 'fileAttributeShares': flFile.fileAttributeShares})
             if format=="json":
                 return fl_response(sMessages, fMessages, format, data=myFilesJSON)
             elif format=="searchbox_html":
                 selectedFileIds = ",".join(fileIdList)
                 context = "private_sharing"
+                groups = session.query(Group).filter(Group.owner_id == userId).all()
                 searchWidget = str(Template(file=get_template_file('search_widget.tmpl'), searchList=[locals(),globals()]))
-                tpl = Template(file=fl.get_template_file('share_files.tmpl'), searchList=[locals(),globals()])
+                tpl = Template(file=get_template_file('share_files.tmpl'), searchList=[locals(),globals()])
                 return str(tpl)
             elif format=="cli":
                 myFilesJSON = sorted(myFilesJSON, key=lambda k: k['fileId'])
@@ -375,7 +376,7 @@ class FileController(object):
         #The file has been successfully uploaded by this point, process the rest of the variables regarding the file
         newFile.name = fileName
         fileNotes = strip_tags(kwargs['fileNotes']) if kwargs.has_key("fileNotes") else ""
-        if len(fileNotes) > 256:
+        if fileNotes is not None and len(fileNotes) > 256:
             fileNotes = fileNotes[0:256]
         newFile.notes = fileNotes
 
@@ -479,7 +480,7 @@ class FileController(object):
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def create_upload_request(self, password, expiration, scanFile, requestType, maxFileSize=None, emailAddresses=None, personalMessage=None, format="json", **kwargs):
-        uploadURL, sMessages, fMessages = "", [], []
+        config, uploadURL, sMessages, fMessages = cherrypy.request.app.config['filelocker'],"", [], []
         try:
             expiration = parse_date(expiration, datetime.date.today())
         except Exception, e:
@@ -502,7 +503,7 @@ class FileController(object):
                 uploadRequest.generate_share_id()
                 session.add(uploadRequest)
                 session.commit()
-                uploadURL = fl.rootURL+"/public_upload?ticketId=%s" % str(ticketId)
+                uploadURL = config['root_url']+"/public_upload?ticketId=%s" % str(ticketId)
                 sMessages.append("Successfully generated upload ticket")
         except Exception, e:
             fMessages.append(str(e))

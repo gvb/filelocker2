@@ -1,10 +1,7 @@
 # -*- coding: utf-8 -*-
-import sys, re
 import ldap
 import logging
-sys.path.append("../")
-from core.dao.models.User import User
-from core.dao.models.FLError import FLError
+from lib.Models import User
 #Thanks to user cywolf1 on SourceForge for the fixes in this module to get it to work with Active Directory
 class LDAPDirectory(object):
     ldap.set_option(ldap.OPT_PROTOCOL_VERSION, ldap.VERSION3)
@@ -52,8 +49,7 @@ class LDAPDirectory(object):
             userFirstName, userLastName, userDisplayName, userEmail = (ldap_dict.get(self.firstNameAttr, [''])[0], ldap_dict.get(self.lastNameAttr, [''])[0], ldap_dict.get(self.displayNameAttr, [''])[0].title(), ldap_dict.get(self.emailAttr, [''])[0])
         else:
             userFirstName, userLastName, userDisplayName, userEmail = ("NOT FOUND", "NOT FOUND", userId + " NOT FOUND", "")
-        foundUser = User(userFirstName, userLastName, userEmail, None, None, None, userId)
-        foundUser.userDisplayName = userDisplayName
+        foundUser = User(first_name=userFirstName, last_name=userLastName, email=userEmail, id=userId, display_name=userDisplayName)
         return foundUser
         
     #This function will do a search on an ldap directory getting all matches for a combination of first names and last names 
@@ -76,12 +72,12 @@ class LDAPDirectory(object):
                     lusers.extend(l.search_ext_s(self.directoryBindDn, ldap.SCOPE_SUBTREE, similarFilter, timeout=30.0))
             except ldap.SIZELIMIT_EXCEEDED, se:
                 if len(lusers) == 0:
-                    raise FLError(True, ["Too many results"])
+                    raise Exception("Too many results.")
                 else:
                     pass
             except ldap.ADMINLIMIT_EXCEEDED, ae:
                 if len(lusers) == 0:
-                    raise FLError(True, ["Too many results."])
+                    raise Exception("Too many results.")
                 else:
                     pass
         else:
@@ -97,18 +93,16 @@ class LDAPDirectory(object):
                     lusers.extend(l.search_ext_s(self.directoryBindDn, ldap.SCOPE_SUBTREE, filterstr, timeout=30.0, sizelimit=10))
                 except ldap.SIZELIMIT_EXCEEDED, se:
                     if len(lusers) == 0:
-                        raise FLError(True, ["Too many results"])
+                        raise Exception("Too many results.")
                     else:
                         pass
                 except ldap.ADMINLIMIT_EXCEEDED, ae:
                     if len(lusers) == 0:
-                        raise FLError(True, ["Too many results."])
+                        raise Exception("Too many results.")
                     else:
                         pass
-        result_length = len(lusers)
         
         #This creates an array of dictionaries with keys for the full name and alias
-        userList = []
         for user in lusers:
             dn, ldap_dict = user
             userId = ldap_dict.get(self.userIdAttr, [''])[0]
@@ -116,22 +110,20 @@ class LDAPDirectory(object):
             userLastName = ldap_dict.get(self.lastNameAttr, [''])[0]
             userDisplayName = ldap_dict.get(self.displayNameAttr, [''])[0].title()
             email = ldap_dict.get(self.emailAttr, [''])[0]
-            foundUser = User(userFirstName, userLastName, email, None, None, None, userId)
-            foundUser.userDisplayName = userDisplayName
+            foundUser = User(first_name=userFirstName, last_name=userLastName, email=email, id=userId, display_name=userDisplayName)
             userMatches.append(foundUser)
         return userMatches
     
     def authenticate(self, userId, password):
-        result = None
         l = ldap.initialize(self.directoryHost)
         try:
             if userId is "" or password is "":
                 logging.info("Username or password cannot be blank.  Anonymous logins are not permitted")
                 raise ldap.INVALID_CREDENTIALS
             if self.isActiveDirectory.lower()=="yes":
-                result = l.simple_bind_s(userId+"@"+self.domainName , password)
+                l.simple_bind_s(userId+"@"+self.domainName , password)
             else:
-                result = l.simple_bind_s(self.userIdAttr+"="+userId+","+ self.directoryBindDn , password)
+                l.simple_bind_s(self.userIdAttr+"="+userId+","+ self.directoryBindDn , password)
             return True #If no errors were raised while binding, we'll consider it a success
         except ldap.INVALID_CREDENTIALS:
             return False

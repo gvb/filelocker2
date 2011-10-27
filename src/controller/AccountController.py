@@ -14,42 +14,40 @@ class AccountController:
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def update_user(self, format="json", **kwargs):
-        fl, user, sMessages, fMessages = cherrypy.thread_data.flDict['app'], cherrypy.session.get("user"), [], []
-        currentUser = session.query(User).filter(User.id==user.id).one()
+        user, sMessages, fMessages = cherrypy.session.get("user"), [], []
         try:
+            currentUser = get_user(user.id)
             if kwargs.has_key("password") and kwargs.has_key("confirmPassword"):
                 if kwargs['password'] != kwargs['confirmPassword']:
                     fMessages.append("Passwords do match. Please retype your new password")
                 elif kwargs['password'] != None and kwargs['password'] != "":
-                    reset_password(currentUser.id, kwargs['password'])
+                    currentUser.set_password(kwargs['password'])
                     sMessages.append("Password successfully changed")
                 else:
                     fMessages.append("Password cannot be blank")
             if kwargs.has_key("emailAddress"):
                 currentUser.email = kwargs["emailAddress"]
+                sMessages.append("Email address successfully updated")
             session.commit()
-            sMessages.append("Email address successfully updated")
-        except FLError, fle:
-            fMessages.extend(fle.failureMessages)
-            sMessages.extend(fle.successMessages)
+        except Exception, e:
+            fMessages.append(str(e))
         return fl_response(sMessages, fMessages, format)
 
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def switch_roles(self, roleUserId=None, format="json", **kwargs):
-        user, fl= (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'])
+        user = cherrypy.session.get("user")
         try:
             if roleUserId is None:
-                cherrypy.session['user'] = fl.get_user(cherrypy.session.get("original_user").userId, True)
-                cherrypy.session['sMessages'].append("Role reverted back to %s" % str(cherrypy.session.get("user").userId))
+                cherrypy.session['user'] = get_user(cherrypy.session.get("original_user").id, True)
+                cherrypy.session['sMessages'].append("Role reverted back to %s" % str(cherrypy.session.get("user").id))
             elif fl.check_permission(user, "(role)%s" % roleUserId) or (cherrypy.session.has_key("original_user") and cherrypy.session.get("original_user").userId == roleUserId):
-                cherrypy.session['user'] = fl.get_user(roleUserId, True)
+                cherrypy.session['user'] = get_user(roleUserId, True)
                 cherrypy.session['sMessages'].append("Role successfully changed to %s" % str(roleUserId))
             else:
                 cherrypy.session['fMessages'].append("You do not have permission to switch to this role")
-        except FLError, fle:
-            cherrypy.session['sMessages'].extend(fle.successMessages)
-            cherrypy.session['fMessages'].extend(fle.failureMessages)
+        except Exception, e:
+            cherrypy.session['fMessages'].append(str(e))
         return fl_response(cherrypy.session['sMessages'], cherrypy.session['fMessages'], format)
 
     @cherrypy.expose
@@ -64,40 +62,26 @@ class AccountController:
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def search_users(self, firstName=None, lastName=None, userId=None, format="json", external=False, **kwargs):
-        user, fl, foundUsersJSON, sMessages, fMessages = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [], [])
-        tooManyResults = False
-        if external == "true":
-            external = True
-        else:
-            external = False
+        config = cherrypy.request.app.config['filelocker']
+        user, foundUsers, sMessages, fMessages, tooManyResults = (cherrypy.session.get("user"),[], [], [], False)
+        external = False if external.lower() != "true" else True
         try:
             if firstName is not None or lastName is not None or userId is not None: #Must have something to search on
-                if firstName == "": firstName = None
-                if lastName == "": lastName = None
-                if userId == "": userId = None
-                if userId is not None:
-                    userId = strip_tags(userId)
-                if firstName is not None:
-                    firstName = strip_tags(firstName)
-                if lastName is not None:
-                    lastName = strip_tags(lastName)
-                foundUsers = fl.search_users(external, firstName, lastName, userId)
-                for foundUser in foundUsers:
-                    foundUsersJSON.append({"displayName": foundUser.userDisplayName, "userId": foundUser.userId})
-                sMessages.append("User search complete")
+                firstName = strip_tags(firstName)
+                lastName = strip_tags(lastName)
+                userId = strip_tags(userId)
+                directory = ExternalDirectory(config)
+                foundUsers = directory.search_users(external, firstName, lastName, userId)
             else:
                 fMessages.append("Please specify the first name, last name, or username of the user for whom you are searching")
-        except FLError, fle:
-            if fle.partialSuccess:
+        except Exception, e:
+            if str(e)=="toomany":
                 tooManyResults = True
             else:
-                logging.error("[%s] [searchUsers] [Errors during directory search: %s]" % (user.userId, str(fMessages)))
-            sMessages.extend(fle.successMessages)
-            fMessages.extend(fle.failureMessages)
+                logging.error("[%s] [searchUsers] [Errors during directory search: %s]" % (user.id, str(fMessages)))
+                fMessages.append(str(e))
 
-        if format=="json":
-            return fl_response(sMessages, fMessages, format, data=foundUsersJSON)
-        elif format=="autocomplete":
+        if format=="autocomplete":
             shareLinkList = []
             if len(fMessages) > 0:
                 shareLinkList.append({'value': 0, 'label': fMessages[-1]})
@@ -105,10 +89,12 @@ class AccountController:
                     fMessages = [] #no need for a failure message on too many results, that'll display in result window
                 sMessage = [] #We don't need to flash a success message every time a search completes
             else:
-                for foundUser in foundUsersJSON:
-                    shareLinkList.append({'value': foundUser['userId'], 'label': foundUser['displayName']})
+                for foundUser in foundUsers:
+                    shareLinkList.append({'value': foundUser.id, 'label': foundUser.display_name})
             return fl_response(sMessages, fMessages, "json", data=shareLinkList) #This is kind of a hack since autocomplete requires a unique data structure, eventually we may be able to move this to the formatter
-
+        else:
+            return fl_response(sMessages, fMessages, format, data=foundUsers)
+        
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def create_group(self, groupName, groupMemberIds=None, groupScope=None, format="json", **kwargs):
@@ -164,64 +150,80 @@ class AccountController:
 
     @cherrypy.tools.requires_login()
     @cherrypy.expose
-    def remove_user_from_group(self, userId, groupId, format="json", **kwargs):
-        user, fl, sMessages, fMessages = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [])
-        userIds = split_list_sanitized(userId)
-        for memberId in userIds:
-            try:
-                fl.remove_user_from_group(user, memberId, groupId)
+    def remove_user_from_group(self, userIds, groupId, format="json", **kwargs):
+        user, sMessages, fMessages = (cherrypy.session.get("user"), [], [])
+        userIds = split_list_sanitized(userIds)
+        try:
+            group = session.query(Group).filter(Group.id==groupId).one()
+            if group.owner_id == user.id or user_has_permission(user, "admin"):
+                for memberId in userIds:
+
+                    groups.remove
                 sMessages.append("Member %s removed successfully" % memberId)
-            except FLError, fle:
-                fMessages.extend(fle.failureMessages)
-                sMessages.extend(fle.successMessages)
+            else:
+                fMessages.append("You do not have permission to modify group with ID:%s" % str(groupId))
+        except sqlalchemy.orm.exc.NoResultFound, nrf:
+            fMessages.append("Group with ID:%s could not be found" % str(groupId))
+        except Exception, e:
+            fMessages.append(str(e))
         return fl_response(sMessages, fMessages, format)
 
     @cherrypy.expose
     @cherrypy.tools.requires_login()
-    def add_user_to_group(self, userId, groupId, format="json", **kwargs):
-        user, fl, sMessages, fMessages  = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [])
-        groupIdList = split_list_sanitized(groupId)
-        for groupIdFromList in groupIdList:
+    def add_user_to_group(self, userId, groupIds, format="json", **kwargs):
+        user, sMessages, fMessages  = (cherrypy.session.get("user"), [], [])
+        groupIds = split_list_sanitized(groupIds)
+        for groupId in groupIds:
             try:
-                fl.add_user_to_group(user, userId, groupIdFromList)
-            except FLError, fle:
-                sMessages.extend(fle.successMessages)
-                fMessages.extend(fle.failureMessages)
+                group = session.query(Group).filter(Group.id == groupId).one()
+                if group.owner_id == user.id or user_has_permission(user, "admin"):
+                    try:
+                        user = get_user(userId)
+                        group.members.append(user)
+                        session.commit()
+                    except sqlalchemy.orm.exc.NoResultFound, nrf:
+                        fMessages.append("Invalid user ID: %s, not added to group" % str(userId))
+                else:
+                    fMessages.append("You do not have permission to modify group with ID:%s" % str(group.id))
+            except sqlalchemy.orm.exc.NoResultFound, nrf:
+                fMessages.append("Group with ID:%s could not be found" % str(groupId))
+            except Exception, e:
+                session.rollback()
+                fMessages.append(str(e))
         return fl_response(sMessages, fMessages, format)
 
-    @cherrypy.expose
-    @cherrypy.tools.requires_login()
-    def get_group_members(self, groupId, format="searchbox_html", **kwargs):
-        user, fl = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'])
-        group = fl.get_group(user, groupId)
-        searchWidget = HTTP_User.get_search_widget(HTTP_User(), "manage_groups")
-        templateFile = fl.get_template_file('view_group.tmpl')
-        tpl = Template(file=templateFile, searchList=[locals(),globals()])
-        return str(tpl)
+#    Ideally this won't be needed anymore
+#    @cherrypy.expose
+#    @cherrypy.tools.requires_login()
+#    def get_group_members(self, groupId, format="searchbox_html", **kwargs):
+#        user, fl = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'])
+#        group = fl.get_group(user, groupId)
+#        searchWidget = HTTP_User.get_search_widget(HTTP_User(), "manage_groups")
+#        templateFile = fl.get_template_file('view_group.tmpl')
+#        tpl = Template(file=templateFile, searchList=[locals(),globals()])
+#        return str(tpl)
 
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def get_groups(self, format="json"):
-        user, fl, sMessages, fMessages = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [])
+        user, sMessages, fMessages = (cherrypy.session.get("user"),  [], [])
         try:
-            groups = fl.get_user_groups(user, user.userId)
-            groups = sorted(groups, key=lambda k: k.groupId)
+            groups = session.query(Group).filter(Group.owner_id==user.id).all()
             if format == "cli":
                 groupsXML = ""
                 for group in groups:
-                    groupsXML += "<group id='%s' name='%s'></group>" % (group.groupId, group.groupName)
+                    groupsXML += "<group id='%s' name='%s'></group>" % (group.id, group.name)
                 groups = groupsXML
-        except FLError, fle:
-            sMessages.extend(fle.successMessages)
-            fMessages.extend(fle.failureMessages)
-        yield fl_response(sMessages, fMessages, format, data=groups)
+        except Exception, e:
+            fMessages.append(str(e))
+        return fl_response(sMessages, fMessages, format, data=groups)
 
 class ExternalDirectory(object):
     directory = None
-    def __init__(self, directoryType):
-        directoryType = directoryType
+    def __init__(self, config):
+        directoryType = config['directory_type']
         if directoryType == "ldap":
-            self.directory = LDAPDirectory.LDAPDirectory()
+            self.directory = LDAPDirectory.LDAPDirectory(config)
         elif directoryType == "local":
             from directory import LocalDirectory
             self.directory = LocalDirectory.LocalDirectory()
@@ -270,8 +272,15 @@ def install_user(self, user):
 
 def get_user(userId, login=False):
     import warnings
+    config = cherrypy.request.app.config['filelocker']
     warnings.simplefilter("ignore")
     user = session.query(User).filter(User.id==userId).scalar()
+    if user is None and config['auth_type']!="local": #This would be silly if we are using local auth, there's no other source of user info
+        directory = ExternalDirectory(config)
+        user = directory.lookup_user(userId)
+        if user is not None:
+            session.add(user)
+            session.commit()
     if user is not None:
         attributeList = []
         for permission in user.permissions:

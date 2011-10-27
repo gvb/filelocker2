@@ -29,24 +29,35 @@ class User(Base):
     __tablename__ = "users"
     id = Column(String(30), primary_key=True)
     quota = Column(Integer)
-    date_last_login = Column(DateTime)
-    date_tos_accept = Column(DateTime)
+    date_last_login = Column(DateTime, nullable=True)
+    date_tos_accept = Column(DateTime, nullable=True)
     email = Column(String(320), default="directory")
     first_name = Column(String(100))
     last_name = Column(String(100))
-    password = Column(String(80))
+    password = Column(String(80), nullable=True)
+    _display_name = Column("display_name", Text, nullable=True)
     permissions = relationship("Permission", secondary=lambda: user_permissions_table)
     quota_used = 0
     salt = None
     is_role = False
     authorized = True
     attributes = []
-    display_name=None
     received_messages = relationship("ReceivedMessage", backref="messages")
+    
+    def set_display_name(self, value):
+        self._display_name = value
+
+    def get_display_name(self):
+        if self._display_name is None or self._display_name == "":
+            return "%s %s" % (self.first_name, self.last_name)
+        else:
+            return self._display_name
 
     def set_password(self, password):
         self.password = hash_password(password)
         
+    display_name = property(get_display_name, set_display_name)
+
     def get_copy(self):
         loadedPermissions = []
         for permission in self.permissions:
@@ -89,6 +100,12 @@ class Group(Base):
     scope = Column(Enum("public", "private", "reserved"), default="private")
     members = relationship("User", secondary=lambda: group_membership_table, backref="groups")
     permissions = relationship("Permission", secondary=lambda: group_permissions_table)
+    
+    def get_dict(self):
+        users = {}
+        for user in self.members:
+            users.append({'id':user.id, 'name':user.display_name})
+        return {'id': self.id, 'name': self.name, 'owner_id':self.owner_id, 'scope': self.scope, 'members':users}
 
 class File(Base):
     __tablename__ = "files"
