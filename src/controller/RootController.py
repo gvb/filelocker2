@@ -103,7 +103,6 @@ class RootController:
                     if currentUser is not None:
                         if currentUser.authorized == False:
                             raise cherrypy.HTTPError(403, "You do not have permission to access this system")
-                        cherrypy.session['user'], cherrypy.session['original_user'], cherrypy.session['sMessages'], cherrypy.session['fMessages'] = currentUser.get_copy(), currentUser.get_copy(), [], []
                         session.add(AuditLog(cherrypy.session.get("user").id, "Login", "User %s logged in successfully from IP %s" % (currentUser.id, cherrypy.request.remote.ip)))
                         session.commit()
                         raise cherrypy.HTTPRedirect(rootURL)
@@ -113,7 +112,6 @@ class RootController:
                             AccountController.install_user(newUser)
                             currentUser = AccountController.get_user(username, True)
                             if currentUser is not None and currentUser.authorized != False:
-                                cherrypy.session['user'], cherrypy.session['original_user'], cherrypy.session['sMessages'], cherrypy.session['fMessages'] = currentUser, currentUser, [], []
                                 raise cherrypy.HTTPRedirect(rootURL)
                             else:
                                 raise cherrypy.HTTPError(403, "You do not have permission to access this system")

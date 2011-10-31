@@ -35,20 +35,210 @@ class AccountController:
 
     @cherrypy.expose
     @cherrypy.tools.requires_login()
+    def create_group(self, groupName, groupMemberIds=None, groupScope="private", format="json", **kwargs):
+        user, sMessages, fMessages = (cherrypy.session.get("user"), [], [])
+        try:
+            scope = strip_tags(groupScope.lower()) if strip_tags(groupScope) is not None else "private"
+            group = Group(name=strip_tags(groupName), scope=scope)
+            session.add(group)
+            memberIds = split_list_sanitized(groupMemberIds)
+            for memberId in memberIds:
+                try:
+                    member = session.query(User).filter(User.id==memberId).one()
+                    group.members.append(member)
+                except sqlalchemy.orm.exc.NoResultFound:
+                    fMessages.append("Could not find user with id:\"%s\" to add to group" % str(memberId))
+            session.commit()
+        except Exception, e:
+            session.rollback()
+            fMessages.append("Could not create group: %s" % str(e))
+            logging.error("[%s] [create_group] [Couldn't create group: %s]" % (user.id, str(e)))
+        return fl_response(sMessages, fMessages, format)
+
+    @cherrypy.tools.requires_login()
+    @cherrypy.expose
+    def delete_groups(self, groupIds, format="json", **kwargs):
+        user, sMessages, fMessages  = (cherrypy.session.get("user"),  [], [])
+        try:
+            groupIds = split_list_sanitized(groupIds)
+            for groupId in groupIds:
+                group = session.query(Group).filter(Group.id==groupId).one()
+            groupName = fl.delete_group(user, groupId)
+            sMessages.append("Group %s deleted successfully" % groupName)
+        except sqlalchemy.orm.exc.NoResultFound, nrf:
+            fMessages.append("Could not find group with ID: %s" % str(groupId))
+        except Exception, e:
+            session.rollback()
+            fMessages.append("Could not delete groups: %s" % str(e))
+            logging.error("[%s] [remove_users_from_group] [Could not delete groups: %s]" % (user.id, str(e)))
+        return fl_response(sMessages, fMessages, format)
+
+    @cherrypy.tools.requires_login()
+    @cherrypy.expose
+    def update_group(self, groupId, groupName=None, groupScope="private", format="json", **kwargs):
+        user, sMessages, fMessages  = (cherrypy.session.get("user"), [], [])
+        try:
+            groupId = strip_tags(groupId)
+            group = session.query(Group).filter(Group.id == groupId).one()
+            if group.owner_id == user.id or user_has_permission(user, "admin"):
+                group.name = strip_tags(groupName) if strip_tags(groupName) is not None else group.name
+                group.scope = strip_tags(groupScope.lower()) if groupScope is not None else group.scope
+                session.commit()
+                sMessages.append("Group updated")
+            else:
+                fMessages.append("You do not have permission to update this group")
+        except sqlalchemy.orm.exc.NoResultFound, nrf:
+            fMessages.append("Could not find group with ID: %s" % str(groupId))
+        except Exception, e:
+            session.rollback()
+            logging.error("[%s] [update_group] [Couldn't update group: %s]" % (user.id, str(e)))
+            fMessages.append("Could not update group: %s" % str(e))
+        return fl_response(sMessages, fMessages, format)
+
+    @cherrypy.tools.requires_login()
+    @cherrypy.expose
+    def remove_users_from_group(self, userId, groupId, format="json", **kwargs):
+        user, sMessages, fMessages = (cherrypy.session.get("user"), [], [])
+        try:
+            userIds = split_list_sanitized(userIds)
+            groupId = int(strip_tags(groupId))
+            group = session.query(Group).filter(Group.id==groupId).one()
+            if group.owner_id == user.id or user_has_permission(user, "admin"):
+                for userId in userIds:
+                    user = AccountController.get_user(userId)
+                    group.remove(user)
+                session.commit()
+                sMessages.append("Group members removed successfully")
+            else:
+                fMessages.append("You do not have permission to modify group with ID:%s" % str(groupId))
+        except ValueError:
+            fMessages.append("Invalid group Id")
+        except sqlalchemy.orm.exc.NoResultFound, nrf:
+            fMessages.append("Group with ID:%s could not be found" % str(groupId))
+        except Exception, e:
+            session.rollback()
+            fMessages.append("Couldn't remove members from group: %s" % str(e))
+            logging.error("[%s] [remove_users_from_group] [Couldn't remove members from group: %s]" % (user.id, str(e)))
+        return fl_response(sMessages, fMessages, format)
+
+    @cherrypy.expose
+    @cherrypy.tools.requires_login()
+    def add_users_to_group(self, userId, groupId, format="json", **kwargs):
+        user, sMessages, fMessages  = (cherrypy.session.get("user"), [], [])
+        try:
+            userIds = split_list_sanitized(userIds)
+            groupId = int(strip_tags(groupId))
+            group = session.query(Group).filter(Group.id == groupId).one()
+            if group.owner_id == user.id or user_has_permission(user, "admin"):
+                try:
+                    for userId in userIds:
+                        user = get_user(userId)
+                        group.members.append(user)
+                    session.commit()
+                except sqlalchemy.orm.exc.NoResultFound, nrf:
+                    fMessages.append("Invalid user ID: %s, not added to group" % str(userId))
+            else:
+                fMessages.append("You do not have permission to modify group with ID:%s" % str(group.id))
+        except ValueError:
+            fMessages.append("Invalid group Id")
+        except sqlalchemy.orm.exc.NoResultFound, nrf:
+            fMessages.append("Group with ID:%s could not be found" % str(groupId))
+        except Exception, e:
+            session.rollback()
+            logging.error("[%s] [add_users_to_group] [Couldn't add members to group: %s]" % (user.id, str(e)))
+            fMessages.append(str(e))
+        return fl_response(sMessages, fMessages, format)
+
+    @cherrypy.expose
+    @cherrypy.tools.requires_login()
+    def get_groups(self, format="json"):
+        user, sMessages, fMessages = (cherrypy.session.get("user"),  [], [])
+        try:
+            groups = session.query(Group).filter(Group.owner_id==user.id).all()
+            if format == "cli":
+                groupsXML = ""
+                for group in groups:
+                    groupsXML += "<group id='%s' name='%s'></group>" % (group.id, group.name)
+                groups = groupsXML
+        except Exception, e:
+            fMessages.append("Could not get groups: %s" % str(e))
+        return fl_response(sMessages, fMessages, format, data=groups)
+
+    @cherrypy.expose
+    @cherrypy.tools.requires_login()
+    def create_role(self, name, email=None, quota=None, format="json", **kwargs):
+        user, sMessages, fMessages = (cherrypy.session.get("user"), [], [])
+        try:
+            if user_has_permission(user, "admin"):
+                email = strip_tags(email)
+                quota = int(quota)
+                newRole = Role(name=strip_tags(name), email=email, quota=quota)
+                session.add(newRole)
+                session.commit()
+            else:
+                fMessages.append("You do not have permission to create roles")
+        except ValueError, ve:
+            fMessages.append("Quota must be a positive integer representing Megabytes")
+        except Exception, e:
+            session.rollback()
+            fMessages.append("Could not create role: %s" % str(e))
+            logging.error("Error creating role: %s" % str(e))
+        return fl_response(sMessages, fMessages, format)
+
+    @cherrypy.expose
+    @cherrypy.tools.requires_login()
+    def update_role(self, id, name=None, email=None, quota=None, format="json", **kwargs):
+        user, sMessages, fMessages = (cherrypy.session.get("user"), [], [])
+        try:
+            if user_has_permission(user, "admin"):
+                role = session.query(Role).filter(Role.id==id).one()
+                role.name = strip_tags(name) if strip_tags(name) is not None else role.name
+                role.quota = int(quota) if int(quota) > 0 else role.quota
+                role.email = strip_tags(email) if strip_tags(email) is not None else role.email
+                session.commit()
+            else:
+                fMessages.append("You do not have permission to update roles")
+        except ValueError:
+            fMessages.append("Quota must be a positive integer representing Megabytes")
+        except sqlalchemy.orm.exc.NoResultFound:
+            fMessages.append("This role ID does not exist")
+        except Exception, e:
+            fMessages.append("Could not update role: %s" % str(e))
+            logging.error("Could not update role: %s" % str(e))
+        return fl_response(sMessages, fMessages, format)
+
+    @cherrypy.expose
+    @cherrypy.tools.requires_login()
+    def delete_role(self, id):
+        user, sMessages, fMessages = (cherrypy.session.get("user"), [], [])
+        try:
+            if user_has_permission(user, "admin"):
+                pass
+            else:
+                fMessages.append("You do not have permission to delete roles")
+        except Exception, e:
+            fMessages.append("Could not delete role: %s" % str(e))
+            logging.error("Error delete role: %s" % str(e))
+        return fl_response(sMessages, fMessages, format)
+
+    @cherrypy.expose
+    @cherrypy.tools.requires_login()
     def switch_roles(self, roleUserId=None, format="json", **kwargs):
         user = cherrypy.session.get("user")
         try:
             if roleUserId is None:
-                cherrypy.session['user'] = get_user(cherrypy.session.get("original_user").id, True)
-                cherrypy.session['sMessages'].append("Role reverted back to %s" % str(cherrypy.session.get("user").id))
-            elif fl.check_permission(user, "(role)%s" % roleUserId) or (cherrypy.session.has_key("original_user") and cherrypy.session.get("original_user").userId == roleUserId):
-                cherrypy.session['user'] = get_user(roleUserId, True)
-                cherrypy.session['sMessages'].append("Role successfully changed to %s" % str(roleUserId))
+                cherrypy.session['current_role'] = None
             else:
-                cherrypy.session['fMessages'].append("You do not have permission to switch to this role")
+                for role in user.roles:
+                    if role.id == roleUserId:
+                        cherrypy.session['current_role'] = role
+                        sMessages.append("Switched to role %s" % role.name)
+                        break
+                    fMessages.append("You are not a member of this role")
         except Exception, e:
-            cherrypy.session['fMessages'].append(str(e))
-        return fl_response(cherrypy.session['sMessages'], cherrypy.session['fMessages'], format)
+            fMessages.append("Unable to switch roles: %s" % str(e))
+            logging.error("Error switching roles: %s" % str(e))
+        return fl_response(sMessages, fMessages, format)
 
     @cherrypy.expose
     @cherrypy.tools.requires_login()
@@ -95,102 +285,6 @@ class AccountController:
         else:
             return fl_response(sMessages, fMessages, format, data=foundUsers)
         
-    @cherrypy.expose
-    @cherrypy.tools.requires_login()
-    def create_group(self, groupName, groupMemberIds=None, groupScope=None, format="json", **kwargs):
-        user, fl, sMessages, fMessages = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [])
-        if groupMemberIds is not None:
-            groupMemberIds = split_list_sanitized(groupMemberIds)
-        else:
-            groupMemberIds = []
-        groupName = strip_tags(groupName)
-        if groupScope is not None:
-            groupScope = strip_tags(groupScope)
-        else:
-            groupScope = "private"
-        try:
-            if groupName != "":
-                fl.create_group(user, groupName, groupMemberIds, groupScope)
-                sMessages.append("Group %s created successfully" % str(groupName))
-            else:
-                fMessages.append("Group name is not valid")
-        except FLError, fle:
-            sMessages.extend(fle.successMessages)
-            fMessages.extend(fle.failureMessages)
-        return fl_response(sMessages, fMessages, format)
-
-    @cherrypy.tools.requires_login()
-    @cherrypy.expose
-    def delete_group(self, groupId, format="json", **kwargs):
-        user, fl, sMessages, fMessages  = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [])
-        groupIdList = split_list_sanitized(groupId)
-        for groupId in groupIdList:
-            try:
-                groupName = fl.delete_group(user, groupId)
-                sMessages.append("Group %s deleted successfully" % groupName)
-            except FLError, fle:
-                sMessages.extend(fle.successMessages)
-                fMessages.extend(fle.failureMessages)
-        return fl_response(sMessages, fMessages, format)
-
-    @cherrypy.tools.requires_login()
-    @cherrypy.expose
-    def update_group(self, groupId, users=None, groupName=None, groupScope="private", format="json", **kwargs):
-        user, fl, sMessages, fMessages  = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [])
-        try:
-            userIds = split_list_sanitized(users)
-            groupName = strip_tags(groupName)
-            if groupScope is not None:
-                groupScope = strip_tags(groupScope.lower())
-            fl.update_group(user, groupId, userIds, groupName, groupScope)
-        except FLError, fle:
-            fMessages.extend(fle.failureMessages)
-            sMessages.extend(fle.successMessages)
-        return fl_response(sMessages, fMessages, format)
-
-    @cherrypy.tools.requires_login()
-    @cherrypy.expose
-    def remove_user_from_group(self, userIds, groupId, format="json", **kwargs):
-        user, sMessages, fMessages = (cherrypy.session.get("user"), [], [])
-        userIds = split_list_sanitized(userIds)
-        try:
-            group = session.query(Group).filter(Group.id==groupId).one()
-            if group.owner_id == user.id or user_has_permission(user, "admin"):
-                for memberId in userIds:
-
-                    groups.remove
-                sMessages.append("Member %s removed successfully" % memberId)
-            else:
-                fMessages.append("You do not have permission to modify group with ID:%s" % str(groupId))
-        except sqlalchemy.orm.exc.NoResultFound, nrf:
-            fMessages.append("Group with ID:%s could not be found" % str(groupId))
-        except Exception, e:
-            fMessages.append(str(e))
-        return fl_response(sMessages, fMessages, format)
-
-    @cherrypy.expose
-    @cherrypy.tools.requires_login()
-    def add_user_to_group(self, userId, groupIds, format="json", **kwargs):
-        user, sMessages, fMessages  = (cherrypy.session.get("user"), [], [])
-        groupIds = split_list_sanitized(groupIds)
-        for groupId in groupIds:
-            try:
-                group = session.query(Group).filter(Group.id == groupId).one()
-                if group.owner_id == user.id or user_has_permission(user, "admin"):
-                    try:
-                        user = get_user(userId)
-                        group.members.append(user)
-                        session.commit()
-                    except sqlalchemy.orm.exc.NoResultFound, nrf:
-                        fMessages.append("Invalid user ID: %s, not added to group" % str(userId))
-                else:
-                    fMessages.append("You do not have permission to modify group with ID:%s" % str(group.id))
-            except sqlalchemy.orm.exc.NoResultFound, nrf:
-                fMessages.append("Group with ID:%s could not be found" % str(groupId))
-            except Exception, e:
-                session.rollback()
-                fMessages.append(str(e))
-        return fl_response(sMessages, fMessages, format)
 
 #    Ideally this won't be needed anymore
 #    @cherrypy.expose
@@ -203,20 +297,7 @@ class AccountController:
 #        tpl = Template(file=templateFile, searchList=[locals(),globals()])
 #        return str(tpl)
 
-    @cherrypy.expose
-    @cherrypy.tools.requires_login()
-    def get_groups(self, format="json"):
-        user, sMessages, fMessages = (cherrypy.session.get("user"),  [], [])
-        try:
-            groups = session.query(Group).filter(Group.owner_id==user.id).all()
-            if format == "cli":
-                groupsXML = ""
-                for group in groups:
-                    groupsXML += "<group id='%s' name='%s'></group>" % (group.id, group.name)
-                groups = groupsXML
-        except Exception, e:
-            fMessages.append(str(e))
-        return fl_response(sMessages, fMessages, format, data=groups)
+
 
 class ExternalDirectory(object):
     directory = None
@@ -233,21 +314,6 @@ class ExternalDirectory(object):
         return self.directory.authenticate(username, password)
     def get_user_matches(self, firstname, lastname, userId):
         return self.directory.get_user_matches(firstname, lastname, userId)
-
-def get_user_roles(user):
-    roleUsers = []
-    for permission in user.permissions:
-        if permission.id.startswith("(role)"):
-            roleUserId = permission.id.split("(role)")[1]
-            roleUser = get_user(roleUserId)
-            roleUsers.append(roleUser)
-    for group in user.groups:
-        for permission in group.permissions:
-            if permission.id.startswith("(role)"):
-                roleUserId = permission.id.split("(role)")[1]
-                roleUser = get_user(roleUserId)
-                roleUsers.append(roleUser)
-    return roleUsers
 
 def user_has_permission(user, permissionId):
     #print "User Permissions: %s" % str(user.permissions)
@@ -302,6 +368,7 @@ def get_user(userId, login=False):
                     if attr is not None:
                         user.attributes.append(attr)
                     uniqueAttributeList.append(attributeId)
+            setup_session(user.get_copy())
     return user
 
 def get_shareable_attributes_by_user(user):
@@ -320,7 +387,11 @@ def get_shareable_attributes_by_user(user):
                 attributeList.append(attribute)
     return attributeList
 
-
+def setup_session(user):
+    cherrypy.session['user'] = user
+    cherrypy.session['current_role'] = None
+    cherrypy.session['sMessages'] = []
+    cherrypy.session['fMessages'] = []
 
 if __name__ == "__main__":
     print "Hello";

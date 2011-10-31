@@ -48,18 +48,13 @@ def requires_login(permissionId=None, **kwargs):
                 if valid_ticket:
                     currentUser = AccountController.get_user(currentUser.id, True)
                     if currentUser is None:
-                        directory = AccountController.ExternalDirectory(cherrypy.request.app.config['filelocker']['directory_type'])
-                        currentUser = directory.lookup_user(userId) #Try to get user info from directory
-                        if currentUser is not None:
-                            AccountController.install_user(currentUser)
-                        else:
-                            logging.error("[system] [installUser] [User not found in directory lookup - installing with defaults]")
-                            currentUser = User(id=userId, display_name="Guest user", first_name="Unknown", last_name="Unknown")
-                            AccountController.install_user(currentUser)
-                    currentUser = AccountController.get_user(currentUser.id, True)
+                        currentUser = User(id=userId, display_name="Guest user", first_name="Unknown", last_name="Unknown")
+                        logging.error("[%s] [requires_login] [User authenticated, but not found in directory - installing with defaults]"%str(userId))
+                        session.add(currentUser)
+                        session.commit()
+                        currentUser = AccountController.get_user(currentUser.id, True) #To populate attributes
                     if currentUser.authorized == False:
                         raise cherrypy.HTTPError(403, "Your user account does not have access to this system.")
-                    cherrypy.session["user"], cherrypy.session['original_user'], cherrypy.session['sMessages'], cherrypy.session['fMessages'] = currentUser, currentUser, [], []
                     session.add(AuditLog(currentUser.id, "Login", "User %s logged in successfully from IP %s" % (currentUser.id, cherrypy.request.remote.ip)))
                     session.commit()
                     if currentUser.date_tos_accept is None:
@@ -156,7 +151,6 @@ def daily_maintenance(config):
         except Exception, e:
             logging.error("[system] [daily_maintenance] [There was a problem while trying to delete an orphaned file %s: %s]" % (str(fileName), str(e)))
             session.rollback()
-
 
 def update_config(config):
     config['filelocker']['version'] = __version__
