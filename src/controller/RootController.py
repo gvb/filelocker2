@@ -132,7 +132,7 @@ class RootController:
     @cherrypy.tools.requires_login()
     def index(self, **kwargs):
         user, originalUser, maxDays = (cherrypy.session.get("user"),  cherrypy.session.get("original_user"), cherrypy.request.app.config['filelocker']['max_file_life_days'])
-        roles = AccountController.get_user_roles(user)
+        roles = session.query(User).filter(User.id == user.id).one().roles
         currentYear = datetime.date.today().year
         startDateFormatted, endDateFormatted = None, None
         today = datetime.datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
