@@ -1,3 +1,4 @@
+import Filelocker
 import os
 import cherrypy
 import logging
@@ -7,87 +8,59 @@ __author__="wbdavis"
 __date__ ="$Sep 25, 2011 9:36:30 PM$"
 class AdminController:
     @cherrypy.expose
-    @cherrypy.tools.requires_login()
+    @cherrypy.tools.requires_login(permission="admin")
     def get_all_users(self, start=0, length=50, format="json", **kwargs):
-        user, fl, flUserList, sMessages, fMessages = cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], None, [], []
+        user, sMessages, fMessages = cherrypy.session.get("user"), [], []
         try:
             start, length = int(strip_tags(start)), int(strip_tags(length))
-            flUsers = fl.get_all_users(user, start, length)
-            flUserList = []
-            for user in flUsers:
-                flUserList.append(user.get_dict())
-        except FLError, fle:
-            sMessages.extend(fle.successMessages)
-            fMessages.extend(fle.failureMessages)
+            flUserQuery = session.query(User)
+            if (length is not None):
+                flUserQuery = flUserQuery.limit(length)
+            if (start is not None and start > 0):
+                flUserQuery = flUserQuery.offset(start)
+            flUsers = flUserQuery.all()
         except Exception, e:
             fMessages.append("Problem getting users: %s" % str(e))
-        return fl_response(sMessages, fMessages, format, data=flUserList)
+        return fl_response(sMessages, fMessages, format, data=flUsers)
 
     @cherrypy.expose
-    @cherrypy.tools.requires_login()
+    @cherrypy.tools.requires_login(permission="admin")
     def get_user_permissions(self, userId, format="json", **kwargs):
-        user, fl, sMessages, fMessages, permissionData = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [], [])
+        sMessages, fMessages, permissionData = ([], [], [])
         try:
-            if user.userId == userId or fl.check_admin(user): #To prevent user enumeration attacks
-                userPermissions, groupPermissions = fl.get_user_permissions(userId)
-                allPermissions = fl.get_all_permissions(user)
-                for permission in allPermissions:
-                    for gPerm in groupPermissions:
-                        if gPerm.permissionId == permission.permissionId:
-                            permissionData.append({'permissionId': permission.permissionId, 'permissionName': permission.permissionName, 'inheritedFrom': "(group) %s" % gPerm.inheritedFrom})
-                            break
-                    for uPerm in userPermissions:
-                        if uPerm.permissionId == permission.permissionId:
-                            permissionData.append({'permissionId': permission.permissionId, 'permissionName': permission.permissionName, 'inheritedFrom': "user"})
-                            break
-                    else:
-                        permissionData.append({'permissionId': permission.permissionId, 'permissionName': permission.permissionName, 'inheritedFrom': ""})
+            userId = strip_tags(userId)
+            flUser = session.query(User).filter(User.id == userId).one()
+            for permission in flUser.permissions:
+                permissionData.append({'permissionId': permission.id, 'permissionName': permission.name, 'inheritedFrom': "user"})
+            for group in flUser.groups:
+                permissionData.append({'permissionId': permission.id, 'permissionName': permission.name, 'inheritedFrom': "(group) %s" % group.name})
             else:
                 fMessages.append("You do not have permission to view permissions for this user")
-        except FLError, fle:
-            sMessages.extend(fle.successMessages)
-            fMessages.extend(fle.failureMessages)
+        except sqlalchemy.orm.exc.NoResultFound:
+            fMessages.append("The user ID: %s does not exist" % str(userId))
+        except Exception, e:
+            logging.error("Couldn't get permissions for user %s: %s" % (userId, str(e)))
+            fMessages.append("Could not get permissions: %s" % str(e))
         return fl_response(sMessages, fMessages, format, data=permissionData)
 
     @cherrypy.expose
-    @cherrypy.tools.requires_login()
-    def create_user(self, userId, firstName, lastName, email, quota, isRole, format="json", **kwargs):
-        user, fl, sMessages, fMessages = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [])
-        try:
-            try:
-                quota = int(quota)
-            except Exception, e:
-                fMessages.append("Invalid number entered for quota. Quota set to 0.")
-                quota = 0
-            userId, firstName, lastName, email, quota = strip_tags(userId), strip_tags(firstName), strip_tags(lastName), strip_tags(email), quota
-            newUser = User(firstName, lastName, email, quota, None, None, userId)
-            password = None
-            if kwargs.has_key("password"):
-                password = kwargs['password']
-            fl.create_user(user, newUser, password)
-            if isRole == "yes":
-                fl.make_role(user, newUser.userId)
-            sMessages.append("Created user %s (%s)" % (newUser.userDisplayName, newUser.userId))
-        except FLError, fle:
-            sMessages.extend(fle.successMessages)
-            fMessages.extend(fle.failureMessages)
-        return fl_response(sMessages, fMessages, format)
-
-    @cherrypy.expose
-    @cherrypy.tools.requires_login()
+    @cherrypy.tools.requires_login(permission="admin")
     def bulk_create_user(self, quota, password, permissions, format="json", **kwargs):
-        user, fl, sMessages, fMessages = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [])
+        user, sMessages, fMessages = (cherrypy.session.get("user"),[], [])
         try:
             permissions = split_list_sanitized(permissions)
             line = cherrypy.request.body.readline()
             count = 0
             while line != "":
                 (userId, userFirstName, userLastName, userEmailAddress) = split_list_sanitized(line)
-                if fl.get_user(userId) is None:
-                    newUser = User(userFirstName, userLastName, userEmailAddress.replace("\n",""), quota, None, None, userId)
-                    fl.create_user(user, newUser, password)
-                    for permission in permissions:
-                        fl.grant_user_permission(user, userId, permission)
+                if session.query(User).filter(User.id==userId).scalar() is None:
+                    newUser = User(first_name=userFirstName, last_name=userLastName, email=userEmailAddress.replace("\n",""), quota=quota, id=userId)
+                    newUser.set_password(password)
+                    session.add(newUser)
+                    for permissionId in permissions:
+                        permission = session.query(Permission).filter(Permission.id==permissionId).one()
+                        newUser.permissions.append(permission)
+                    session.commit()
                     count = count + 1
                 else:
                     fMessages.append("User %s already exists." % userId)
@@ -96,20 +69,20 @@ class AdminController:
                 sMessages.append("Created %s users" % count)
         except ValueError, ve:
             fMessages.append("CSV file not parsed correctly, possibly in wrong format.")
-        except FLError, fle:
-            sMessages.extend(fle.successMessages)
-            fMessages.extend(fle.failureMessages)
+        except Exception, e:
+            logging.error("[%s] [bulk_create_user] [Problem creating users in bulk: %s]" % (user.id, str(e)))
+            fMessages.append("Problem creating users in bulk: %s" % str(e))
         return fl_response(sMessages, fMessages, format)
 
     @cherrypy.expose
-    @cherrypy.tools.requires_login()
+    @cherrypy.tools.requires_login(permission="admin")
     def download_user_data(self):
-        user, fl, sMessages, fMessages = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [])
+        user = cherrypy.session.get("user")
         try:
-            userList = fl.get_all_users(user, None, None)
+            userList = session.query(User).all()
             mycsv = ""
             for flUser in userList:
-                mycsv = mycsv + flUser.userId + ", " + flUser.userFirstName + ", " + flUser.userLastName + ", " + flUser.userEmail + "\n"
+                mycsv = mycsv + flUser.id + ", " + flUser.first_name + ", " + flUser.last_name + ", " + flUser.email + "\n"
             response = cherrypy.response
             response.headers['Cache-Control'] = "no-cache"
             response.headers['Content-Disposition'] = '%s; filename="%s"' % ("attachment", "fileLockerUsers.csv")
@@ -120,277 +93,255 @@ class AdminController:
             response.stream = True
             return response.body
         except Exception, e:
-            fMessages.append("Error creating CSV of all users.")
-            logging.error("Error: %s" % str(e))
+            logging.error("[%s] [download_user_data] [Unable to serve user data CSV: %s]" % (user.id, str(e)))
             raise HTTPError(500, "Unable to serve user data CSV: %s" % str(e))
 
     @cherrypy.expose
-    @cherrypy.tools.requires_login()
-    def make_user_role(self, roleUserId, format="json", **kwargs):
-        user, fl, sMessages, fMessages = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [])
+    @cherrypy.tools.requires_login(permission="admin")
+    def create_role(self, roleName, email, quota, format="json", **kwargs):
+        user, sMessages, fMessages = (cherrypy.session.get("user"), [], [])
         try:
-            fl.make_role(user, roleUserId)
+            newRole = Role(name=strip_tags(roleName), email=strip_tags(email), quota=int(quota))
+            session.add(newRole)
+            session.commit()
             sMessages.append("Successfully created a role for user %s. Other users who are granted the permission to assume this role may act on behalf of this user now." % str(roleUserId))
-        except FLError, fle:
-            sMessages.extend(fle.successMessages)
-            fMessages.extend(fle.failureMessages)
+        except ValueError:
+            fMessages.append("Quota must be a positive integer")
+        except Exception, e:
+            session.rollback()
+            logging.error("[%s] [create_role] [Problem creating role: %s]" % (user.id, str(e)))
+            fMessages.append("Problem creating role: %s" % str(e))
         return fl_response(sMessages, fMessages, format)
 
     @cherrypy.expose
-    @cherrypy.tools.requires_login()
-    def delete_user_role(self, roleUserId, format="json", **kwargs):
-        user, fl, sMessages, fMessages = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [])
+    @cherrypy.tools.requires_login(permission="admin")
+    def delete_role(self, roleId, format="json", **kwargs):
+        user, sMessages, fMessages = (cherrypy.session.get("user"), [], [])
         try:
-            fl.delete_role(user, roleUserId)
+            role = session.query(Role).filter(Role.id == roleId).one()
             sMessages.append("Successfully deleted the role aspect for user %s." % str(roleUserId))
-        except FLError, fle:
-            sMessages.extend(fle.successMessages)
-            fMessages.extend(fle.failureMessages)
+        except sqlalchemy.orm.exc.NoResultFound:
+            fMessages.append("The role ID: %s does not exist" % str(roleId))
+        except Exception, e:
+            session.rollback()
+            logging.error("[%s] [delete_role] [Problem deleting role: %s]" % (user.id, str(e)))
+            fMessages.append("Problem deleting role: %s" % str(e))
         return fl_response(sMessages, fMessages, format)
 
     @cherrypy.expose
-    @cherrypy.tools.requires_login()
+    @cherrypy.tools.requires_login(permission="admin")
     def grant_user_permission(self, userId, permissionId, format="json", **kwargs):
-        user, fl, sMessages, fMessages = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [])
+        user, sMessages, fMessages = (cherrypy.session.get("user"), [], [])
         try:
-            fl.grant_user_permission(user, userId, permissionId)
-            sMessages.append("User %s granted permission %s" % (userId, permissionId))
-        except FLError, fle:
-            sMessages.extend(fle.successMessages)
-            fMessages.extend(fle.failureMessages)
+            permission = session.query(Permission).filter(Permission.id == permissionId).one()
+            try:
+                flUser = session.query(User).filter(User.id == userId).one()
+                flUser.permissions.append(permission)
+                session.commit()
+                sMessages.append("User %s granted permission %s" % (userId, permissionId))
+            except sqlalchemy.orm.exc.NoResultFound:
+                fMessages.append("User with ID: %s does not exist" % str(userId))
+        except sqlalchemy.orm.exc.NoResultFound:
+            fMessages.append("Permission with ID: %s does not exist" % str(permissionId))
+        except Exception, e:
+            session.rollback()
+            logging.error("[%s] [grant_user_permission] [Problem granting user a permission: %s]" % (user.id, str(e)))
+            fMessages.append("Problem granting a user permission: %s" % str(e))
         return fl_response(sMessages, fMessages, format)
 
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def revoke_user_permission(self, userId, permissionId, format="json", **kwargs):
-        user, fl, sMessages, fMessages = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [])
+        user, sMessages, fMessages = (cherrypy.session.get("user"), [], [])
         try:
-            fl.revoke_user_permission(user, userId, permissionId)
-            sMessages.append("User permission revoked")
-        except FLError, fle:
-            sMessages.extend(fle.successMessages)
-            fMessages.extend(fle.failureMessages)
+            permission = session.query(Permission).filter(Permission.id == permissionId).one()
+            try:
+                flUser = session.query(User).filter(User.id == userId).one()
+                flUser.permissions.remove(permission)
+                session.commit()
+                sMessages.append("User %s no longer has permission %s" % (userId, permissionId))
+            except sqlalchemy.orm.exc.NoResultFound:
+                fMessages.append("User with ID: %s does not exist" % str(userId))
+        except sqlalchemy.orm.exc.NoResultFound:
+            fMessages.append("Permission with ID: %s does not exist" % str(permissionId))
+        except Exception, e:
+            session.rollback()
+            logging.error("[%s] [revoke_user_permission] [Problem revoking a user permission: %s]" % (user.id, str(e)))
+            fMessages.append("Problem revoking a user permission: %s" % str(e))
         return fl_response(sMessages, fMessages, format)
 
     @cherrypy.expose
-    @cherrypy.tools.requires_login()
-    def update_filelocker_user(self, userId, quota, email, firstName, lastName, password, confirmPassword, isRole, format="json", **kwargs):
-        user, fl, sMessages, fMessages = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [])
+    @cherrypy.tools.requires_login(permission="admin")
+    def update_user(self, userId, quota, email, firstName, lastName, password, confirmPassword, format="json", **kwargs):
+        user, sMessages, fMessages = (cherrypy.session.get("user"), [], [])
         try:
             userId = strip_tags(userId)
-            updateUser = fl.get_user(userId)
-            try:
-                newQuota = int(strip_tags(quota))
-                updateUser.userQuota = newQuota
-            except Exception, e:
-                fMessages.append("Invalid quota entered: Quota must be a valid integer greater than 0")
-            updateUser.userEmail = strip_tags(email)
-            updateUser.userFirstName = strip_tags(firstName)
-            updateUser.userLastName = strip_tags(lastName)
-            if isRole == "yes":
-                fl.make_role(user, userId) #Since this is more a function of making a permission, not updating the user
-            else:
-                fl.delete_role(user, userId)
+            updateUser = get_user(userId) #This kind of implicitly enforces permissions
+            updateUser.email = strip_tags(email)
+            updateUser.quota = int(quota)
+            updateUser.first_name = strip_tags(firstName)
+            updateUser.last_name = strip_tags(lastName)
             if password != "" and password != None and confirmPassword != "" and confirmPassword != None:
                 if password == confirmPassword:
-                    fl.update_user(user, updateUser, password)
-                    sMessages.append("Successfully updated user settings")
+                    updateUser.set_password(password)
                 else:
-                    fMessages.append("Passwords do not match")
-            else:
-                fl.update_user(user, updateUser)
-                sMessages.append("Successfully updated user settings")
-        except FLError, fle:
-            sMessages.extend(fle.successMessages)
-            fMessages.extend(fle.failureMessages)
+                    fMessages.append("Passwords do not match, password has not be reset")
+            sMessages.append("Successfully updated user settings")
+            session.commit()
         except Exception, e:
+            session.rollback()
+            logging.error("[%s] [(admin)update_user] [Problem revoking a user permission: %s]" % (user.id, str(e)))
             fMessages.append("Problem while updating user object: %s" % str(e))
         return fl_response(sMessages, fMessages, format)
 
     @cherrypy.expose
-    @cherrypy.tools.requires_login()
+    @cherrypy.tools.requires_login(permission="admin")
     def get_vault_usage(self, format="json", **kwargs):
-        user, fl, sMessages, fMessages, vaultUsedMB, vaultCapacityMB = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [], 0, 0)
+        user, sMessages, fMessages, vaultUsedMB, vaultCapacityMB = (cherrypy.session.get("user"), [], [], 0, 0)
         try:
-            vaultSpaceFreeMB, vaultCapacityMB = fl.get_vault_usage()
+            vaultSpaceFreeMB, vaultCapacityMB = FileController.get_vault_usage()
             vaultUsedMB = vaultCapacityMB - vaultSpaceFreeMB
-        except FLError, fle:
-            logging.error("[%s] [getVaultUsage] [Error while getting quota: %s]" % (user.userId,str(fle.failureMessages)))
-            fMessages.extend(fle.failureMessages)
-            sMessages.extend(fle.successMessages)
+        except Exception, e:
+            logging.error("[%s] [get_vault_usage] [Error while getting quota: %s]" % (user.userId,str(e)))
+            fMessages.append("Could not get vault usage: %s" % str(e))
         return fl_response(sMessages, fMessages, format, data={'vaultCapacityMB': vaultCapacityMB , 'vaultUsedMB': vaultUsedMB})
 
     @cherrypy.expose
-    @cherrypy.tools.requires_login()
+    @cherrypy.tools.requires_login(permission="admin")
     def delete_users(self, userIds, format="json", **kwargs):
-        user, fl, sMessages, fMessages = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [])
+        user, sMessages, fMessages = (cherrypy.session.get("user"),  [], [])
         userIds = split_list_sanitized(userIds)
         try:
             for userId in userIds:
                 try:
-                    fl.delete_user(user, userId)
+                    delUser = session.query(User).filter(User.id == userId).one()
+                    session.delete(delUser)
                     sMessages.append("Successfully deleted user %s" % userId)
-                except FLError, fle:
-                    sMessages.extend(fle.successMessages)
-                    fMessages.extend(fle.failureMessages)
-        except FLError, fle:
-            sMessages.extend(fle.successMessages)
-            fMessages.extend(fle.failureMessages)
+                except sqlalchemy.orm.exc.NoResultFound:
+                    fMessages.append("User with ID:%s does not exist" % userId)
+                except Exception, e:
+                    fMessages.append("Could not delete user: %s" % str(e))
+                session.commit()
         except Exception, e:
-            fMessages.append("Unable to delete user: %s" % str(e))
-        return fl_response(sMessages, fMessages, format)
-
-    @cherrypy.expose
-    @cherrypy.tools.requires_login()
-    def update_local_directory_user(self, userId, firstName, lastName, email, format="json", **kwargs):
-        user, fl, sMessages, fMessages = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [])
-        password = None
-        if kwargs.has_key("password"):
-            password = kwargs['password']
-        try:
-            userId, firstName, lastName, email = strip_tags(userId), strip_tags(firstName), strip_tags(lastName), strip_tags(email)
-            updateUser = User(firstName, lastName, email, None, None, None, userId)
-            fl.update_local_user(user, updateUser, password)
-            sMessags.append("Updated user %s" % userId)
-        except FLError, fle:
-            sMessages.extend(fle.successMessages)
-            fMessages.extend(fle.failureMessages)
-        except Exception, e:
-            fMessages.append("Unable to update user: %s" % str(e))
+            session.rollback()
+            logging.error("[%s] [(admin)delete_users] [Could not delete users: %s]" % (user.id, str(e)))
+            fMessages.append("Could not delete users: %s" % str(e))
         return fl_response(sMessages, fMessages, format)
 
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def update_server_config(self, format="json", **kwargs):
-        user, fl, sMessages, fMessages = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [])
-        configParameterList = []
+        user, sMessages, fMessages = (cherrypy.session.get("user"), [], [])
         try:
             for key in kwargs:
                 if key.startswith("config_name_"):
                     parameterName = key[12:]
                     description = kwargs['config_desc_%s' % parameterName]
+                    value = None
                     if parameterName.endswith("pass"): #Don't strip characters from passwords
                         value = kwargs[key]
                     else:
                         value = strip_tags(kwargs[key])
-                    parameter = Parameter(parameterName, description, None, value) #Type won't change, don't need to store or set
-                    configParameterList.append(parameter)
-            fl.update_config(user, configParameterList)
-            for fl_instance in cherrypy.FLThreads:
-                fl_instance['app'] = None
-                fl_instance['app'] = Filelocker(cherrypy.request.app.config)
-        except FLError, fle:
-            sMessages.extend(fle.successMessages)
-            fMessages.extend(fle.failureMessages)
+                    parameter = session.query(ConfigParameter).filter(ConfigParameter.name == parameterName).one()
+                    parameter.description = description
+                    parameter.value = value
+            session.commit()
+            Filelocker.update_config(cherrypy.request.app.config)
         except Exception, e:
+            session.rollback()
+            logging.error("[%s] [update_server_config] [Could not update server config: %s]" % (user.id, str(e)))
             fMessages.append("Unable to update config: %s" % str(e))
         return fl_response(sMessages, fMessages, format)
 
     @cherrypy.expose
-    @cherrypy.tools.requires_login()
-    def update_config_password(self, parameter, password, format="json", **kwargs):
-        user, fl, sMessages, fMessages = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [])
-        parameterName = parameter
-        try:
-            configParameterList = [Parameter(parameterName,None, "text", password),]
-            fl.update_config(user, configParameterList)
-            sMessages.append("Password parameter %s updated." % parameterName)
-        except FLError, fle:
-            sMessages.extend(fle.successMessages)
-            fMessages.extend(fle.failureMessages)
-        except Exception, e:
-            fMessages.append("Unable to update config: %s" % str(e))
-        return fl_response(sMessages, fMessages, format)
-
-    @cherrypy.expose
-    @cherrypy.tools.requires_login()
+    @cherrypy.tools.requires_login(permission="admin")
     def create_attribute(self, attributeName, attributeId, format="json", **kwargs):
-        user, fl, sMessages, fMessages = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [])
+        user, sMessages, fMessages = (cherrypy.session.get("user"), [], [])
         try:
-            attributeName = strip_tags(attributeName)
-            attributeId = strip_tags(attributeId)
-            if attributeId is None or attributeId == "":
+            attributeName, attributeId = strip_tags(attributeName), strip_tags(attributeId)
+            if attributeId is None:
                 fMessages.append("You must specify an ID for an attribute")
-            elif attributeName is None or attributeName == "":
+            elif attributeName is None:
                 fMessages.append("You must give this attribute a name")
             else:
-                newAttribute = Attribute(attributeId, attributeName)
-                fl.create_attribute(user, newAttribute)
+                attribute = Attribute(name=attributeName, id=attributeId)
+                session.add(attribute)
+                session.commit()
                 sMessages.append("Successfully created a new attribute")
-        except FLError, fle:
-            sMessages.extend(fle.successMessages)
-            fMessages.extend(fle.failureMessages)
         except Exception, e:
+            session.rollback()
+            logging.error("[%s] [create_attribute] [Could not create attribute: %s]" % (user.id, str(e)))
             fMessages.append("Unable to create attribute: %s" % str(e))
         return fl_response(sMessages, fMessages, format)
 
     @cherrypy.expose
-    @cherrypy.tools.requires_login()
+    @cherrypy.tools.requires_login(permission="admin")
     def delete_attributes(self, attributeIds, format="json", **kwargs):
-        user, fl, sMessages, fMessages = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [])
+        user, sMessages, fMessages = (cherrypy.session.get("user"), [], [])
         try:
             attributeIdList = split_list_sanitized(attributeIds)
             for attributeId in attributeIdList:
-                fl.delete_attribute(user, strip_tags(attributeId))
-                sMessages.append("Successfully deleted attribute: %s" % attributeId)
-        except FLError, fle:
-            sMessages.extend(fle.successMessages)
-            fMessages.extend(fle.failureMessages)
+                try:
+                    delAttribute = session.query(Attribute).filter(Attribute.id==attributeId).one()
+                    session.delete(delAttribute)
+                    sMessages.append("Successfully deleted attribute: %s" % attributeId)
+                except sqlalchemy.orm.exc.NoResultFound:
+                    fMessages.append("Attribute with ID: %s does not exist" % str(attributeId))
+            session.commit()
         except Exception, e:
+            logging.error("[%s] [delete_attributes] [Could not delete attributes: %s]" % (user.id, str(e)))
             fMessages.append("Unable to delete attribute: %s" % str(e))
         return fl_response(sMessages, fMessages, format)
 
     @cherrypy.expose
-    @cherrypy.tools.requires_login()
+    @cherrypy.tools.requires_login(permission="admin")
     def get_template_text(self, templateName, format="json", **kwargs):
-        user, fl, sMessages, fMessages, templateText = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [], "")
+        user, sMessages, fMessages, templateText = (cherrypy.session.get("user"), [], [], "")
         try:
-            if fl.check_admin(user):
-                templateName = strip_tags(templateName)
-                templateFilePath = fl.get_template_file(templateName)
-                templateFile = open(templateFilePath)
-                templateText = templateFile.read()
-            else:
-                raise FLError(False, ["You do not have permission to view or edit template files."])
-        except FLError, fle:
-            sMessages.extend(fle.successMessages)
-            fMessages.extend(fle.failureMessages)
+            templateName = strip_tags(templateName)
+            templateFilePath = fl.get_template_file(templateName)
+            templateFile = open(templateFilePath)
+            templateText = templateFile.read()
         except Exception, e:
+            logging.error("[%s] [get_template_text] [Unable to load template text: %s]" % (user.id, str(e)))
             fMessages.append("Unable to load template text: %s" % str(e))
         return fl_response(sMessages, fMessages, format, data=templateText)
 
     @cherrypy.expose
-    @cherrypy.tools.requires_login()
+    @cherrypy.tools.requires_login(permission="admin")
     def save_template(self, templateName, templateText, format="json", **kwargs):
-        user, fl, sMessages, fMessages = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [])
+        user, sMessages, fMessages, config, templateText = (cherrypy.session.get("user"), [], [], cherrpy.request.app.config['filelocker'], "")
         try:
             templateName = strip_tags(templateName)
-            fl.save_custom_template(user, templateName, templateText)
+            filePath = os.path.join(config['vault'], "custom", templateName)
+            if os.path.exists(os.path.join(config['vault'], "custom")) == False:
+                os.mkdir(os.path.join(config['vault'], "custom"))
+            templateFile = open(filePath, "w")
+            templateFile.write(templateText)
+            templateFile.close()
             sMessages.append("Successfully saved custom template file")
-            templateFile = open(fl.get_template_file(templateName))
+            templateFile = open(get_template_file(templateName))
             templateText = templateFile.read()
-        except FLError, fle:
-            sMessages.extend(fle.successMessages)
-            fMessages.extend(fle.failureMessages)
         except Exception, e:
+            logging.error("[%s] [save_template] [Unable to save template text: %s]" % (user.id, str(e)))
             fMessages.append("Unable to save template text: %s" % str(e))
         return fl_response(sMessages, fMessages, format, data=templateText)
 
     @cherrypy.expose
-    @cherrypy.tools.requires_login()
+    @cherrypy.tools.requires_login(permission="admin")
     def revert_template(self, templateName, format="json", **kwargs):
-        user, fl, sMessages, fMessages, templateText = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [], "")
+        user, sMessages, fMessages, config, templateText = (cherrypy.session.get("user"), [], [], cherrpy.request.app.config['filelocker'], None)
         try:
             templateName = strip_tags(templateName)
-            fl.delete_custom_template(user, templateName)
-            sMessages.append("Successfully reverted template file %s to original." % templateName)
+            filePath = os.path.join(config['vault'], "custom", templateName)
+            if os.path.exists(filePath): #This causes no problems if the tempate doesn't already exist
+                os.remove(filePath)
             templateFile = open(fl.get_template_file(templateName))
             templateText = templateFile.read()
-        except FLError, fle:
-            sMessages.extend(fle.successMessages)
-            fMessages.extend(fle.failureMessages)
+            sMessages.append("Successfully reverted template file %s to original." % templateName)
         except Exception, e:
-            fMessages.append("Unable to save template text: %s" % str(e))
+            logging.error("[%s] [revert_template] [Unable to revert template text: %s]" % (user.id, str(e)))
+            fMessages.append("Unable to revert template text: %s" % str(e))
         return fl_response(sMessages, fMessages, format, data=templateText)
     
 if __name__ == "__main__":

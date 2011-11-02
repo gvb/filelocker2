@@ -12,11 +12,29 @@ __date__ ="$Sep 25, 2011 9:37:17 PM$"
 
 class AccountController:
     @cherrypy.expose
+    @cherrypy.tools.requires_login(permission="admin")
+    def create_user(self, userId, firstName, lastName, email, quota, isRole, format="json", **kwargs):
+        sMessages, fMessages = ([], [])
+        try:
+            newUser = User(userId=strip_tags(userId), firstName=strip_tags(firstName), lastName=strip_tags(lastName), email=strip_tags(email), quota=int(quota))
+            if kwargs.has_key("password"):
+                newUser.set_password(kwargs['password'])
+            session.add(newUser)
+            session.commit()
+            sMessages.append("Created user %s (%s)" % (newUser.display_name, newUser.id))
+        except ValueError:
+                fMessages.append("Invalid number entered for quota. Quota set to 0.")
+        except Exception, e:
+            logging.error("Could not create user acount with ID:%s - %s" % (userId, str(e)))
+            fMessages.append("Could not create user acount: %s" % str(e))
+        return fl_response(sMessages, fMessages, format)
+
+    @cherrypy.expose
     @cherrypy.tools.requires_login()
     def update_user(self, format="json", **kwargs):
         user, sMessages, fMessages = cherrypy.session.get("user"), [], []
         try:
-            currentUser = get_user(user.id)
+            currentUser = get_user(user.id) #This kind of implicitly enforces permissions
             if kwargs.has_key("password") and kwargs.has_key("confirmPassword"):
                 if kwargs['password'] != kwargs['confirmPassword']:
                     fMessages.append("Passwords do match. Please retype your new password")
