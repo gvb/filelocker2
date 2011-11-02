@@ -1,41 +1,43 @@
 [global]
-server.socket_port=8083
-server.socket_host="127.0.0.1"
-server.reverse_dns=False
-server.thread_pool=20
-server.environment="production"
-server.max_request_body_size: 2147483648 
-engine.autoreload.on=False
 tools.sessions.on=True
+engine.autoreload.on=False
+tools.sessions.secure=False
+server.thread_pool=20
+log.screen=False
 tools.sessions.name="filelocker"
-tools.sessions.secure = True 
-tools.sessions.storage_type='ram'
+server.socket_port=8080
+tools.gzip.on=True
+log.access_file="/home/wbdavis/filelocker2/filelocker.access.log"
+server.reverse_dns=False
+tools.gzip.mime_types=['text/html', 'text/css', 'image/jpeg', 'image/gif', 'text/javascript', 'image/png']
+tools.sessions.storage_type="ram"
 tools.sessions.timeout=15
-log.screen = False
-log.access_file = "/var/log/filelocker2/cherrypy.access.log"
-log.error_file = "/var/log/filelocker2/cherrypy.error.log"
+server.environment="development"
+server.socket_timeout=60
+log.error_file="/home/wbdavis/filelocker2/filelocker.error.log"
+server.socket_host="0.0.0.0"
+
+[/]
+tools.SATransaction.on = True
+tools.SATransaction.dburi = "mysql+mysqldb://filelocker:l0ck;files@localhost/filelocker_sqlalchemy"
+tools.SATransaction.echo = False
 
 [filelocker]
-rootpath = "/opt/filelocker2"
-rooturl = "https://dev.filelocker.itns.purdue.edu/filelocker2"
-vault = "/vault/data"
-logdir = "/var/log/filelocker2"
-clustermaster = True
-clustermemberid = 0
-loglevel = 40
-#Log levels are
-#10 - debug, 20 - info, 30 - warning, 40 - error, 50 - critical
+vault="/home/wbdavis/vault"
+root_url="http://localhost:8080"
+root_path="/home/wbdavis/filelocker2/branches/2.6/src"
+cluster_member_id=0
+cluster_master=True
 
-#Comment this portion out if Apace is serving the static directory
 [/static]
-tools.staticdir.root = "/opt/filelocker2"
-tools.staticdir.on = True
-tools.staticdir.dir = "static"
-
+tools.staticdir.root="/home/wbdavis/filelocker2/branches/2.6/src"
+tools.staticdir.dir="static"
+tools.staticdir.on=True
 
 [database]
-dbtype = 'mysql'
-dbhost = ''
-dbuser = ''
-dbpassword = ''
-dbname = ''
+dbtype="mysql"
+dbuser="filelocker"
+dbhost="localhost"
+dbname="filelocker"
+dbpassword="l0ck;files"
+
