@@ -69,12 +69,12 @@ class User(Base):
         return {'userFirstName':self.first_name, 'userLastName':self.last_name, 'userDisplayName': self.display_name, 'userEmail': self.email, 'isRole': self.is_role, 'userId': self.id, 'userQuotaUsed': self.quota_used, 'userQuota': self.quota}
 #mapper(User, "users", properties={'permissions': relationship("Permission", lazy='joined')})
 role_membership_table = Table("role_membership", Base.metadata,
-    Column("role_id", Integer, ForeignKey("roles.id")),
+    Column("role_id", String(30), ForeignKey("roles.id")),
     Column("user_id", String(30), ForeignKey("users.id")))
 
 class Role(Base):
     __tablename__ = "roles"
-    id = Column(Integer, primary_key=True)
+    id = Column(String(30), primary_key=True)
     name = Column(String(50), nullable=False)
     email = Column(String(320), nullable=True)
     quota = Column(Integer, nullable=False)

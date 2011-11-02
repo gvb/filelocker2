@@ -95,39 +95,7 @@ class AdminController:
         except Exception, e:
             logging.error("[%s] [download_user_data] [Unable to serve user data CSV: %s]" % (user.id, str(e)))
             raise HTTPError(500, "Unable to serve user data CSV: %s" % str(e))
-
-    @cherrypy.expose
-    @cherrypy.tools.requires_login(permission="admin")
-    def create_role(self, roleName, email, quota, format="json", **kwargs):
-        user, sMessages, fMessages = (cherrypy.session.get("user"), [], [])
-        try:
-            newRole = Role(name=strip_tags(roleName), email=strip_tags(email), quota=int(quota))
-            session.add(newRole)
-            session.commit()
-            sMessages.append("Successfully created a role for user %s. Other users who are granted the permission to assume this role may act on behalf of this user now." % str(roleUserId))
-        except ValueError:
-            fMessages.append("Quota must be a positive integer")
-        except Exception, e:
-            session.rollback()
-            logging.error("[%s] [create_role] [Problem creating role: %s]" % (user.id, str(e)))
-            fMessages.append("Problem creating role: %s" % str(e))
-        return fl_response(sMessages, fMessages, format)
-
-    @cherrypy.expose
-    @cherrypy.tools.requires_login(permission="admin")
-    def delete_role(self, roleId, format="json", **kwargs):
-        user, sMessages, fMessages = (cherrypy.session.get("user"), [], [])
-        try:
-            role = session.query(Role).filter(Role.id == roleId).one()
-            sMessages.append("Successfully deleted the role aspect for user %s." % str(roleUserId))
-        except sqlalchemy.orm.exc.NoResultFound:
-            fMessages.append("The role ID: %s does not exist" % str(roleId))
-        except Exception, e:
-            session.rollback()
-            logging.error("[%s] [delete_role] [Problem deleting role: %s]" % (user.id, str(e)))
-            fMessages.append("Problem deleting role: %s" % str(e))
-        return fl_response(sMessages, fMessages, format)
-
+        
     @cherrypy.expose
     @cherrypy.tools.requires_login(permission="admin")
     def grant_user_permission(self, userId, permissionId, format="json", **kwargs):
