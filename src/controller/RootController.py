@@ -21,7 +21,7 @@ class RootController:
     file = FileController.FileController()
     account = AccountController.AccountController()
     admin = AdminController
-    message_interface = MessageController.MessageController()
+    message = MessageController.MessageController()
     #DropPrivileges(cherrypy.engine, umask=077, uid='nobody', gid='nogroup').subscribe()
 
     def __init__(self):
