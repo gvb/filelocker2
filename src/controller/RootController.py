@@ -17,8 +17,8 @@ __author__="wbdavis"
 __date__ ="$Sep 25, 2011 9:36:56 PM$"
 
 class RootController:
-    share_interface = ShareController.ShareController()
-    file_interface = FileController.FileController()
+    share = ShareController.ShareController()
+    file = FileController.FileController()
     account = AccountController.AccountController()
     admin = AdminController
     message_interface = MessageController.MessageController()
