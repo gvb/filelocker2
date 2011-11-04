@@ -42,7 +42,7 @@ class User(Base):
     is_role = False
     authorized = True
     attributes = []
-    received_messages = relationship("ReceivedMessage", backref="messages")
+    received_messages = relationship("MessageShare", backref="messages")
     
     def set_display_name(self, value):
         self._display_name = value
@@ -208,7 +208,7 @@ class Message(Base):
             messageDict['messageRecipients'] = self.recipients
         return messageDict
 
-class ReceivedMessage(Base):
+class MessageShare(Base):
     __tablename__ = "message_recipients"
     message_id = Column(Integer, ForeignKey("messages.id"), primary_key=True)
     recipient_id = Column(String(30), ForeignKey("users.id"), primary_key=True)
