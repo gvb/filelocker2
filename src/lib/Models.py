@@ -79,7 +79,12 @@ class Role(Base):
     email = Column(String(320), nullable=True)
     quota = Column(Integer, nullable=False)
     members = relationship("User", secondary=lambda: role_membership_table, backref="roles")
+    permissions = relationship("Permission", secondary=lambda: role_permissions_table)
 
+role_permissions_table = Table("role_permissions", Base.metadata,
+    Column("role_id", String(30), ForeignKey("roles.id"), primary_key=True, nullable=False),
+    Column("permission_id", String(50), ForeignKey("permissions.id"), primary_key=True, nullable=False))
+    
 class Permission(Base):
     __tablename__ = "permissions"
     id = Column(String(50), primary_key=True)

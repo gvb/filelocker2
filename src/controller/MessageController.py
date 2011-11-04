@@ -97,17 +97,39 @@ class MessageController:
 
     @cherrypy.expose
     @cherrypy.tools.requires_login()
+    def delete_received_messages(self, messageIds, format="json", **kwargs):
+        user, sMessages, fMessages = cherrypy.session.get("user"), [], []
+        try:
+            messageIdList = split_list_sanitized(messageIds)
+            for messageId in messageIdList:
+                rMessage = session.query(ReceivedMessage).filter(ReceivedMessage.message_id==messageId).one()
+                if rMessage.recipient_id == user.id or rMessage.message.owner_id == user.id or AccountController.user_has_permission(user, "admin"):
+                    session.delete(rMessage)
+                else:
+                    fMessages.append("You do not have permission to delete message with ID: %s" % messageId)
+            session.commit()
+            sMessages.append("Message(s) deleted")
+        except Exception, e:
+            logging.error("[%s] [delete_received_messages] [Could not delete received message: %s]" % (user.id, str(e)))
+            fMessages.append("Could not delete received message: %s" % str(e))
+        return fl_response(sMessages, fMessages, format)
+
+    @cherrypy.expose
+    @cherrypy.tools.requires_login()
     def delete_messages(self, messageIds, format="json", **kwargs):
         user, sMessages, fMessages = cherrypy.session.get("user"), [], []
         try:
-            #Todo
             messageIdList = split_list_sanitized(messageIds)
             for messageId in messageIdList:
-                fl.delete_message(user, messageId)
+                message = session.query(Message).filter(Message.id==messageId).scalar()
+                if (message.recipient_id==user.id or message.owner_id == user.id):
+                    session.delete(message)
+                else:
+                    fMessages.append("You do not have permission to delete message with ID: %s" % messageId)
             sMessages.append("Message(s) deleted")
-        except FLError, fle:
-            sMessages.extend(fle.successMessages)
-            fMessages.extend(fle.failureMessages)
+        except Exception, e:
+            logging.error("[%s] [delete_messages] [Could not delete message: %s]" % (user.id, str(e)))
+            fMessages.append("Could not delete message: %s" % str(e))
         return fl_response(sMessages, fMessages, format)
 
 def decrypt_message(message):

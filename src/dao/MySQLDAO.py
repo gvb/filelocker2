@@ -5,25 +5,7 @@ import MySQLdb
 import logging
 from DAO import DAO
 import sys
-from model.User import User
-from model.File import File
-from model.UploadTicket import UploadTicket
-from model.PrivateShare import PrivateShare
-from model.PrivateGroupShare import PrivateGroupShare
-from model.PrivateAttributeShare import PrivateAttributeShare
-from model.PublicShare import PublicShare
-from model.Parameter import Parameter
-from model.Group import Group
-from model.Message import Message
-from model.ActionLog import ActionLog
-from model.FLError import FLError
-from model.Attribute import Attribute
-from model.Permission import Permission
-from model.CLIKey import CLIKey
-try:
-    from hashlib import md5
-except ImportError, ie:
-    from md5 import md5
+from models import *
 
 class MySQLDAO(DAO):
     connection = None
@@ -48,383 +30,85 @@ class MySQLDAO(DAO):
     def get_db(self):
         return MySQLdb.connect(self.dbHost, self.dbUser, self.dbPassword, self.dbName)
         
-    def getParameter(self, parameterName):
-        param = None
-        sql = "SELECT * FROM config WHERE config_parameter_name=%s"
-        sql_args = [parameterName,]
-        result = self.execute(sql, sql_args)
-        if result is not None and len(result)>0:
-            param = Parameter(result[0]['config_parameter_name'], result[0]['config_parameter_description'], result[0]['config_parameter_type'], result[0]['config_parameter_value'])
-        return param
-        
-    def getAllParameters(self):
+    def GetAllParameters(self):
         params = []
         sql = "SELECT * FROM config"
         results = self.execute(sql, None)
         if results is not None and len(results)>0:
             for row in results:
-                param = Parameter(row['config_parameter_name'], row['config_parameter_description'], row['config_parameter_type'], row['config_parameter_value'])
+                param = ConfigParameter(name=row['config_parameter_name'], description=row['config_parameter_description'], type=row['config_parameter_type'], value=row['config_parameter_value'])
                 params.append(param)
         return params
         
-    def setParameter(self, param):
-        sql = "UPDATE config SET config_parameter_value=%s WHERE config_parameter_name=%s"
-        sql_args = [param.value, param.parameterName]
-        self.execute(sql, sql_args)
-        
-#Files
-    def createFile (self, flFile):
-        sql = "INSERT INTO file (file_name, file_type, file_notes, file_size, file_uploaded_datetime, file_owner_id, file_expiration_datetime, file_passed_avscan, file_encryption_key, file_status, file_location, file_notify_on_download, file_upload_ticket_id) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
-        sql_args = [flFile.fileName, flFile.fileType, flFile.fileNotes, flFile.fileSizeBytes, flFile.fileUploadedDatetime, flFile.fileOwnerId, flFile.fileExpirationDatetime, flFile.filePassedAvScan, flFile.fileEncryptionKey, flFile.fileStatus, flFile.fileLocation, flFile.fileNotifyOnDownload, flFile.fileUploadTicketId]
-        results, fileId = self.execute(sql, sql_args, True)
-        return fileId
-
-    def getFile (self, fileId):
-        sql = "SELECT * FROM file WHERE file_id=%s"
-        sql_args = [int(fileId),]
-        results = self.execute(sql,sql_args)
-        currentFile = None
-        if results is not None and len(results)>0:
-            fileR = results[0]
-            currentFile = File(fileR['file_name'], fileR['file_type'], fileR['file_notes'], fileR['file_size'], fileR['file_uploaded_datetime'], fileR['file_owner_id'], fileR['file_expiration_datetime'], fileR['file_passed_avscan'], fileR['file_encryption_key'], fileR['file_id'], fileR['file_status'], fileR['file_location'], fileR['file_notify_on_download'], fileR['file_upload_ticket_id'])
-        return currentFile
-    
-    def getExpiredFiles(self):
+    def GetAllFiles(self):
         sql = "SELECT * FROM file WHERE file_expiration_datetime < now()"
         sql_args = None
         results = self.execute(sql, sql_args)
-        expiredFiles = []
+        allFiles = []
         for row in results:
-            currentFile = File(row['file_name'], row['file_type'], row['file_notes'], row['file_size'], row['file_uploaded_datetime'], row['file_owner_id'], row['file_expiration_datetime'], row['file_passed_avscan'], row['file_encryption_key'], row['file_id'], row['file_status'], row['file_location'], row['file_notify_on_download'], row['file_upload_ticket_id'])
+            currentFile = File(name=row['file_name'], type=row['file_type'], notes=row['file_notes'], size=row['file_size'], date_uploaded=row['file_uploaded_datetime'], owner_id=row['file_owner_id'], date_expires=row['file_expiration_datetime'], passed_avscan=row['file_passed_avscan'], encryption_key=row['file_encryption_key'], id=row['file_id'], status=row['file_status'],  notify_on_download=row['file_notify_on_download'], upload_request_id=row['file_upload_ticket_id'])
             expiredFiles.append(currentFile)
-        return expiredFiles
-    
-    def getFilesByOwner(self, ownerId):
-        sql = "SELECT * FROM file WHERE file_owner_id=%s"
-        sql_args = [ownerId,]
-        results = self.execute(sql, sql_args)
-        fileList = []
-        for fileR in results:
-            currentFile = File(fileR['file_name'], fileR['file_type'], fileR['file_notes'], fileR['file_size'], fileR['file_uploaded_datetime'], fileR['file_owner_id'], fileR['file_expiration_datetime'], fileR['file_passed_avscan'], fileR['file_encryption_key'], fileR['file_id'], fileR['file_status'], fileR['file_location'], fileR['file_notify_on_download'], fileR['file_upload_ticket_id'])
-            fileList.append(currentFile)
-        return fileList
-    
-    def getFilesByUploadTicket(self, ticketId):
-        sql = "SELECT * FROM file WHERE file_upload_ticket_id=%s"
-        sql_args = [ticketId,]
-        results = self.execute(sql, sql_args)
-        fileList = []
-        for fileR in results:
-            currentFile = File(fileR['file_name'], fileR['file_type'], fileR['file_notes'], fileR['file_size'], fileR['file_uploaded_datetime'], fileR['file_owner_id'], fileR['file_expiration_datetime'], fileR['file_passed_avscan'], fileR['file_encryption_key'], fileR['file_id'], fileR['file_status'], fileR['file_location'], fileR['file_notify_on_download'], fileR['file_upload_ticket_id'])
-            fileList.append(currentFile)
-        return fileList
-        
-    def updateFile (self, flFile):
-        sql = "UPDATE file SET file_name=%s, file_type=%s, file_notes=%s, file_size=%s, file_uploaded_datetime=%s, file_owner_id=%s, file_expiration_datetime=%s, file_passed_avscan=%s, file_encryption_key=%s, file_status=%s, file_location=%s, file_notify_on_download=%s, file_upload_ticket_id=%s WHERE file_id=%s"
-        sql_args = [flFile.fileName, flFile.fileType, flFile.fileNotes, flFile.fileSizeBytes, flFile.fileUploadedDatetime, flFile.fileOwnerId, flFile.fileExpirationDatetime, flFile.filePassedAvScan, flFile.fileEncryptionKey, flFile.fileStatus, flFile.fileLocation, flFile.fileNotifyOnDownload, flFile.fileUploadTicketId, flFile.fileId]
-        self.execute(sql, sql_args)
-        return True
+        return allFiles
 
-    def deleteFile (self, fileId):
-        sql = "DELETE FROM file WHERE file_id=%s"
-        sql_args = [fileId]
-        self.execute(sql, sql_args)
-        return True
 #Groups
-    def createGroup (self, newGroup):
-        sql = "INSERT INTO groups (group_name, group_scope, group_owner_id) VALUES (%s, %s, %s)"
-        sql_args = [newGroup.groupName, newGroup.groupScope, newGroup.ownerId]
-        results, groupId = self.execute(sql, sql_args, True)
-        for groupMember in newGroup.groupMembers:
-            sql = "INSERT INTO group_membership VALUES(%s, %s)"
-            sql_args = [groupId, groupMember.userId]
-            self.execute(sql, sql_args)
-        return groupId
-
-    def getGroup (self, groupId):
-        sql = "SELECT * FROM groups WHERE group_id=%s"
-        sql_args = [groupId,]
+    def GetAllGroups (self):
+        sql = "SELECT * FROM groups"
+        sql_args = []
         results = self.execute(sql,sql_args)
-        currentGroup = None
-        if results is not None and len(results)>0:
-            groupR = results[0]
+        allGroups = []
+        for row in results:
+            group = Group(id=row['group_id'], name=row['group_name'], owner_id=row['group_owner_id'], scope=row['group_scope'])
+            sql_args = [groupId,]
             sql = "SELECT * FROM group_membership WHERE group_membership_group_id=%s"
             memberResults = self.execute(sql,sql_args)
-            groupMembers = []
             for memberRow in memberResults:
-                groupMember = self.getUser(memberRow['group_membership_user_id'])
-                if groupMember is None:
-                    groupMember = User(None,None, None, None, None, None, memberRow['group_membership_user_id'])
-                groupMembers.append(groupMember)
-            currentGroup = Group(groupR['group_scope'], groupR['group_owner_id'], groupR['group_name'], groupMembers, groupR['group_id'])
-        return currentGroup
-
-    def getGroupsByUserId(self, userId):
-        sql = "SELECT group_id FROM groups WHERE group_owner_id=%s"
-        sql_args = [userId,]
-        groupRows = self.execute(sql, sql_args)
-        groupList = []
-        for groupRow in groupRows:
-            group = self.getGroup(groupRow['group_id']) #We do this because we already have code to populate group members in getGroup
-            groupList.append(group)
-        return groupList
-        
-    def updateGroup(self, group):
-        #clear group membership
-        sql = "DELETE FROM group_membership WHERE group_membership_group_id=%s"
-        sql_args = [group.groupId]
-        self.execute(sql, sql_args)
-        #Now add the correct members back in
-        sql = "INSERT INTO group_membership (group_membership_group_id, group_membership_user_id) VALUES(%s, %s)"
-        for groupMember in group.groupMembers:
-            sql_args=[group.groupId, groupMember.userId]
-            self.execute(sql, sql_args)
-        #Update group name and scope
-        sql = "UPDATE groups SET group_name=%s, group_scope=%s WHERE group_id=%s"
-        sql_args = [group.groupName, group.groupScope, group.groupId]
-        self.execute(sql, sql_args)
-        return True
-
-    def deleteGroup (self, groupId):
-        sql = "DELETE FROM groups WHERE group_id=%s"
-        sql_args = [groupId]
-        self.execute(sql, sql_args)
-        return True
-        
-    def removeUserFromGroup(self, userId, groupId):
-        sql = "DELETE FROM group_membership WHERE group_membership_user_id=%s AND group_membership_group_id=%s"
-        sql_args = [userId, groupId]
-        self.execute(sql, sql_args)
-        return True
-        
-    def addUserToGroup(self, userId, groupId):
-        sql = "INSERT INTO group_membership VALUES (%s, %s)"
-        sql_args = [groupId, userId]
-        try:
-            self.execute(sql, sql_args)
-        except MySQLdb.IntegrityError, ie:
-            pass 
-        except Exception, e:
-            raise e
-        return True
+                groupMembers.append(User(id=memberRow['group_membership_user_id']))
+            sql = "SELECT * FROM group_permission WHERE group_permission_group_id=%s"
+            permissionResults = self.execute(sql,sql_args)
+            for permissionRow in permissionResults:
+                group.permissions.append(Permission(id=permissionRow['group_permission_permission_id']))
+            allGroups.append(group)
+        return allGroups
 
 #Permissions
-    def createPermission (self, permission):
-        sql = "INSERT INTO permission VALUES (%s, %s)"
-        sql_args = [permission.permissionId, permission.permissionName]
-        try:
-            self.execute(sql, sql_args)
-        except MySQLdb.IntegrityError, ie:
-            pass # basically, if the permission already exists, just ignore. TODO maybe update the name instead?
-        return True
-
-    def getPermission (self, permissionId):
-        sql = "SELECT * FROM permission WHERE permission_id=%s"
-        sql_args = [permissionId]
-        results = self.execute(sql,sql_args)
-        currentPermission = None
-        for row in results:
-            currentPermission = Permission(row['permission_id'], row['permission_name'])
-        return currentPermission
-    
-    def getAllPermissions(self):
+    def GetAllPermissions(self):
         sql = "SELECT * FROM permission"
         permissions = []
         results = self.execute(sql, None)
         for row in results:
-            permissions.append(Permission(row['permission_id'], row['permission_name']))
+            permissions.append(Permission(id=row['permission_id'], name=row['permission_name']))
         return permissions
-    
-    def getPermissionsByUser(self, userId): #returns a tuple -> userPermissions, groupPermissions
-        sql = "SELECT * FROM user_permission, permission WHERE user_permission_user_id=%s AND user_permission_permission_id = permission_id"
-        sql_args = [userId]
-        userPermissionsList = []
-        groupPermissionsList = []
-        results = self.execute(sql, sql_args)
-        for row in results:
-            userPermissionsList.append(Permission(row['user_permission_permission_id'], row['permission_name'], "user"))
-        sql = "SELECT * FROM group_permission, group_membership, groups WHERE group_permission_group_id = group_membership_group_id AND groups.group_id = group_membership_group_id AND group_membership_user_id=%s"
-        results = self.execute(sql, sql_args)
-        for row in results:
-            permission = self.getPermission(row['group_permission_permission_id'])
-            permission.inheritedFrom = row['group_name']
-            groupPermissionsList.append(permission)
-        return userPermissionsList, groupPermissionsList
-
-    def updatePermission (self, permission):
-        sql = "UPDATE permission SET permission_name=%s WHERE permission_id=%s"
-        sql_args = [permission.permissionName, permission.permissionId]
-        self.execute(sql, sql_args)
-        return True
-
-    def deletePermission (self, permissionId):
-        sql = "DELETE FROM permission WHERE permission_id=%s"
-        sql_args = [permissionId]
-        self.execute(sql, sql_args)
-        return True
-    
-    def grantUserPermission(self, userId, permissionId):
-        sql = "INSERT INTO user_permission (user_permission_permission_id, user_permission_user_id) VALUES(%s, %s)"
-        sql_args = [permissionId, userId]
-        self.execute(sql, sql_args)
-        
-    def revokeUserPermission(self, userId, permissionId):
-        sql = "DELETE FROM user_permission WHERE user_permission_permission_id = %s AND user_permission_user_id=%s"
-        sql_args = [permissionId, userId]
-        self.execute(sql, sql_args)
-        
-    def grantGroupPermission(self, groupId, permissionId):
-        sql = "INSERT INTO group_permission (group_permission_permission_id, group_permission_group_id) VALUES(%s, %s)"
-        sql_args = [permissionId, userId]
-        self.execute(sql, sql_args)
-    
-    def revokeGroupPermission(self, groupId, permissionId):
-        sql = "DELETE FROM group_permission WHERE group_permission_permission_id = %s AND group_permission_permission_id=%s"
-        sql_args = [permissionId, groupId]
-        self.execute(sql, sql_args)
 
 #Private Shares
-    def createPrivateShare(self, privateShare):
-        sql = "INSERT INTO private_share VALUES (%s, %s)"
-        sql_args = [privateShare.fileId, privateShare.targetId]
-        #The reason this doesn't return an ID is because it requires and extra query and is not presently necessary in any context
-        try:
-            self.execute(sql, sql_args)
-        except MySQLdb.IntegrityError, ie:
-            pass
-        return True
-
-    def getPrivateSharesByOwner(self, ownerId, dictionary=False):
+    def GetAllUserShares(self):
         files = self.getFilesByOwner(ownerId)
-        sql = "SELECT * FROM private_share, file WHERE private_share_file_id=%s AND private_share_file_id=file_id AND file_owner_id=%s"
-        if dictionary:
-            shareDictionary = {}
-            for flFile in files:
-                shareDictionary[flFile.fileId] = []
-                sql_args = [flFile.fileId,ownerId]
-                results = self.execute(sql, sql_args)
-                for row in results:
-                    shareDictionary[flFile.fileId].append(row['private_share_target_id'])
-            return shareDictionary
-        else:
-            privateShareList = []
-            for flFile in files:
-                sql_args = [flFile.fileId,ownerId]
-                shares = []
-                results = self.execute(sql, sql_args)
-                for prShR in results:
-                    privateShare = PrivateShare(prShR['private_share_file_id'], ownerId, prShR['private_share_target_id'])
-                    shares.append(privateShare)
-                privateShareList.extend(shares)
-            return privateShareList
-
-    def deletePrivateShare(self, fileId, targetId):
-        sql = "DELETE FROM private_share WHERE private_share_file_id=%s AND private_share_target_id=%s"
-        sql_args = [fileId, targetId]
-        self.execute(sql, sql_args)
-        return True
-        
-    def hidePrivateShare(self, fileId, targetId):
-        sql = "INSERT INTO hidden_share VALUES (%s,%s)"
-        sql_args = [targetId, fileId]
-        try:
-            self.execute(sql, sql_args)
-        except MySQLdb.IntegrityError, ie:
-            raise FLError(False, ["This share is already hidden"])
-        return True
-        
-    def unhideAllPrivateShares(self, targetId):
-        sql = "DELETE FROM hidden_share WHERE hidden_share_target_id=%s"
-        sql_args = [targetId]
-        self.execute(sql, sql_args)
-        return True
-    
-    def unhideByFileId(self, fileId):
-        sql = "DELETE FROM hidden_share WHERE hidden_share_file_id=%s"
-        sql_args = [fileId]
-        self.execute(sql, sql_args)
-        return True
-    
-    def isShareHidden(self, fileId, targetId):
-        sql = "SELECT * FROM hidden_share WHERE hidden_share_target_id=%s AND hidden_share_file_id=%s"
-        sql_args = [targetId, fileId]
+        sql = "SELECT * FROM private_share"
+        privateShareList = []
         results = self.execute(sql, sql_args)
-        if len(results) > 0:
-            return True
-        return False
+        for prShR in results:
+            privateShareList.append(UserShare(file_id=prShR['private_share_file_id'], user_id=prShR['private_share_target_id']))
+        return privateShareList
         
 #Private Group Shares
-    def createPrivateGroupShare(self, privateGroupShare):
-        sql = "INSERT INTO private_group_share VALUES (%s, %s)"
-        sql_args = [privateGroupShare.fileId, privateGroupShare.targetId]
-        #The reason this doesn't return an ID is because it requires an extra query and is not presently necessary in any context
-        try:
-            self.execute(sql, sql_args)
-        except MySQLdb.IntegrityError, ie:
-            pass
-        return True
+    def GetAllGroupShares(self):
+        sql = "SELECT * FROM private_group_share"
+        privateGroupShareList = []
+        results = self.execute(sql, sql_args)
+        for row in results:
+            privateGroupShareList.append(GroupShare(file_idrow['private_group_share_file_id'], group_id=row['private_group_share_target_id']))
+        return privateGroupShareList
 
-    def getPrivateGroupSharesByOwner(self, ownerId, dictionary=False):
-        files = self.getFilesByOwner(ownerId)
-        sql = "SELECT * FROM private_group_share, groups WHERE private_group_share_file_id=%s AND private_group_share_target_id=group_id"
-        if dictionary:
-            groupShareDictionary = {}
-            for flFile in files:
-                groupShareDictionary[flFile.fileId] = []
-                sql_args = [flFile.fileId,]
-                results = self.execute(sql, sql_args)
-                for row in results:
-                    groupShareDictionary[flFile.fileId].append(row['private_group_share_target_id'])
-            return groupShareDictionary
-        else:
-            privateGroupShareList = []
-            for flFile in files:
-                sql_args = [flFile.fileId,]
-                shares = []
-                results = self.execute(sql, sql_args)
-                for prShR in results:
-                    privateShare = PrivateGroupShare(prShR['private_group_share_file_id'], ownerId, prShR['private_group_share_target_id'])
-                    privateShare.targetName = prShR['group_name']
-                    shares.append(privateShare)
-                privateGroupShareList.extend(shares)
-            return privateGroupShareList
-
-    def deletePrivateGroupShare (self, fileId, targetId):
-        sql = "DELETE FROM private_group_share WHERE private_group_share_file_id=%s AND private_group_share_target_id=%s"
-        sql_args = [fileId, targetId]
-        self.execute(sql, sql_args)
-        return True
-    
+    def getHiddenSharesDictList(self):
+        sql = "SELECT * FROM hidden_share"
+        sql_args = []
+        results = self.execute(sql, sql_args)
+        hidden_shares = []
+        for row in results:
+            hidden_shares.append({'user_id': row['hidden_share_target_id'], 'file_id':row['hidden_share_file_id']})
+        return hidden_shares
 
 #Private Attribute Shares
-    def createAttribute(self, attribute):
-        sql = "INSERT INTO attribute VALUES(%s, %s)"
-        sql_args = [attribute.attributeId, attribute.attributeName]
-        try:
-            self.execute(sql, sql_args)
-        except MySQLdb.IntegrityError, ie:
-            raise FLError(False, ["An attribute with this ID already exists"])
-        
-    def deleteAttribute(self, attributeId):
-        sql = "DELETE FROM attribute WHERE attribute_id = %s"
-        sql_args = [attributeId,]
-        self.execute(sql, sql_args)
-    
-    def updateAttribute(self, attribute):
-        sql = "UPDATE attribute SET attribute_name = %s WHERE attribute_id =%s"
-        sql_args = [attribute.attributeName, attribute.attributeId]
-        self.execute(sql, sql_args)
-        
-    def getAttribute(self, attributeId):
-        sql = "SELECT * FROM attribute WHERE attribute_id = %s"
-        sql_args = [attributeId,]
-        results = self.execute(sql, sql_args)
-        attr = None
-        for row in results:
-            attr = Attribute(row['attribute_id'], row['attribute_name'])
-        return attr
-     
-    def getAllAttributes(self):
+    def GetAllAttributes(self):
         sql = "SELECT * FROM attribute"
         sql_args = None
         results = self.execute(sql, sql_args)
@@ -434,142 +118,37 @@ class MySQLDAO(DAO):
             attributes.append(attr)
         return attributes
     
-    def createPrivateAttributeShare(self, privateAttributeShare):
-        sql = "INSERT INTO private_attribute_share (private_attribute_share_file_id, private_attribute_share_attribute_id) VALUES (%s, %s)"
-        sql_args = [privateAttributeShare.fileId, privateAttributeShare.attribute]
-        #The reason this doesn't return an ID is because it requires and extra query and is not presently necessary in any context
-        try:
-            self.execute(sql, sql_args)
-        except MySQLdb.IntegrityError, ie:
-            pass #The share already exists, ignore
-        except Exception, e:
-            raise e
-        return True
-    
-    def getSharedFilesByAttribute(self, attributeId):
-        sql = "SELECT * FROM private_attribute_share, file WHERE private_attribute_share_attribute_id=%s AND file.file_id = private_attribute_share_file_id"
-        sql_args = [attributeId,]
-        fileList = []
+    def GetAllAttributeShares(self):
+        sql = "SELECT * FROM private_attribute_share"
+        sql_args = []
+        attributeShares = []
         results = self.execute(sql, sql_args)
         for row in results:
-            fileList.append(File(row['file_name'], row['file_type'], row['file_notes'], row['file_size'], row['file_uploaded_datetime'], row['file_owner_id'], row['file_expiration_datetime'], row['file_passed_avscan'], row['file_encryption_key'], row['file_id'], row['file_status'], row['file_location'], row['file_notify_on_download'], row['file_upload_ticket_id']))
-        return fileList
-        
-    def deletePrivateAttributeShare (self, fileId, attributeId):
-        sql = "DELETE FROM private_attribute_share WHERE private_attribute_share_file_id=%s and private_attribute_share_attribute_id=%s"
-        sql_args = [fileId, attributeId]
-        self.execute(sql, sql_args)
-        return True
-    
-    def deletePrivateAttributeSharesByAttributeId(self, attributeId):
-        sql = "DELETE FROM private_attribute_share WHERE private_attribute_share_attribute_id=%s"
-        sql_args = [attributeId]
-        self.execute(sql, sql_args)
-        return True
+            attributeShares.append(AttributeShare(attribute_id=row["private_attribute_share_attribute_id"], file_id=row["private_attribute_share_file_id"]))
+        return attributeShares
         
 #Public Shares
-    def createPublicShare (self, publicShare):
-        try:
-            sql = "INSERT INTO public_share (public_share_file_id, public_share_expiration, public_share_password_hash, public_share_id, public_share_type)  VALUES(%s, %s, %s, %s, %s)"
-            publicShare.shareId = publicShare.generateShareId()
-            sql_args = [publicShare.fileId, publicShare.expirationDateTime, publicShare.passwordHash, publicShare.shareId, publicShare.shareType]
-            self.execute(sql, sql_args)
-        except MySQLdb.IntegrityError, ie:
-            idList = []
-            sql2 = "SELECT public_share_id FROM public_share"
-            idRows = self.execute(sql2, None)
-            for idRow in idRows:
-                idList.append(idRow['public_share_id'])
-            while publicShare.shareId in idList:
-                publicShare.shareId = publicShare.generateShareId()
-            self.execute(sql, sql_args)
-        return publicShare.shareId
-
-    def getPublicShare (self, publicShareId):
-        sql = "SELECT * FROM public_share WHERE public_share_id=%s"
-        sql_args = [publicShareId,]
-        results = self.execute(sql, sql_args)
-        currentPubShare = None
-        for row in results:
-            flFile = self.getFile(row['public_share_file_id'])
-            currentPubShare = PublicShare(row['public_share_file_id'], flFile.fileOwnerId, row['public_share_expiration'], row['public_share_password_hash'], row['public_share_type'], row['public_share_id'])
-        return currentPubShare
-    
-    def getPublicShareByFileId(self, fileId):
-        sql = "SELECT * FROM public_share WHERE public_share_file_id=%s"
-        sql_args = [fileId,]
-        results = self.execute(sql, sql_args)
-        currentPubShare = None
-        for row in results:
-            flFile = self.getFile(row['public_share_file_id'])
-            currentPubShare = PublicShare(row['public_share_file_id'], flFile.fileOwnerId, row['public_share_expiration'], row['public_share_password_hash'], row['public_share_type'], row['public_share_id'])
-        return currentPubShare
-        
-    def getExpiredPublicShares(self):
-        sql = "SELECT * FROM public_share WHERE public_share_expiration < now()"
-        sql_args = None
-        results = self.execute(sql, sql_args)
-        expiredPublicShares = []
-        for row in results:
-            flFile = self.getFile(row['public_share_file_id'])
-            ownerId = None
-            if flFile is not None:
-                ownerId = flFile.fileOwnerId
-            currentPubShare = PublicShare(row['public_share_file_id'], ownerId, row['public_share_expiration'], row['public_share_password_hash'], row['public_share_type'], row['public_share_id'])
-            expiredPublicShares.append(currentPubShare)
-        return expiredPublicShares
-        
-    def getPublicShare(self, shareId):
-        sql = "SELECT * FROM public_share, file WHERE public_share_file_id=file_id AND public_share_id=%s"
-        sql_args = [shareId,]
-        results = self.execute(sql, sql_args)
-        publicShare = None
-        for row in results:
-            flFile = self.getFile(row['public_share_file_id'])
-            publicShare = PublicShare(row['public_share_file_id'], flFile.fileOwnerId, row['public_share_expiration'], row['public_share_password_hash'], row['public_share_type'], row['public_share_id'])
-        return publicShare
-        
-    def getPublicSharesByOwner(self, ownerId):
-        sql = "SELECT * FROM public_share, file WHERE public_share_file_id=file_id AND file_owner_id=%s"
-        sql_args = [ownerId,]
+    def GetAllPublicShares (self):
+        sql = "SELECT * FROM public_share, file WHERE file.file_id = public_share.public_share_file_id"
+        sql_args = []
         results = self.execute(sql, sql_args)
         publicShares = []
-        for pbShR in results:
-            publicShare = PublicShare(pbShR['public_share_file_id'], ownerId, pbShR['public_share_expiration'], pbShR['public_share_password_hash'], pbShR['public_share_type'], pbShR['public_share_id'])
-            publicShares.append(publicShare)
+        for row in results:
+            currentPubShare = PublicShare(id=row['public_share_id'], owner_id=row['file_owner_id'], date_expires=row['public_share_expiration'], password=row['public_share_password_hash'], reuse=row['public_share_type'])
+            currentPubShare.files.append(File(id=row['public_share_file_id']))
+            publicShares.append(currentPubShare)
         return publicShares
-        
-    def updatePublicShare (self, publicShare):
-        sql = "UPDATE public_share SET public_share_file_id=%s, public_share_expiration=%s, public_share_password_hash=%s WHERE public_share_id=%s"
-        sql_args = [publicShare.fileId, publicShare.expirationDatetime, publicShare.passwordHash, publicShare.shareId]
-        self.execute(sql, sql_args)
-        return True
-
-    def deletePublicShare (self, publicShareId):
-        sql = "DELETE FROM public_share WHERE public_share_id=%s"
-        sql_args = [publicShareId]
-        self.execute(sql, sql_args)
-        return True
-
+    
 #User functions
-    def createUser (self, user, password=None):
-        sql = "INSERT INTO user (user_first_name, user_last_name, user_id, user_quota, user_last_login_datetime, user_tos_accept_datetime, user_email) VALUES (%s, %s, %s, %s, %s, %s, %s)"
-        sql_args = [user.userFirstName, user.userLastName, user.userId, user.userQuota, user.userLastLogin, user.userTosAcceptDatetime, user.userEmail]
-        try:
-            self.execute(sql, sql_args)
-        except MySQLdb.IntegrityError, ie:
-            logging.warning("User already exists. No need to create.")
-        if password is not None:
-            self.updateUser(user, password)
-
-    def getUser (self, userId):
-        sql = "SELECT * FROM user WHERE user_id=%s"
-        sql_args = [userId]
+    def GetAllUsers (self):
+        sql = "SELECT * FROM user"
+        sql_args = []
         results = self.execute(sql, sql_args)
         currentUser = None
         for row in results:
-            currentUser = User(row['user_first_name'].title(), row['user_last_name'].title(), row['user_email'], row['user_quota'], row['user_last_login_datetime'], row['user_tos_accept_datetime'], row['user_id'])
-            rSql = "SELECT * FROM permission WHERE permission_id=%s"
+            currentUser = User(first_name=row['user_first_name'], last_name=row['user_last_name'], email=row['user_email'], quota=row['user_quota'], date_last_login=row['user_last_login_datetime'], date_tos_accept=row['user_tos_accept_datetime'], id=row['user_id'])
+            #TODO: Grab Permissions for user - account for roles, and attributes:?
+            pSql = "SELECT * FROM permission WHERE permission_id=%s"
             sql_args = ["(role)%s" % currentUser.userId]
             rolesResults = self.execute(rSql, sql_args)
             for roleRow in rolesResults:
