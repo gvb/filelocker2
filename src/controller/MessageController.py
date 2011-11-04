@@ -14,7 +14,7 @@ __date__ ="$Sep 25, 2011 9:32:23 PM$"
 class MessageController:
     @cherrypy.expose
     @cherrypy.tools.requires_login()
-    def send_message(self, subject, body, recipientIds, expiration, format="json", **kwargs):
+    def create_message(self, subject, body, recipientIds, expiration, format="json", **kwargs):
         user, sMessages, fMessages = cherrypy.session.get("user"), [], []
         try:
             maxExpiration = datetime.datetime.today() + datetime.timedelta(days=cherrypy.request.app.config['filelocker']['max_file_life_days'])
@@ -34,7 +34,7 @@ class MessageController:
             for recipientId in recipientIdList:
                 rUser = AccountController.get_user(recipientId)
                 if rUser is not None:
-                    session.add(ReceivedMessage(message_id=newMessage.id, recipient_id=rUser))
+                    session.add(MessageShare(message_id=newMessage.id, recipient_id=rUser.id))
                 else:
                     fMessages.append("Could not send to user with ID:%s - Invalid user ID" % str(recipientId))
             session.commit()
@@ -42,7 +42,24 @@ class MessageController:
         except ValueError:
             fMessages.append("Invalid expiration date format. Date must be in mm/dd/yyyy format.")
         except Exception, e:
+            logging.error("[%s] [create_message] [Could not create message: %s]" % (user.id, str(e)))
             fMessages.append("Could not send message: %s" % str(e))
+        return fl_response(sMessages, fMessages, format)
+    
+    @cherrypy.expose
+    @cherrypy.tools.requires_login()
+    def share_message(self, message, recipientIds):
+        try:
+            recipientIdList = split_list_sanitized(recipientIds)
+            for recipientId in recipientIdList:
+                rUser = AccountController.get_user(recipientId)
+                if rUser is not None:
+                    session.add(MessageShare(message_id=newMessage.id, recipient_id=rUser.id))
+                else:
+                    fMessages.append("Could not send to user with ID:%s - Invalid user ID" % str(recipientId))
+        except Exception, e:
+            logging.error("[%s] [share_message] [Could not share message: %s]" % (user.id, str(e)))
+            fMessages.append("Could not share message: %s" % str(e))
         return fl_response(sMessages, fMessages, format)
 
     @cherrypy.expose
@@ -50,7 +67,7 @@ class MessageController:
     def get_new_message_count(self, format="json", **kwargs):
         user, sMessages, fMessages, newMessageCount = cherrypy.session.get("user"), [], [], []
         try:
-            newMessageCount = session.query(func.count(ReceivedMessage.message_id), ReceivedMessage.recipient_id,).filter(ReceivedMessage.recipient_id==user.id).scalar()
+            newMessageCount = session.query(func.count(MessageShare.message_id), MessageShare.recipient_id,).filter(MessageShare.recipient_id==user.id).scalar()
         except Exception,e :
             fMessages.append(str(e))
         return fl_response(sMessages, fMessages, format, data=newMessageCount)
@@ -61,7 +78,7 @@ class MessageController:
         user, sMessages, fMessages = cherrypy.session.get("user"), [], []
         messagesList, recvMessagesList, sentMessagesList  = [], [], [] 
         try:
-            recvMessages = session.query(ReceivedMessage).filter(ReceivedMessage.recipient_id==user.id).all()
+            recvMessages = session.query(MessageShare).filter(MessageShare.recipient_id==user.id).all()
             sentMessages = session.query(Message).filter(Message.owner_id==user.id).all()
             for message in recvMessages:
                 messageDict = message.get_dict()
@@ -85,7 +102,7 @@ class MessageController:
     def read_message(self, messageId, format="json", **kwargs):
         user, sMessages, fMessages = cherrypy.session.get("user"), [], []
         try:
-            message = session.query(ReceivedMessage).filter(ReceivedMessage.message_id == messageId).one()
+            message = session.query(MessageShare).filter(MessageShare.message_id == messageId).one()
             if message.recipient_id == user.id:
                 message.date_viewed = datetime.datetime.now()
             else:
@@ -97,12 +114,12 @@ class MessageController:
 
     @cherrypy.expose
     @cherrypy.tools.requires_login()
-    def delete_received_messages(self, messageIds, format="json", **kwargs):
+    def delete_shared_messages(self, messageIds, format="json", **kwargs):
         user, sMessages, fMessages = cherrypy.session.get("user"), [], []
         try:
             messageIdList = split_list_sanitized(messageIds)
             for messageId in messageIdList:
-                rMessage = session.query(ReceivedMessage).filter(ReceivedMessage.message_id==messageId).one()
+                rMessage = session.query(MessageShare).filter(MessageShare.message_id==messageId).one()
                 if rMessage.recipient_id == user.id or rMessage.message.owner_id == user.id or AccountController.user_has_permission(user, "admin"):
                     session.delete(rMessage)
                 else:
