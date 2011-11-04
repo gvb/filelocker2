@@ -43,21 +43,21 @@
                 </div>
                 <div>
                     <label for="fileNotes">Add notes to file:</label>
-                    <textarea name="fileNotes" id="uploadFileNotes" cols="38" rows="3" onKeyUp="javascript:limitCharacters('upload');"></textarea>
+                    <textarea name="fileNotes" id="uploadFileNotes" cols="38" rows="3" onKeyUp="javascript:Utility.limitCharacters('upload');"></textarea>
                     <div id="uploadNotesInfo"></div>
                 </div>
                 <div>
                     <label for="uploadScanFile">Other options:</label>
-                    <input type="checkbox" name="scanFile" id="uploadScanFile" checked="checked" /><span onclick="javascript:check('uploadScanFile');">Scan for viruses?</span>
+                    <input type="checkbox" name="scanFile" id="uploadScanFile" checked="checked" /><span onclick="javascript:Utility.check('uploadScanFile');">Scan for viruses?</span>
                 </div>
                 #if $AccountController.user_has_permission($user, "admin")
                 <div>
-                    <input type="checkbox" name="systemUpload" id="systemUpload" /><span onclick="javascript:check('systemUpload');">System upload?</span>
+                    <input type="checkbox" name="systemUpload" id="systemUpload" /><span onclick="javascript:Utility.check('systemUpload');">System upload?</span>
                 </div>
                 #end if
                 #if $config['geotagging']
                 <div id="uploadGeolocationOption">
-                    <input type="checkbox" name="uploadGeolocation" id="uploadGeolocation" onClick="javascript:setGeoData();" /><span onclick="javascript:check('uploadGeolocation');javascript:setGeoData();">Geotag this file upload?</span> <a href="javascript:viewHelp('help_geotag');" class="helpLink">What's this?</a>
+                    <input type="checkbox" name="uploadGeolocation" id="uploadGeolocation" onClick="javascript:setGeoData();" /><span onclick="javascript:Utility.check('uploadGeolocation');javascript:setGeoData();">Geotag this file upload?</span> <a href="javascript:Help.prompt('help_geotag');" class="helpLink">What's this?</a>
                 </div>
                 #end if
                 <div>
@@ -84,18 +84,18 @@
                 </div>
                 <div>
                     <label for="uploadRequestMessage">Add message to email:</label>
-                    <textarea name="uploadRequestMessage" id="uploadRequestMessage" cols="38" rows="3" onKeyUp="javascript:limitCharacters('upload_request');"></textarea>
+                    <textarea name="uploadRequestMessage" id="uploadRequestMessage" cols="38" rows="3" onKeyUp="javascript:Utility.limitCharacters('upload_request');"></textarea>
                     <div id="uploadRequestNotesInfo"></div>
                 </div>
                 <div>
                     <label for="uploadRequestShareType">Other options:</label>
-                    <input type="checkbox" id="uploadRequestShareType" onclick="javascript:toggleUploadRequestShareType();" /><span onclick="javascript:check('uploadRequestShareType');javascript:toggleUploadRequestShareType();">Allow multiple file uploads for this request (requires password)?</span>
+                    <input type="checkbox" id="uploadRequestShareType" onclick="javascript:UploadRequest.toggleType();" /><span onclick="javascript:Utility.check('uploadRequestShareType');javascript:toggleUploadRequestShareType();">Allow multiple file uploads for this request (requires password)?</span>
                 </div>
                 <div>
-                    <input type="checkbox" id="uploadRequestScanFile" checked="checked" /><span onclick="javascript:check('uploadRequestScanFile');">Force a virus scan for uploaded files?</span>
+                    <input type="checkbox" id="uploadRequestScanFile" checked="checked" /><span onclick="javascript:Utility.check('uploadRequestScanFile');">Force a virus scan for uploaded files?</span>
                 </div>
                 <div>
-                    <input type="checkbox" id="uploadRequestPasswordSelector" onclick="javascript:toggleUploadRequestPassword();"/><span onclick="javascript:check('uploadRequestPasswordSelector');javascript:toggleUploadRequestPassword();">Password protect this upload request?</span>
+                    <input type="checkbox" id="uploadRequestPasswordSelector" onclick="javascript:UploadRequest.togglePassword();"/><span onclick="javascript:Utility.check('uploadRequestPasswordSelector');javascript:UploadRequest.togglePassword();">Password protect this upload request?</span>
                     <span id="uploadRequestSelector" style="display:none">
                         <label for="uploadRequestPassword">Password:</label>
                         <input type="password" name="uploadRequestPassword" id="uploadRequestPassword" />
@@ -104,7 +104,7 @@
                     </span>
                 </div>
                 <div>
-                    <div class="button"><a href="javascript:createUploadRequest();" title="Create an upload request" class="uploadRequestButton"><span>Create Request</span></a></div>
+                    <div class="button"><a href="javascript:UploadRequest.create();" title="Create an upload request" class="uploadRequestButton"><span>Create Request</span></a></div>
                 </div>
             </form>
         </div>
@@ -142,10 +142,10 @@
             </div>
             <div>
                 <label for="publicShareType">Other options:</label>
-                <input type="checkbox" id="publicShareType" onclick="javascript:togglePublicShareType();" /><span onclick="javascript:check('publicShareType');javascript:togglePublicShareType();">Allow multiple downloads (requires password)?</span>
+                <input type="checkbox" id="publicShareType" onclick="javascript:togglePublicShareType();" /><span onclick="javascript:Utility.check('publicShareType');javascript:togglePublicShareType();">Allow multiple downloads (requires password)?</span>
             </div>
             <div>
-                <input type="checkbox" id="publicSharePasswordSelector" onclick="javascript:togglePublicSharePassword();"/><span onclick="javascript:check('publicSharePasswordSelector');javascript:togglePublicSharePassword();">Password protect this public share?</span>
+                <input type="checkbox" id="publicSharePasswordSelector" onclick="javascript:togglePublicSharePassword();"/><span onclick="javascript:Utility.check('publicSharePasswordSelector');javascript:togglePublicSharePassword();">Password protect this public share?</span>
                 <span id="publicShareSelector" style="display:none">
                     <label for="publicSharePassword">Password:</label>
                     <input type="password" name="publicSharePassword" id="publicSharePassword" />
@@ -204,7 +204,7 @@
                         </div>
                         <br />
                         <div>
-                            <input type="checkbox" id="createUserRole"/><span onclick="javascript:check('createUserRole');">Is this user a role?</span>
+                            <input type="checkbox" id="createUserRole"/><span onclick="javascript:Utility.check('createUserRole');">Is this user a role?</span>
                         </div>
                         <div>
                             <div class="button" id="createUserButton"><a href="javascript:createUser();" title="Create a new Filelocker user" class="saveButton"><span>Create User</span></a></div>
@@ -274,7 +274,7 @@
                 </div>
                 <br />
                 <div>
-                    <input type="checkbox" id="updateUserRole"/><span onclick="javascript:check('updateUserRole');">Is this user a role?</span>
+                    <input type="checkbox" id="updateUserRole"/><span onclick="javascript:Utility.check('updateUserRole');">Is this user a role?</span>
                 </div>
                 <input type="hidden" id="updateUserId" value=""/>
                 <div>
@@ -493,7 +493,7 @@
                                 <li><div class="itemTitleMedium"><a href="${config['root_url']}/download_filelocker_client?platform=cli" title="Download CLI client" class="script"><span>Download CLI Client</span></a></div></li><br />
 <!--                                 <li><div class="itemTitleMedium"><a href="${config['root_url']}/download_filelocker_client?platform=ios" title="Download iOS client" class="ios"><span>Download iOS Client</span></a></div></li><br /> -->
 <!--                                 <li><div class="itemTitleMedium"><a href="${config['root_url']}/download_filelocker_client?platform=android" title="Download Android client" class="android"><span>Download Android Client</span></a></div></li><br /> -->
-                                <li><div class="itemTitleMedium"><a href="javascript:viewHelp('help_cli');" title="View help article for Filelocker CLI" class="help helpLink"><span>How do I use Filelocker CLI?</span></a></div></li>
+                                <li><div class="itemTitleMedium"><a href="javascript:Help.prompt('help_cli');" title="View help article for Filelocker CLI" class="help helpLink"><span>How do I use Filelocker CLI?</span></a></div></li>
                             </ul>
                         </div>
                     </form>
@@ -573,7 +573,7 @@
             <td id="messageBodyWrapper">
                 <div id="messageSubject"></div>
                 <div id="messageBody">
-                    <a href="javascript:viewHelp('help_message');" class="helpLink">Learn more about Filelocker Messaging.</a>
+                    <a href="javascript:Help.prompt('help_message');" class="helpLink">Learn more about Filelocker Messaging.</a>
                 </div>
             </td>
             </tr>
@@ -599,7 +599,7 @@
                 <h4>Subject:</h4>
                 <input type="text" maxlength="255" id="flMessageSubject" />
                 <h4>Body:</h4>
-                <textarea name="messageBody" id="flMessageBody" cols="40" rows="7" onKeyUp="javascript:limitCharacters('messages');"></textarea>
+                <textarea name="messageBody" id="flMessageBody" cols="40" rows="7" onKeyUp="javascript:Utility.limitCharacters('messages');"></textarea>
                 <div id="messageInfo"></div>
             </td>
             <td id="messages_searchContainer">

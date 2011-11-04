@@ -262,7 +262,7 @@ class RootController:
             systemFiles = session.query(File).filter(File.owner_id == "system").all()
         defaultExpiration = datetime.date.today() + (datetime.timedelta(days=cherrypy.request.app.config['filelocker']['max_file_life_days']))
         uploadRequests = session.query(UploadRequest).filter(UploadRequest.owner_id==user.id).all()
-        userFiles = self.file_interface.get_user_file_list(format="list")
+        userFiles = self.file.get_user_file_list(format="list")
         userShareableAttributes = ShareController.get_user_shareable_attributes(user)
         attributeFilesDict = ShareController.get_files_shared_with_user_by_attribute(user)
         sharedFiles = ShareController.get_files_shared_with_user(user)

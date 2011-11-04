@@ -6,10 +6,10 @@
     </div>
     
     <div class="toolbar">
-        <div class="button"><a href="javascript:promptUpload();" title="Upload a new file to Filelocker" class="uploadButton"><span>Upload</span></a></div>
-        <div class="button hidden" id="multiShare"><a href="javascript:dismissStatusMessage();javascript:promptShareFiles();" title="Manage shares for the selected files" class="shareButton"><span>Manage Shares</span></a></div>
-        <div class="button"><a href="javascript:dismissStatusMessage();javascript:loadManageGroups();" title="Manage my groups of Filelocker users" class="manageGroupsButton"><span>Manage Groups</span></a></div>
-        <div class="button"><a href="privjavascript:deleteFiles();" title="Permanently delete the selected files from Filelocker" class="deleteButton"><span>Delete</span></a></div>
+        <div class="button"><a href="javascript:File2.prompt();" title="Upload a new file to Filelocker" class="uploadButton"><span>Upload</span></a></div>
+        <div class="button hidden" id="multiShare"><a href="javascript:StatusResponse.hide();javascript:Share.prompt();" title="Manage shares for the selected files" class="shareButton"><span>Manage Shares</span></a></div>
+        <div class="button"><a href="javascript:StatusResponse.hide();javascript:Group.load();" title="Manage my groups of Filelocker users" class="manageGroupsButton"><span>Manage Groups</span></a></div>
+        <div class="button"><a href="javascript:deleteFiles();" title="Permanently delete the selected files from Filelocker" class="deleteButton"><span>Delete</span></a></div>
     </div>
     
     <div class="file_list"> <!--Files content area-->
@@ -109,7 +109,7 @@
                                 $f.date_uploaded</li>
                                 #if $f.owner_id == $user.id
                                     <li><div class="itemTitleMedium"><span class="cross"><a href="javascript:promptConfirmation('deleteFile', ['$f.id']);" title="Permanently delete this file from Filelocker" class="redText">Delete This File</a></span></div></li>
-                                    <li><div class="itemTitleMedium"><span class="save"><a href="$config['root_url']/file_interface/download?fileId=$f.id" title="Download this file from Filelocker">Download This File</a></span></div></li>
+                                    <li><div class="itemTitleMedium"><span class="save"><a href="$config['root_url']/file/download?fileId=$f.id" title="Download this file from Filelocker">Download This File</a></span></div></li>
                                     <li><div class="itemTitleMedium"><span class="statistics"><a href="javascript:viewDownloadStatistics('$f.id');" title="View a chart of this file's downloads over time">View Download Statistics</a></span></div></li>
                                     #set $notesStripped = $re.sub(r'\[geo\]-?\d+\.\d+,-?\d+\.\d+\[/geo\]', '', $str($f.notes))
                                     #if $notesStripped != ""
@@ -229,7 +229,7 @@
                                 </li>
                                 <li><div class="itemTitle"><span class="clock">Uploaded:</span></div>$f.date_uploaded</li>
                                 <li><div class="itemTitleMedium"><span class="cross"><a href="javascript:promptConfirmation('deleteFile', ['$f.id']);" title="Permanently delete this file from Filelocker" class="redText">Delete This File</a></span></div></li>
-                                <li><div class="itemTitleMedium"><span class="save"><a href="$config['root_url']/file_interface/download?fileId=$f.id" title="Download this file from Filelocker">Download This File</a></span></div></li>
+                                <li><div class="itemTitleMedium"><span class="save"><a href="$config['root_url']/file/download?fileId=$f.id" title="Download this file from Filelocker">Download This File</a></span></div></li>
                                 #set $notesStripped = $re.sub(r'\[geo\]-?\d+\.\d+,-?\d+\.\d+\[/geo\]', '', $str($f.notes))
                                 #if $notesStripped != ""
                                     <li><div class="itemTitleMedium"><span class="view"><a href="javascript:viewnotes('$notesStripped');" title="View the user-entered notes for this file">View File Notes</a></span></div></li>
@@ -327,7 +327,7 @@
                                     #end if
                                     <li><div class="itemTitleMedium"><span class="hide"><a href="javascript:hidePrivateShare('$f.id');" title="Hide this share from Filelocker. Unhide shares in Account Settings" class="redText">Hide This Share</a></span></div></li>
                                     <li><div class="itemTitleWide"><span id="takeOwnership_$f.id" class="take_ownership"><a href="javascript:takeFile('$f.id');" title="Move this file to 'My Files' for resharing">Take Ownership (to Reshare)</a></span></div></li>
-                                    <li><div class="button" style="width: 185px"><a href="$config['root_url']/file_interface/download?fileId=$f.id" title="Download this file from Filelocker" class="saveButton"><span><center>Download This File</center></span></a></div></li>
+                                    <li><div class="button" style="width: 185px"><a href="$config['root_url']/file/download?fileId=$f.id" title="Download this file from Filelocker" class="saveButton"><span><center>Download This File</center></span></a></div></li>
                                     </ul>
                                 </div>
                             </div>
@@ -416,7 +416,7 @@
                                                 <li><div class="itemTitleMedium"><span class="map"><a href="http://maps.google.com/maps?q=${fileGeoData.group(1)},${fileGeoData.group(2)}" title="View this file's upload location on Google Maps" target="_blank">View Upload Location</a></span></div></li>
                                             #end if
                                             <li><div class="itemTitleWide"><span id="takeOwnership_$f.id" class="take_ownership"><a href="javascript:takeFile('$f.id');" title="Move this file to 'My Files' for resharing">Take Ownership (to Reshare)</a></span></div></li>
-                                            <li><div class="button" style="width: 185px"><a href="$config['root_url']/file_interface/download?fileId=$f.id" title="Download this file from Filelocker" class="saveButton"><span><center>Download This File</center></span></a></div></li>
+                                            <li><div class="button" style="width: 185px"><a href="$config['root_url']/file/download?fileId=$f.id" title="Download this file from Filelocker" class="saveButton"><span><center>Download This File</center></span></a></div></li>
                                             </ul>
                                         </div>
                                     </div>
@@ -468,7 +468,7 @@
                     #for $uploadRequest in $uploadRequests
                     <tr class="fileRow">
                         <td class="spacer"></td>
-                        <td><a href="javascript:viewUploadRequestLink('$uploadRequest.id')" class="document_alert">View Link</a></td>
+                        <td><a href="javascript:UploadRequest.promptView('$uploadRequest.id')" class="document_alert">View Link</a></td>
                         <td>$uploadRequest.type.title()</td>
                         #if $uploadRequest.scan_file
                         <td>Yes</td>
@@ -506,18 +506,18 @@
         <h4>Need a file from someone?</h4>
         <p>If you need a file from someone who doesn't have a Filelocker account, you can email them an Upload Request.</p>
         <div class="button">
-            <a href="javascript:promptRequestUpload();" title="Request a file from a user outside of $config['org_name']" class="uploadRequestButton"><span>Request Upload</span></a>
+            <a href="javascript:UploadRequest.prompt();" title="Request a file from a user outside of $config['org_name']" class="uploadRequestButton"><span>Request Upload</span></a>
         </div>
         <img src="$config['root_url']/static/images/page_elements/horizontal_rule.gif" alt="" class="horizontal_rule" />
         <p><strong>Quick Help</strong></p>
         <ul>
-            <li><a href="javascript:viewHelp('help_upload');" class="helpLink">How do I upload a file?</a></li>
-            <li><a href="javascript:viewHelp('help_share');" class="helpLink">How do I share a file?</a></li>
-            <li><a href="javascript:viewHelp('help_message');" class="helpLink">How do I send a message?</a></li>
-            <li><a href="javascript:viewHelp();" class="helpLink">Show all...</a></li>
+            <li><a href="javascript:Help.prompt('help_upload');" class="helpLink">How do I upload a file?</a></li>
+            <li><a href="javascript:Help.prompt('help_share');" class="helpLink">How do I share a file?</a></li>
+            <li><a href="javascript:Help.prompt('help_message');" class="helpLink">How do I send a message?</a></li>
+            <li><a href="javascript:Help.prompt();" class="helpLink">Show all...</a></li>
         </ul>
         <p><strong>Quick Tip</strong></p>
-        <span id="randomTip"></span> <a href="javascript:viewHelp('help_just_the_tips');" class="helpLink">Show all...</a>
+        <span id="randomTip"></span> <a href="javascript:Help.prompt('help_just_the_tips');" class="helpLink">Show all...</a>
         #if $config['admin_email'] is not None and $config['admin_email'] != ""
         <p><span class="feedback"><a href="mailto:$config['admin_email']" title="Send email to $config['admin_email'], the Filelocker administrator"><strong>Send Feedback</strong></a></span></p>
         #end if

@@ -1,208 +1,246 @@
 var pollerId="";
-var messageTimer;
 var continuePolling = false;
-var popup_small_width = 580;
-var popup_large_width = 780;
-var filelocker_width = 870;
-var modalDefaults = {
-    autoOpen: false,
-    draggable: false,
-    modal: true,
-    resizable: false,
-    zIndex: 10
-};
 
-function login()
-{
-    window.location.replace(FILELOCKER_ROOT);
-}
-function toggleDetails(toggleAction)
-{
-    clearTimeout(messageTimer);
-    if (toggleAction =="show")
-    {
-        $("#statusMessageDetails").show();
-        $("#showDetailsLink").hide();
-        $("#hideDetailsLink").show();
-        $("#hideDetailsLink").addClass("statusMessageDetailsLink");
+Defaults = function() {
+    var dialog = {
+        autoOpen: false,
+        draggable: false,
+        modal: true,
+        resizable: false,
+        zIndex: 10
+    };
+    var smallDialog = $.extend({ width: 580 }, dialog);
+    var largeDialog = $.extend({ width: 780 }, dialog);
+    
+    return {
+        filelockerWidth: 870,
+        smallDialog:smallDialog,
+        largeDialog:largeDialog
     }
-    else if (toggleAction =="hide")
+}();
+
+StatusResponse = function() {
+    var timer;
+    function create(action, message, success)
     {
-        $("#statusMessageDetails").hide();
-        $("#hideDetailsLink").hide();
-        $("#showDetailsLink").show();
-        $("#showDetailsLink").addClass("statusMessageDetailsLink");
+        var newResponse = Array();
+        newResponse.sMessages = [];
+        newResponse.fMessages = [];
+        var msgArray = success ? newResponse.sMessages : newResponse.fMessages;
+        msgArray.push(message);
+        StatusResponse.show(newResponse, action);
     }
-}
-function dismissStatusMessage()
-{
-    if($("#statusMessage").is(":visible"))
+    function show(response, shortActionMessage)
     {
-        toggleDetails("hide");
-        $("#statusMessage").hide("drop", { direction: "up" }, 200);
-    }
-}
-function showMessages(response, shortActionMessage)
-{
-    var options = {};
-    var detailSection ="<span id=\"statusMessageDetails\" class=\"hidden\"><p class='errorDetails'><strong>Details:&nbsp;</strong>";
-    $.each(response.fMessages, function(index,value) {
-        if (value == "expired")
-            login();
-        else
+        var detailSection ="<span id=\"statusMessageDetails\" class=\"hidden\"><p class='errorDetails'><strong>Details:&nbsp;</strong>";
+        $.each(response.fMessages, function(index,value) {
+            if (value == "expired")
+                Filelocker.login();
+            else
+                detailSection += value + "<br />";
+        });
+        $.each(response.sMessages, function(index,value) {
             detailSection += value + "<br />";
-    });
-    $.each(response.sMessages, function(index,value) {
-        detailSection += value + "<br />";
-    });
-    detailSection += "</p></span>";
-    if (response.fMessages !== undefined && response.fMessages.length > 0) // Errors occurred, aggregate messages and permanently display.
-    {
-        $("#statusMessage").removeClass("ui-state-highlight");
-        $("#statusMessage").addClass("ui-state-error");
-        $("#statusMessage").html("<span class='ui-icon ui-icon-alert' style='float: left; margin-right: .3em'></span>Errors while "+shortActionMessage+" <span id='toggleDetails'><span id='showDetailsLink' class='statusMessageDetailsLink'>(show details) </span><span id='hideDetailsLink' class='statusMessageDetailsLink hidden'>(hide details) </span></span><span id='dismissStatusMessage' style='float: right;'><span class='dismiss'></span></span>"+detailSection);
-        $("#statusMessage").show("drop", { direction: "up" }, 200);
+        });
+        detailSection += "</p></span>";
+        if (response.fMessages != null && response.fMessages.length > 0) // Errors occurred, aggregate messages and permanently display.
+        {
+            $("#statusMessage").removeClass("ui-state-highlight");
+            $("#statusMessage").addClass("ui-state-error");
+            $("#statusMessage").html("<span class='ui-icon ui-icon-alert' style='float: left; margin-right: .3em'></span>Errors while "+shortActionMessage+" <span id='toggleDetails'><span id='showDetailsLink' class='statusMessageDetailsLink'>(show details) </span><span id='hideDetailsLink' class='statusMessageDetailsLink hidden'>(hide details) </span></span><span id='dismissStatusMessage' style='float: right;'><span class='dismiss'></span></span>"+detailSection);
+            $("#statusMessage").show("drop", { direction: "up" }, 200);
+        }
+        else // No errors, so just display success, and fade away after 5 seconds.
+        {
+            $("#statusMessage").removeClass("ui-state-error");
+            $("#statusMessage").addClass("ui-state-highlight");
+            $("#statusMessage").html("<span class='ui-icon ui-icon-check' style='float: left; margin-right: .3em'></span>Success "+shortActionMessage+" <span id='toggleDetails'><span id='showDetailsLink' class='statusMessageDetailsLink'>(show details) </span><span id='hideDetailsLink' class='statusMessageDetailsLink hidden'>(hide details) </span></span><span id='dismissStatusMessage' style='float: right;'><span class='dismiss'></span></span>"+detailSection);
+            $("#statusMessage").show("drop", { direction: "up" }, 200);
+            timer = setTimeout(function() { StatusResponse.hide(); }, 5000);
+        }
     }
-    else // No errors, so just display success, and fade away after 5 seconds.
+    function hide()
     {
-        $("#statusMessage").removeClass("ui-state-error");
-        $("#statusMessage").addClass("ui-state-highlight");
-        $("#statusMessage").html("<span class='ui-icon ui-icon-check' style='float: left; margin-right: .3em'></span>Success "+shortActionMessage+" <span id='toggleDetails'><span id='showDetailsLink' class='statusMessageDetailsLink'>(show details) </span><span id='hideDetailsLink' class='statusMessageDetailsLink hidden'>(hide details) </span></span><span id='dismissStatusMessage' style='float: right;'><span class='dismiss'></span></span>"+detailSection);
-        $("#statusMessage").show("drop", { direction: "up" }, 200);
-        messageTimer = setTimeout(function() { dismissStatusMessage(); }, 5000);
+        if($("#statusMessage").is(":visible"))
+        {
+            StatusResponse.toggleDetails("hide");
+            $("#statusMessage").hide("drop", { direction: "up" }, 200);
+        }
     }
-}
-function generatePseudoResponse(action, message, success)
-{
-    var pseudoResponse = Array();
-    pseudoResponse.sMessages = [];
-    pseudoResponse.fMessages = [];
-    var msgArray = success ? pseudoResponse.sMessages : pseudoResponse.fMessages;
-    msgArray.push(message);
-    showMessages(pseudoResponse, action);
-}
-function checkServerMessages(actionName)
-{
-    $.getJSON(FILELOCKER_ROOT+'/get_server_messages?format=json&ms=' + new Date().getTime(), function(response) {
-        if (response.fMessages.length > 0 || response.sMessages.length > 0)
-            showMessages(response, actionName);
-        else
+    function toggleDetails(toggleAction)
+    {
+        clearTimeout(timer);
+        if (toggleAction == "show")
+        {
+            $("#statusMessageDetails").show();
+            $("#showDetailsLink").hide();
+            $("#hideDetailsLink").show();
+            $("#hideDetailsLink").addClass("statusMessageDetailsLink");
+        }
+        else if (toggleAction == "hide")
+        {
+            $("#statusMessageDetails").hide();
+            $("#hideDetailsLink").hide();
+            $("#showDetailsLink").show();
+            $("#showDetailsLink").addClass("statusMessageDetailsLink");
+        }
+    }
+    
+    return {
+        create:create,
+        show:show,
+        hide:hide,
+        toggleDetails:toggleDetails
+    }
+}();
+
+Utility = function() {
+    function limitCharacters(destination)
+    {
+        var characterLimit = 250;
+        var textId = "";
+        var notesId = "";
+        
+        if(destination === "upload")
+        {
+            textId = "uploadFileNotes";
+            notesId = "uploadNotesInfo";
+        }
+        else if(destination === "public_upload")
+        {
+            textId = "fileNotes";
+            notesId = "publicUploadNotesInfo";
+        }
+        else if(destination === "upload_request")
+        {
+            characterLimit = 1000;
+            textId = "uploadRequestMessage";
+            notesId = "uploadRequestNotesInfo";
+        }
+        else if(destination === "messages")
+        {
+            characterLimit = 1000;
+            textId = "flMessageBody";
+            notesId = "messageInfo";
+        }
+
+        if($("#"+textId).val().length > characterLimit)
+        {
+            $("#"+notesId).html("You are unable to write more than "+characterLimit+" characters.");
+            $("#"+textId).val($("#"+textId).val().substr(0, characterLimit));
             return false;
-    });
-}
-function limitCharacters(destination)
-{
-    var characterLimit = 250;
-    var currentText = "";
-    var textId = "";
-    var notesId = "";
-    if(destination == "upload")
-    {
-        textId = "uploadFileNotes";
-        notesId = "uploadNotesInfo";
+        }
+        else
+        {
+            $("#"+notesId).html("You have "+ (characterLimit - $("#"+textId).val().length) +" characters remaining.");
+            return true;
+        }
     }
-    else if(destination == "public_upload")
-    {
-        textId = "fileNotes";
-        notesId = "publicUploadNotesInfo";
-    }
-    else if(destination == "upload_request")
-    {
-        characterLimit = 1000;
-        textId = "uploadRequestMessage";
-        notesId = "uploadRequestNotesInfo";
-    }
-    else if(destination == "messages")
-    {
-        characterLimit = 1000;
-        textId = "flMessageBody";
-        notesId = "messageInfo";
-    }
-    if($("#"+textId).val().length > characterLimit)
-    {
-        $("#"+notesId).html("You are unable to write more than "+characterLimit+" characters.");
-        $("#"+textId).val($("#"+textId).val().substr(0, characterLimit));
-        return false;
-    }
-    else
-    {
-        $("#"+notesId).html("You have "+ (characterLimit - $("#"+textId).val().length) +" characters remaining.");
-        return true;
-    }
-}
-function detectBrowserVersion(){
-    var userAgent = navigator.userAgent.toLowerCase();
-    $.browser.chrome = /chrome/.test(navigator.userAgent.toLowerCase());
-    var version = 0;
-    var browserName = "";
+    function detectBrowserVersion(){
+        var userAgent = navigator.userAgent.toLowerCase();
+        $.browser.chrome = /chrome/.test(navigator.userAgent.toLowerCase());
+        var version = 0;
+        var browserName = "";
 
-    // Is this a version of IE?
-    if($.browser.msie) {
-        userAgent = $.browser.version;
-        userAgent = userAgent.substring(0,userAgent.indexOf('.'));  
-        version = userAgent;
-        browserName = "Internet Explorer";
-    }
+        // Is this a version of IE?
+        if($.browser.msie) {
+            userAgent = $.browser.version;
+            userAgent = userAgent.substring(0,userAgent.indexOf('.'));  
+            version = userAgent;
+            browserName = "Internet Explorer";
+        }
 
-    // Is this a version of Chrome?
-    if($.browser.chrome) {
-        userAgent = userAgent.substring(userAgent.indexOf('chrome/') +7);
-        userAgent = userAgent.substring(0,userAgent.indexOf('.'));  
-        version = userAgent;
-        // If it is chrome then jQuery thinks it's safari so we have to tell it it isn't
-        $.browser.safari = false;
-        browserName = "Chrome";
-    }
+        // Is this a version of Chrome?
+        if($.browser.chrome) {
+            userAgent = userAgent.substring(userAgent.indexOf('chrome/') +7);
+            userAgent = userAgent.substring(0,userAgent.indexOf('.'));  
+            version = userAgent;
+            // If it is chrome then jQuery thinks it's safari so we have to tell it it isn't
+            $.browser.safari = false;
+            browserName = "Chrome";
+        }
 
-    // Is this a version of Safari?
-    if($.browser.safari) {
-        userAgent = userAgent.substring(userAgent.indexOf('safari/') +7);   
-        userAgent = userAgent.substring(0,userAgent.indexOf('.'));
-        version = userAgent;
-        browserName = "Safari";
-    }
-
-    // Is this a version of Mozilla?
-    if($.browser.mozilla) {
-        //Is it Firefox?
-        if(navigator.userAgent.toLowerCase().indexOf('firefox') != -1) {
-            userAgent = userAgent.substring(userAgent.indexOf('firefox/') +8);
+        // Is this a version of Safari?
+        if($.browser.safari) {
+            userAgent = userAgent.substring(userAgent.indexOf('safari/') +7);   
             userAgent = userAgent.substring(0,userAgent.indexOf('.'));
             version = userAgent;
-            browserName = "Firefox";
+            browserName = "Safari";
         }
-        // If not then it must be another Mozilla
-    }
 
-    // Is this a version of Opera?
-    if($.browser.opera) {
-        userAgent = userAgent.substring(userAgent.indexOf('version/') +8);
-        userAgent = userAgent.substring(0,userAgent.indexOf('.'));
-        version = userAgent;
-        browserName = "Opera";
+        // Is this a version of Mozilla?
+        if($.browser.mozilla) {
+            //Is it Firefox?
+            if(navigator.userAgent.toLowerCase().indexOf('firefox') != -1) {
+                userAgent = userAgent.substring(userAgent.indexOf('firefox/') +8);
+                userAgent = userAgent.substring(0,userAgent.indexOf('.'));
+                version = userAgent;
+                browserName = "Firefox";
+            }
+            // If not then it must be another Mozilla
+        }
+
+        // Is this a version of Opera?
+        if($.browser.opera) {
+            userAgent = userAgent.substring(userAgent.indexOf('version/') +8);
+            userAgent = userAgent.substring(0,userAgent.indexOf('.'));
+            version = userAgent;
+            browserName = "Opera";
+        }
+        return [browserName, version];
     }
-    return [browserName, version];
-}
-function check(checkboxId)
+    function getRandomTip()
+    {
+        var tip = $("#help_just_the_tips li:random").text();
+        $("#randomTip").text(tip);
+    }
+    function tipsyfy()
+    {
+        $(".tipsy").remove(); // Remove any currently displayed tipsy elements.
+        $("a").filter(function() { // Add the external link class to the tipsy for all external links (including mailto).
+            if((this.hostname && this.hostname !== location.hostname && $(this).attr("title")) || this.href.match(/^mailto\:/))
+                $(this).attr("title","<span class='external'>" + $(this).attr("title") + "</span>");
+        });
+        $("a, #quotaProgressBar, #fileVaultUsageBar, #nameRoleContainer div, .publicShareCheckbox, .notifyCheckbox, .groupMember, .groupName, .attributeName, .userQuotaUsage").tipsy({ // Initiate tipsy for all links, progress bars, and some custom elements
+            delayIn: 500,
+            gravity: 'nw',
+            html: true,
+            opacity: 0.9
+        });
+    }
+    function check(checkboxId)
+    {
+        if($("#"+checkboxId).is(":checked"))
+            $("#"+checkboxId).prop("checked", false);
+        else
+            $("#"+checkboxId).prop("checked", true);
+    }
+    function allClassBoxChecked(checkboxId, classIdent)
+    {
+        if ($("#"+checkboxId).is(":checked"))
+            $("."+classIdent).prop("checked", true);
+        else
+            $("."+classIdent).prop("checked", false);
+    }
+    
+    return {
+        tipsyfy:tipsyfy,
+        getRandomTip:getRandomTip,
+        check:check
+    }
+}();
+
+function checkServerMessages(actionName)
 {
-    if($("#"+checkboxId).is(":checked"))
-        $("#"+checkboxId).prop("checked", false);
-    else
-        $("#"+checkboxId).prop("checked", true);
+    Filelocker.request("/get_server_messages", actionName, "{}", true);
 }
-function allClassBoxChecked(checkboxId, classIdent)
-{
-    if ($("#"+checkboxId).is(":checked"))
-        $("."+classIdent).prop("checked", true);
-    else
-        $("."+classIdent).prop("checked", false);
-}
+
 function poll()
 {
     if(continuePolling)
     {
         continuePolling = false;
-        $.getJSON(FILELOCKER_ROOT+'/file_interface/upload_stats?format=json&ms=' + new Date().getTime(), function(uploadStats) {
+        $.getJSON(FILELOCKER_ROOT+'/file/upload_stats?format=json&ms=' + new Date().getTime(), function(uploadStats) {
             continuePolling = true;
             if(uploadStats === null || typeof(uploadStats.data) == 'undefined' || uploadStats.data.length === 0) // Files are done uploading
             {
@@ -296,69 +334,57 @@ function poll()
         });
     }
 }
-// Help
-function loadHelp()
-{
-    var html = "";
-    var oddRow = "oddRow";
-    var count = 1;
-    $("#helpViewer").load(FILELOCKER_ROOT+"/help?ms=" + new Date().getTime(), {}, function (responseText, textStatus, xhr) {
-        if (textStatus == "error")
-            generatePseudoResponse("loading help", "Error "+xhr.status+": "+xhr.textStatus, false);
-        else
-        {
-            $("#helpViewer > div").each(function(index, value) {
-                $(this).hide();
-                oddRow = (count%2 === 0) ? "" : "oddRow";
-                html += "<tr id='"+$(this).attr("id")+"_row' class='fileRow "+oddRow+"' onClick='javascript:openHelp(\""+$(this).attr("id")+"\");'><td class='leftborder'></td><td class='rightborder pseudoLink'>" + $(this).children("h4").html() + "</td></tr>";
-                count++;
-            });
-            $("#helpTableOfContents").html(html);
-            getRandomTip();
-        }
-    });
-}
-function viewHelp(subject)
-{
-    tipsyfy();
-    $("#helpBox").dialog("open");
-    if(subject !== undefined)
-        openHelp(subject);
-    else
-        openHelp("help_start");
-}
-function openHelp(subject)
-{
-    $("#helpTableOfContents tr").each(function(index, value) {
-        $(this).removeClass("rowSelected");
-    });
-    $("#"+subject+"_row").addClass("rowSelected");
-    $("#helpViewer > div").each(function(index, value) {
-        $(this).hide();
-    });
-    $("#"+subject).show();
-}
 
-// Miscellaneous
-function getRandomTip()
-{
-    var tip = $("#help_just_the_tips li:random").text();
-    $("#randomTip").text(tip);
-}
-function tipsyfy()
-{
-    $(".tipsy").remove(); // Remove any currently displayed tipsy elements.
-    $("a").filter(function() { // Add the external link class to the tipsy for all external links (including mailto).
-        if((this.hostname && this.hostname !== location.hostname && $(this).attr("title")) || this.href.match(/^mailto\:/))
-            $(this).attr("title","<span class='external'>" + $(this).attr("title") + "</span>");
-    });
-    $("a, #quotaProgressBar, #fileVaultUsageBar, #nameRoleContainer div, .publicShareCheckbox, .notifyCheckbox, .groupMember, .groupName, .attributeName, .userQuotaUsage").tipsy({ // Initiate tipsy for all links, progress bars, and some custom elements
-        delayIn: 500,
-        gravity: 'nw',
-        html: true,
-        opacity: 0.9
-    });
-}
+Help = function() {
+    function load()
+    {
+        var html = "";
+        var oddRow = "oddRow";
+        var count = 1;
+        $("#helpViewer").load(FILELOCKER_ROOT+"/help?ms=" + new Date().getTime(), {}, function (responseText, textStatus, xhr) {
+            if (textStatus == "error")
+                StatusResponse.show("loading help", "Error "+xhr.status+": "+xhr.textStatus, false);
+            else
+            {
+                $("#helpViewer > div").each(function(index, value) {
+                    $(this).hide();
+                    oddRow = (count%2 === 0) ? "" : "oddRow";
+                    html += "<tr id='"+$(this).attr("id")+"_row' class='fileRow "+oddRow+"' onClick='javascript:Help.render(\""+$(this).attr("id")+"\");'><td class='leftborder'></td><td class='rightborder pseudoLink'>" + $(this).children("h4").html() + "</td></tr>";
+                    count++;
+                });
+                $("#helpTableOfContents").html(html);
+                Utility.getRandomTip();
+            }
+        });
+    }
+    function prompt(subject)
+    {
+        Utility.tipsyfy();
+        $("#helpBox").dialog("open");
+        if(subject !== undefined)
+            render(subject);
+        else
+            render("help_start");
+    }
+    function render(subject)
+    {
+        $("#helpTableOfContents tr").each(function(index, value) {
+            $(this).removeClass("rowSelected");
+        });
+        $("#"+subject+"_row").addClass("rowSelected");
+        $("#helpViewer > div").each(function(index, value) {
+            $(this).hide();
+        });
+        $("#"+subject).show();
+    }
+    
+    return {
+        load:load,
+        prompt:prompt,
+        render:render
+    };
+}();
+
 jQuery.jQueryRandom = 0;
 jQuery.extend(jQuery.expr[":"],
 {
@@ -408,27 +434,26 @@ jQuery(document).ready(function(){
     
     // Bind events to status message events and overlay clicks so they can pierce the jQuery UI modal overlay.
     $("#showDetailsLink").live("click", function() {
-        toggleDetails("show");
+        StatusResponse.toggleDetails("show");
     });
     $("#hideDetailsLink").live("click", function() {
-        toggleDetails("hide");
+        StatusResponse.toggleDetails("hide");
     });
     $("#dismissStatusMessage").live("click", function() {
-        dismissStatusMessage();
+        StatusResponse.hide();
     });
     $("#helpUploadLarge").live("click", function() {
-        viewHelp("help_upload_large");
+        Help.view("help_upload_large");
     });
     $(".ui-widget-overlay").live("click", function() {
-        $(".ui-dialog:visible").find(".ui-dialog-titlebar-close").trigger('click');
+        $(".ui-dialog:visible").find(".ui-dialog-titlebar-close").click();
     });
     
     // Load help documentation for all public and private pages.
-    loadHelp();
-    $("#helpBox").dialog($.extend({}, modalDefaults, {
-        title: "<span class='help'>Help</span>",
-        width: popup_large_width
-    }));
+    Help.load();
+    $("#helpBox").dialog($.extend({}, {
+        title: "<span class='help'>Help</span>"
+    }, Defaults.largeDialog));
     
     // Implementation of string trimming for IE.
     if(typeof String.prototype.trim !== 'function') {
@@ -437,7 +462,7 @@ jQuery(document).ready(function(){
         };
     }
     
-    tipsyfy();
+    Utility.tipsyfy();
     $("#footer p").html($("#footer p").html().replace("©","<span onclick='javascript:toggleTypography();'>&copy;</span>"));
 });
 function toggleTypography(){var y="body, p, h1, h2, h3, h4, h5, h6, a, thead, th, td, ol, ul, li, dt, dd, sub, sup, label, fieldset, form";if($.browser.mozilla)var z="\"Lucida Grande\",\"Segoe UI\",Arial,Verdana,sans-serif";else var z="'Lucida Grande', 'Segoe UI', Arial, Verdana, sans-serif";if($("body").css("font-family")==z||$("body").css("font-family")==z)$(y).css("font-family","\"Comic Sans MS\"");else $(y).css("font-family",z);}

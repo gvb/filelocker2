@@ -10,7 +10,7 @@ function initPublicUpload()
         uploader = new qq.FileUploader({
             element: $("#uploadButton")[0],
             listElement: $("#progressBarSection")[0],
-            action: FILELOCKER_ROOT+'/file_interface/upload?format=json',
+            action: FILELOCKER_ROOT+'/file/upload?format=json',
             params: {},
             sizeLimit: 2147483647,
             onSubmit: function(id, fileName){
