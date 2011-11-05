@@ -194,6 +194,7 @@ class Message(Base):
     date_expires = Column(DateTime)
     encryption_key = Column(String(64))
     date_viewed = None #This is for readers of recieved messages
+    message_shares = relationship("MessageShare", backref="message", single_parent=True, cascade="all, delete-orphan")
     #recipients = []
 
     def get_dict(self):
@@ -216,7 +217,6 @@ class MessageShare(Base):
     message_id = Column(Integer, ForeignKey("messages.id"), primary_key=True)
     recipient_id = Column(String(30), ForeignKey("users.id"), primary_key=True)
     date_viewed = Column(DateTime, nullable=True, default=None)
-    message = relationship("Message", backref="message_shares")
 
 class UserShare(Base):
     __tablename__ = "user_shares"

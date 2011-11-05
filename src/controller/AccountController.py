@@ -276,7 +276,7 @@ class AccountController:
 
     @cherrypy.expose
     @cherrypy.tools.requires_login()
-    def search_users(self, firstName=None, lastName=None, userId=None, format="json", external=False, **kwargs):
+    def search_users(self, firstName=None, lastName=None, userId=None, format="json", external="false", **kwargs):
         config = cherrypy.request.app.config['filelocker']
         user, foundUsers, sMessages, fMessages, tooManyResults = (cherrypy.session.get("user"),[], [], [], False)
         external = False if external.lower() != "true" else True

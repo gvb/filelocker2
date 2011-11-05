@@ -18,10 +18,6 @@ class MessageController:
     @cherrypy.tools.requires_login()
     def create_message(self, subject, body, recipientIds, expiration, format="json", **kwargs):
         user, sMessages, fMessages = cherrypy.session.get("user"), [], []
-        print "Subject: %s" % str(subject)
-        print "Body: %s" % str(body)
-        print "Recipients: %s" % str(recipientIds)
-        print "Expiration: %s" % str(expiration)
         try:
             maxExpiration = datetime.datetime.today() + datetime.timedelta(days=cherrypy.request.app.config['filelocker']['max_file_life_days'])
             expiration = datetime.datetime(*time.strptime(strip_tags(expiration), "%m/%d/%Y")[0:5]) if (kwargs.has_key('expiration') and strip_tags(expiration) is not None and expiration.lower() != "never") else maxExpiration
@@ -40,7 +36,7 @@ class MessageController:
             for recipientId in recipientIdList:
                 rUser = AccountController.get_user(recipientId)
                 if rUser is not None:
-                    session.add(MessageShare(message_id=newMessage.id, recipient_id=rUser.id))
+                    newMessage.message_shares.append(MessageShare(message_id=newMessage.id, recipient_id=rUser.id))
                 else:
                     fMessages.append("Could not send to user with ID:%s - Invalid user ID" % str(recipientId))
             session.commit()
