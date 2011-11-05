@@ -336,6 +336,10 @@ class AuditLog(Base):
 def create_admin_user(dburi, password):
     adminUser = User(id="admin", first_name="Administrator", quota=1024, date_tos_accept=datetime.datetime.now())
     adminUser.set_password(password)
+    testUser1 = User(id="wbdavis", first_name="Brett", last_name="Davis", quota=1024, date_tos_accept=datetime.datetime.now())
+    testUser1.set_password("test")
+    testUser2 = User(id="cmiller", first_name="Chris", last_name="Miller", quota=1024, date_tos_accept=datetime.datetime.now())
+    testUser2.set_password("test")
     engine = create_engine(dburi, echo=True)
     #Base.metadata.create_all(engine)
     Session = sessionmaker(bind=engine)
@@ -346,6 +350,8 @@ def create_admin_user(dburi, password):
     if oldAdmin is not None:
         session.delete(oldAdmin)
     session.add(adminUser)
+    session.add(testUser1)
+    session.add(testUser2)
     session.commit()
     print "Password after set: %s" % str(adminUser.password)
 
