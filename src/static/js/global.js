@@ -469,7 +469,7 @@ jQuery(document).ready(function(){
     
     // Load help documentation for all public and private pages.
     Help.load();
-    $("#helpBox").dialog($.extend({}, {
+    $("#helpBox").dialog($.extend({
         title: "<span class='help'>Help</span>"
     }, Defaults.largeDialog));
     

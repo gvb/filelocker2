@@ -11,35 +11,35 @@ FLFile = function() {
         $("input.datePast").datepicker({dateFormat: 'mm/dd/yy', showAnim: 'slideDown', maxDate: 0});
         $("#fileName").prop("checked", false);
         
-        $("#uploadBox").dialog($.extend({}, {
+        $("#uploadBox").dialog($.extend({
             title: "<span class='upload'>Upload a File</span>"
         }, Defaults.smallDialog));
-        $("#uploadRequestBox").dialog($.extend({}, {
+        $("#uploadRequestBox").dialog($.extend({
             title: "<span class='document_alert'>Request Upload to Filelocker</span>"
         }, Defaults.smallDialog));
-        $("#uploadRequestLinkBox").dialog($.extend({}, {
+        $("#uploadRequestLinkBox").dialog($.extend({
             title: "<span class='globe'>View Public URL for Upload Request</span>"
         }, Defaults.smallDialog));
-        $("#publicShareLinkBox").dialog($.extend({}, {
+        $("#publicShareLinkBox").dialog($.extend({
             title: "<span class='globe'>View Public URL</span>"
         }, Defaults.smallDialog));
-        $("#publicShareBox").dialog($.extend({}, {
+        $("#publicShareBox").dialog($.extend({
             title: "<span class='globe'>Share a File Publicly</span>",
             close: function() { load(); }
         }, Defaults.smallDialog));
-        $("#fileNotesBox").dialog($.extend({}, {
+        $("#fileNotesBox").dialog($.extend({
             title: "<span class='view'>View File Notes</span>"
         }, Defaults.smallDialog));
         if (GEOTAGGING)
         {
-            $("#fileUploadLocationBox").dialog($.extend({}, {
+            $("#fileUploadLocationBox").dialog($.extend({
                 title: "<span class='map'>View File Upload Location</span>"
             }, Defaults.smallDialog));
         }
-        $("#fileStatisticsBox").dialog($.extend({}, {
+        $("#fileStatisticsBox").dialog($.extend({
             title: "<span class='statistics'>View File Statistics</span>"
         }, Defaults.smallDialog));
-        $("#shareMultiBox").dialog($.extend({}, {
+        $("#shareMultiBox").dialog($.extend({
             title: "<span class='share'>Share a File</span>",
             close: function() { load(); }
         }, Defaults.smallDialog));
@@ -219,12 +219,12 @@ FLFile = function() {
                             systemUpload = "yes";
                     }
                     uploader.setParams({
-                        'scanFile': $("#uploadScanFile").is(":checked"),
-                        'fileNotes': $("#uploadFileNotes").val(),
-                        'expiration': $("#uploadExpiration").val(),
-                        'uploadIndex': id,
-                        'systemUpload': systemUpload,
-                        'fileName': fileName
+                        scanFile: $("#uploadScanFile").is(":checked"),
+                        fileNotes: $("#uploadFileNotes").val(),
+                        expiration: $("#uploadExpiration").val(),
+                        uploadIndex: id,
+                        systemUpload: systemUpload,
+                        fileName: fileName
                     });
                     $("#uploadBox").dialog("close");
                     continuePolling = true;

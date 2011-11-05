@@ -112,16 +112,16 @@ jQuery(document).ready(function() {
     $("#availableRoles div").css('width', $("#nameRoleContainer").width()+2);
 //     $.tablesorter.defaults.headers = {0: {sorter: false}, 4: {sorter: false}};
     $("#quotaProgressBar").progressbar({value:0});
-    $("#editAccountBox").dialog($.extend({}, Defaults.largeDialog, {
+    $("#editAccountBox").dialog($.extend({
         title: "<span class='gear'>Edit Account</span>"
-    }));
-    $("#messagesBox").dialog($.extend({}, Defaults.largeDialog, {
+    }, Defaults.largeDialog));
+    $("#messagesBox").dialog($.extend({
         title: "<span class='message'>Messages</span>"
-    }));
-    $("#createMessageBox").dialog($.extend({}, Defaults.largeDialog, {
+    }, Defaults.largeDialog));
+    $("#createMessageBox").dialog($.extend({
         title: "<span class='new_message'>Create Message</span>"
-    }));
-    $("#confirmBox").dialog($.extend({}, Defaults.smallDialog, {
+    }, Defaults.largeDialog));
+    $("#confirmBox").dialog($.extend({
         title: "<span class='alert'>Confirm Action</span>",
         width: 350,
         buttons: {
@@ -133,7 +133,7 @@ jQuery(document).ready(function() {
                 $(this).dialog("close");
             }
         }
-    }));
+    }, Defaults.smallDialog));
     $("#account_sections").tabs();
     $("#fileStatistics").tabs();
     $("#CLIKeyTableSorter").tablesorter({
@@ -217,9 +217,9 @@ jQuery(document).ready(function() {
     FLFile.init();
     if (BANNER)
     {
-        $("#bannerBox").dialog($.extend({}, Defaults.smallDialog, {
+        $("#bannerBox").dialog($.extend({
             title: "<span class='help'>Message from the Administrator:</span>"
-        }));
+        }, Defaults.smallDialog));
         $("#bannerBox").dialog("open");
     }
     Message.getCount();

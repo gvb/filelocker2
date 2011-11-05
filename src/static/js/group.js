@@ -10,10 +10,10 @@ Group = function() {
                     Filelocker.login();
                 else
                 {
-                    $("#viewGroupBox").dialog($.extend({}, Defaults.largePopup, {
+                    $("#viewGroupBox").dialog($.extend({
                         title: "<span class='view'>View Group Membership</span>",
                         close: function() { load(); }
-                    }));
+                    }, Defaults.largeDialog));
                     if($("#groupsTable tr").length>0)
                     {
                         $("#groupTableSorter").tablesorter({
@@ -83,9 +83,9 @@ Group = function() {
                     Filelocker.login();
                 else
                 {
-                    $("#viewGroupBox").dialog($.extend({}, Defaults.largePopup, {
+                    $("#viewGroupBox").dialog($.extend({
                         title: "<span class='view'>View Group Membership</span>"
-                    }));
+                    }, Defaults.largeDialog));
                     $("#current_members").accordion({ autoHeight: false });
                     Account.Search.init("manage_groups");
                     $("#viewGroupBox").dialog("open");

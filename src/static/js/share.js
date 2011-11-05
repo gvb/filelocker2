@@ -22,9 +22,9 @@ Share = function() {
                     Filelocker.login();
                 else
                 {
-                    $("#shareMultiBox").dialog($.extend({}, largePopup, {
+                    $("#shareMultiBox").dialog($.extend({
                         title: "<span class='share'>Share a File</span>"
-                    }));
+                    }, Defaults.largeDialog));
                     Account.Search.init("private_sharing");
                     $("#current_shares").accordion({ autoHeight: false });
                     if(accordionIndex != null)
