@@ -4,29 +4,6 @@
     </div><!--End Wrapper 2 col - Content Area -->
     
 <!-- Begin Lightboxen -->
-#if $AccountController.user_has_permission($user, "admin")
-<div id="updatePasswordBox" class="hidden">
-    <div class="popup_wrapper">
-        <div class="popup_small">
-            <form action="" name="form" id="updatePasswordParameter">
-            <input type="hidden" id="updatePasswordName"/>
-            <div>
-                <label for="updatePassword">Password</label>
-                <input type="password" name="updatePassword" id="updatePassword" />
-            </div>
-            <div>
-                <label for="confirmUpdatePassword">Password</label>
-                <input type="password" name="confirmUpdatePassword" id="confirmUpdatePassword" />
-            </div>
-             <div>
-                <div class="button"><a href="javascript:updateConfigPassword();" title="Update a configuration password" class="acceptButton"><span>Set Password</span></a></div>
-            </div>
-            <div class="clear"></div>
-            </form>
-        </div>
-    </div>
-</div>
-#end if
 <div id="uploadBox" class="hidden">
     <div class="popup_wrapper">
         <div class="popup_small">
@@ -89,7 +66,7 @@
                 </div>
                 <div>
                     <label for="uploadRequestShareType">Other options:</label>
-                    <input type="checkbox" id="uploadRequestShareType" onclick="javascript:UploadRequest.toggleType();" /><span onclick="javascript:Utility.check('uploadRequestShareType');javascript:toggleUploadRequestShareType();">Allow multiple file uploads for this request (requires password)?</span>
+                    <input type="checkbox" id="uploadRequestShareType" onclick="javascript:UploadRequest.toggleType();" /><span onclick="javascript:Utility.check('uploadRequestShareType');javascript:UploadRequest.toggleType();">Allow multiple file uploads for this request (requires password)?</span>
                 </div>
                 <div>
                     <input type="checkbox" id="uploadRequestScanFile" checked="checked" /><span onclick="javascript:Utility.check('uploadRequestScanFile');">Force a virus scan for uploaded files?</span>
@@ -142,10 +119,10 @@
             </div>
             <div>
                 <label for="publicShareType">Other options:</label>
-                <input type="checkbox" id="publicShareType" onclick="javascript:togglePublicShareType();" /><span onclick="javascript:Utility.check('publicShareType');javascript:togglePublicShareType();">Allow multiple downloads (requires password)?</span>
+                <input type="checkbox" id="publicShareType" onclick="javascript:Share.Public.toggleType();" /><span onclick="javascript:Utility.check('publicShareType');javascript:Share.Public.toggleType();">Allow multiple downloads (requires password)?</span>
             </div>
             <div>
-                <input type="checkbox" id="publicSharePasswordSelector" onclick="javascript:togglePublicSharePassword();"/><span onclick="javascript:Utility.check('publicSharePasswordSelector');javascript:togglePublicSharePassword();">Password protect this public share?</span>
+                <input type="checkbox" id="publicSharePasswordSelector" onclick="javascript:Share.Public.TogglePassword();"/><span onclick="javascript:Utility.check('publicSharePasswordSelector');javascript:Share.Public.togglePassword();">Password protect this public share?</span>
                 <span id="publicShareSelector" style="display:none">
                     <label for="publicSharePassword">Password:</label>
                     <input type="password" name="publicSharePassword" id="publicSharePassword" />
@@ -157,7 +134,7 @@
             <input type="hidden" id="publicShareDestination" value=""/>
             <div>
                 <label for="publicShareButton">By clicking "Share" below, you will make this file publicly accessible at the generated URL.</label>
-                <div class="button"><a href="javascript:publicShareFile()" title="Share this file publicly" class="shareButton" id="publicShareButton"><span>Share</span></a></div>
+                <div class="button"><a href="javascript:Share.Public.create()" title="Share this file publicly" class="shareButton" id="publicShareButton"><span>Share</span></a></div>
             </div>
             </form>
         </div>
@@ -207,7 +184,7 @@
                             <input type="checkbox" id="createUserRole"/><span onclick="javascript:Utility.check('createUserRole');">Is this user a role?</span>
                         </div>
                         <div>
-                            <div class="button" id="createUserButton"><a href="javascript:createUser();" title="Create a new Filelocker user" class="saveButton"><span>Create User</span></a></div>
+                            <div class="button" id="createUserButton"><a href="javascript:Admin.User.create();" title="Create a new Filelocker user" class="saveButton"><span>Create User</span></a></div>
                         </div>
                         <div class="clear"></div>
                     </form>
@@ -278,7 +255,7 @@
                 </div>
                 <input type="hidden" id="updateUserId" value=""/>
                 <div>
-                    <div class="button" id="updateUserButton"><a href="javascript:updateFilelockerUser();" title="Save changes to this Filelocker user" class="saveButton"><span>Update User</span></a></div>
+                    <div class="button" id="updateUserButton"><a href="javascript:Admin.User.update();" title="Save changes to this Filelocker user" class="saveButton"><span>Update User</span></a></div>
                 </div>
                 <div class="clear"></div>
             </form>
@@ -313,9 +290,9 @@
             <input type="text" style="width: 0; height: 0; top: -100px; position: absolute;"/><!-- jQuery UI dialogs autofocus to the first element. -->
             <input type="hidden" id="userHistoryCurrentUser" />
             <label for="userHistoryStartDate">Start Date:</label>
-            <input type="text" id="userHistoryStartDate" class="datePast" value="$startDateFormatted.strftime('%m/%d/%Y')" onselect="this.value=''" onchange="javascript:promptViewUserHistory();" />
+            <input type="text" id="userHistoryStartDate" class="datePast" value="$startDateFormatted.strftime('%m/%d/%Y')" onselect="this.value=''" onchange="javascript:Admin.User.viewHistory();" />
             <label for="userHistoryEndDate">End Date:</label>
-            <input type="text" id="userHistoryEndDate" class="datePast" value="$endDateFormatted.strftime('%m/%d/%Y')" onselect="this.value=''" onchange="javascript:promptViewUserHistory();" />
+            <input type="text" id="userHistoryEndDate" class="datePast" value="$endDateFormatted.strftime('%m/%d/%Y')" onselect="this.value=''" onchange="javascript:Admin.User.viewHistory();" />
             <div id="userHistoryTableSorterWrapper">
                 <table class="file_table" id="userHistoryTableSorter" >
                 <thead>
@@ -350,7 +327,7 @@
                     <input type="text" name="createAttributeName" id="createAttributeName" size="10" value="" />
                 </div>
                 <div>
-                    <div class="button" id="createAttributeButton"><a href="javascript:createAttribute();" title="Create a dynamic attribute" class="saveButton"><span>Create Attribute</span></a></div>
+                    <div class="button" id="createAttributeButton"><a href="javascript:Admin.Attribute.create();" title="Create a dynamic attribute" class="saveButton"><span>Create Attribute</span></a></div>
                 </div>
                 <div class="clear"></div>
             </form>
@@ -447,7 +424,7 @@
                         </div>
                         #end if
                         <div>
-                            <div class="button" id="updateButton"><a href="javascript:updateUser('$user.id');" title="Save changes to your account settings" class="saveButton"><span>Update Account</span></a></div>
+                            <div class="button" id="updateButton"><a href="javascript:Account.updateUser('$user.id');" title="Save changes to your account settings" class="saveButton"><span>Update Account</span></a></div>
                         </div>
                         <div class="clear"></div>
                     </form>
@@ -456,7 +433,7 @@
                     <form action="" name="hiddenSharesForm" id="hiddenSharesForm">
                         <label for="unhideButton">If you have previously hidden Filelocker shares, you can unhide them below.</label>
                         <div>
-                            <div class="button" id="unhideButton"><a href="javascript:unhideAllPrivateShares();" title="Unhide all previously hidden Filelocker shares" class="unhideButton"><span>Unhide All Shares</span></a></div>
+                            <div class="button" id="unhideButton"><a href="javascript:Share.unhide();" title="Unhide all previously hidden Filelocker shares" class="unhideButton"><span>Unhide All Shares</span></a></div>
                         </div>
                         <div class="clear"></div>
                     </form>
@@ -514,8 +491,8 @@
                     <ul>
                         <li><a href="#inbox">Inbox</a></li>
                         <li><a href="#sent">Sent</a></li>
-                        <span class="buttonNarrow"><a href="javascript:deleteSelectedMessages();" title="Delete the selected messages" class="deleteMessagesButtonNarrow"><span class="deleteMessagesButtonNarrow">Delete</span></a></span>
-                        <span class="buttonNarrow"><a href="javascript:promptCreateMessage();" title="Create a new Filelocker message" class="messageNewButtonNarrow"><span>New</span></a></span>
+                        <span class="buttonNarrow"><a href="javascript:Message.deleteSelected();" title="Delete the selected messages" class="deleteMessagesButtonNarrow"><span class="deleteMessagesButtonNarrow">Delete</span></a></span>
+                        <span class="buttonNarrow"><a href="javascript:Message.promptCreate();" title="Create a new Filelocker message" class="messageNewButtonNarrow"><span>New</span></a></span>
                     </ul>
                     <div id="inbox">
                         <table class="file_table" id="messageInboxTableSorter">

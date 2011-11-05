@@ -87,7 +87,7 @@ Group = function() {
                         title: "<span class='view'>View Group Membership</span>"
                     }));
                     $("#current_members").accordion({ autoHeight: false });
-                    initSearchWidget("manage_groups");
+                    Account.Search.init("manage_groups");
                     $("#viewGroupBox").dialog("open");
                 }
             }
@@ -100,7 +100,7 @@ Group = function() {
             StatusResponse.create("adding new group", "You are currently in the process of adding/editing a group.", false);
         else
         {
-            $("#groupsTable").append("<tr id='group_new' class='groupRow'><td id='groupNameElement_new' class='groupNameElement'><input id='checkbox_new' type='checkbox' disabled='disabled'></td><td><input id='name_new' type='text'></input>&nbsp;<a href='javascript:createGroup();' class='inlineLink' title='Create Group'><span class='plus'>&nbsp;</span></a><a href='javascript:loadManageGroups();' class='inlineLink' title='Cancel Group Creation'><span class='cross'>&nbsp;</span></a></td><td>Not editable</td><td class='dropdownArrow rightborder'></td></tr>");
+            $("#groupsTable").append("<tr id='group_new' class='groupRow'><td id='groupNameElement_new' class='groupNameElement'><input id='checkbox_new' type='checkbox' disabled='disabled'></td><td><input id='name_new' type='text'></input>&nbsp;<a href='javascript:Group.create();' class='inlineLink' title='Create Group'><span class='plus'>&nbsp;</span></a><a href='javascript:Group.load();' class='inlineLink' title='Cancel Group Creation'><span class='cross'>&nbsp;</span></a></td><td>Not editable</td><td class='dropdownArrow rightborder'></td></tr>");
             if($.browser.mozilla)
                 $("#name_new").keypress(addGroupIfEnter); 
             else
@@ -121,8 +121,8 @@ Group = function() {
             $("#group_" + groupId).empty();
             var rowhtml = "<td id='groupNameElement_new' class='groupNameElement'>";
             rowhtml += "<input id='checkbox_new' type='checkbox' disabled='disabled'/></td><td><input id='name_new' type='text' value='"+currentName+"'></input>&nbsp;&nbsp;";
-            rowhtml += "<a href='javascript:updateGroup("+groupId+");' class='inlineLink' title='Save New Name'><span class='save'>&nbsp;</span></a>";
-            rowhtml += "<a href='javascript:loadManageGroups();' class='inlineLink' title='Cancel Rename'><span class='cross'>&nbsp;</span></a></td>";
+            rowhtml += "<a href='javascript:Group.update("+groupId+");' class='inlineLink' title='Save New Name'><span class='save'>&nbsp;</span></a>";
+            rowhtml += "<a href='javascript:Group.load();' class='inlineLink' title='Cancel Rename'><span class='cross'>&nbsp;</span></a></td>";
             rowhtml += "<td>Renaming...</td><td class='dropdownArrow rightborder'></td><input type='hidden' id='group_new' />";
             $("#group_" + groupId).append(rowhtml);
             $("#name_new").focus();

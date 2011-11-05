@@ -16,7 +16,7 @@ Message = function() {
                         shortenedSubject = shortenedSubject.substring(0,22) + "..." + shortenedSubject.substring(shortenedSubject.length-5,shortenedSubject.length);
                     recvhtml += "<tr id='"+value.id+"_inbox' class='groupRow "+unreadMessage+"' onClick='javascript:Message.read(\""+value.id+"\",\"inbox\");'>";
                     recvhtml += "<td class='leftborder'><input id='"+value.id+"' type='checkbox' class='messageInboxSelectBox' /><span id='"+value.id+"_subject' class='hidden'>"+value.subject+"</span><span id='"+value.id+"_body' class='hidden'>"+value.body+"</span></td>";
-                    recvhtml += "<td><a href='javascript:Message.read(\""+value.id+"\",\"inbox\");' class='messageLink'>"+value.ownerId+"</a></td><td><a class='messageLink' href='javascript:Message.read(\""+value.id+"\",\"inbox\");'>"+shortenedSubject+"</a></td><td>"+value.creationDatetime+"</td><td class='rightborder'><a href='javascript:Message.promptCreateReply(\""+value.subject+"\",\""+value.ownerId+"\");javascript:manualSearch(\""+value.ownerId+"\", \"messages\");' class='inlineLink' title='Reply to this message'><span class='replyMessage'>&nbsp;</span></a><a href='javascript:Utility.promptConfirmation(\"Message.del\", [\""+value.id+"\"]);' class='inlineLink' title='Delete this message'><span class='cross'>&nbsp;</span></a></td>";
+                    recvhtml += "<td><a href='javascript:Message.read(\""+value.id+"\",\"inbox\");' class='messageLink'>"+value.ownerId+"</a></td><td><a class='messageLink' href='javascript:Message.read(\""+value.id+"\",\"inbox\");'>"+shortenedSubject+"</a></td><td>"+value.creationDatetime+"</td><td class='rightborder'><a href='javascript:Message.promptCreateReply(\""+value.subject+"\",\""+value.ownerId+"\");javascript:Account.Search.manual(\""+value.ownerId+"\", \"messages\");' class='inlineLink' title='Reply to this message'><span class='replyMessage'>&nbsp;</span></a><a href='javascript:Utility.promptConfirmation(\"Message.del\", [\""+value.id+"\"]);' class='inlineLink' title='Delete this message'><span class='cross'>&nbsp;</span></a></td>";
                     recvhtml += "</tr>";
                 });
                 if(recvhtml === "")
@@ -119,7 +119,7 @@ Message = function() {
         $("#flMessageSubject").val("");
         $("#flMessageRecipientId").val("");
         $("#flMessageBody").val("");
-        initSearchWidget("messages");
+        Account.Search.init("messages");
         $("#createMessageBox").dialog("open");
     }
 
@@ -131,7 +131,7 @@ Message = function() {
         else
             $("#flMessageSubject").val("RE: " + subject);
         $("#flMessageBody").val("");
-        initSearchWidget("messages");
+        Account.Search.init("messages");
         $("#createMessageBox").dialog("open");
     }
 

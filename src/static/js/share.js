@@ -1,16 +1,7 @@
 Share = function() {
-    function showMulti()
-    {
-        if ($("#multiShare").is(':hidden'))
-            $("#multiShare").show("clip", {}, 500);
-    }
-    function hideMulti()
-    {
-        if (!$("#multiShare").is(':hidden'))
-            $("#multiShare").hide();
-    }
     function prompt(fileId, accordionIndex, tabIndex)
     {
+        //todo var fileIds = fileId || $.each...
         var fileIds = "";
         if (fileId != null)
             fileIds = fileId;
@@ -20,7 +11,8 @@ Share = function() {
                 fileIds+=$(this).val()+",";
             });
         }
-        
+
+        //todo no .load
         $("#shareMultiBox").load(FILELOCKER_ROOT+"/file/get_user_file_list?format=searchbox_html&ms=" + new Date().getTime(), {fileIdList: fileIds}, function (responseText, textStatus, xhr) {
             if (textStatus == "error")
                 StatusResponse.create("loading sharing page", "Error "+xhr.status+": "+xhr.textStatus, false);
@@ -33,11 +25,11 @@ Share = function() {
                     $("#shareMultiBox").dialog($.extend({}, largePopup, {
                         title: "<span class='share'>Share a File</span>"
                     }));
-                    initSearchWidget("private_sharing");
+                    Account.Search.init("private_sharing");
                     $("#current_shares").accordion({ autoHeight: false });
-                    if(accordionIndex !== undefined)
+                    if(accordionIndex != null)
                         $("#current_shares").accordion("activate", tabIndex);
-                    if(tabIndex !== undefined)
+                    if(tabIndex != null)
                         $("#private_sharing_sections").tabs("select", tabIndex);
                     $("#shareMultiBox").dialog("open");
                 }
@@ -45,6 +37,163 @@ Share = function() {
             Utility.tipsyfy();
         });
     }
+    function hide(fileId)
+    {
+        Filelocker.request("/share/hide_shares", "hiding share", {fileIds: fileId}, true, function() {
+            FLFile.load();
+        });
+    }
+    function unhide()
+    {
+        Filelocker.request("/share/unhide_shares", "unhiding shares", {}, true, function() {
+            $("#editAccountBox").dialog("close");
+            FLFile.load();
+        })
+    }
+    function hideMulti()
+    {
+        if ($("#multiShare").is(':visible'))
+            $("#multiShare").hide();
+    }
+    function showMulti()
+    {
+        if ($("#multiShare").is(':hidden'))
+            $("#multiShare").show("clip", {}, 500);
+    }
+
+    User = function() {
+        function create(targetId, fileId)
+        {
+            var action = "sharing files with users";
+            var fileIds = fileId || $("#selectedFiles").val();
+            if(fileIds === "" || fileIds === ",")
+                StatusResponse.create(action, "Select file(s) for sharing.", false);
+            else
+            {
+                var notify = $("#private_sharing_notifyUser").is(":checked") ? "yes" : "no";
+                Filelocker.request("/share/create_user_shares", action, {fileIds: fileIds, targetId: targetId, notify: notify}, true, function() {
+                    Share.prompt(fileIds, 0, 0);
+                });
+            }
+        }
+        function del(targetId, fileId)
+        {
+            var action = "unsharing files with users";
+            var fileIds = "";
+            if (fileId != null)
+                fileIds = fileId;
+            else
+            {
+                selectedFiles = [];
+                $("#sharesTable .fileSelectBox:checked").each(function() {selectedFiles.push($(this).val());});
+                $.each(selectedFiles, function(index,value) {
+                    fileIds += value + ",";
+                });
+            }
+
+            if(fileIds === "" || fileIds === ",")
+                StatusResponse.create(action, "Select file(s) for unsharing.", false);
+            else
+            {
+                Filelocker.request("/share/delete_user_shares", action, {fileIds: fileIds, targetId: targetId}, true, function() {
+                    Share.prompt(fileIds, 0, 0);
+                });
+            }
+        }
+        return {
+            create:create,
+            del:del
+        }
+    }();
+
+    Group = function() {
+        function create(targetId, fileId)
+        {
+            var action = "sharing files with groups";
+            var fileIds = fileId || $("#selectedFiles").val();
+            if(fileIds === "" || fileIds === ",")
+                StatusResponse.create(action, "Select file(s) for sharing.", false);
+            else
+            {
+                var notify = $("#private_sharing_notifyGroup").is(":checked") ? "yes" : "no";
+                Filelocker.request("/share/create_group_shares", action, {fileIds: fileIds, targetId: targetId, notify: notify}, true, function() {
+                    Share.prompt(fileIds, 1, 1);
+                });
+            }
+        }
+        function del(targetId, fileId)
+        {
+            var action = "unsharing files with groups";
+            var fileIds = "";
+            if (fileId != null)
+                fileIds = fileId;
+            else
+            {
+                selectedFiles = [];
+                $("#sharesTable .fileSelectBox:checked").each(function() {selectedFiles.push($(this).val());});
+                $.each(selectedFiles, function(index,value) {
+                    fileIds += value + ",";
+                });
+            }
+
+            if(fileIds === "" || fileIds === ",")
+                StatusResponse.create(action, "Select file(s) for unsharing.", false);
+            else
+            {
+                Filelocker.request("/share/delete_group_shares", action, {fileIds: fileIds, targetId: targetId}, true, function() {
+                    Share.prompt(fileIds, 1, 1);
+                });
+            }
+        }
+        return {
+            create:create,
+            del:del
+        };
+    }();
+
+    Attribute = function() {
+        function create(attributeId, fileId)
+        {
+            var action = "sharing files by attribute";
+            var fileIds = fileId || $("#selectedFiles").val();
+            if(fileIds === "" || fileIds === ",")
+                StatusResponse.create(action, "Select file(s) for sharing.", false);
+            else
+            {
+                Filelocker.request("/share/create_attribute_shares", action, {fileIds: fileIds, attributeId: attributeId}, true, function() {
+                    Share.prompt(fileIds, 2, 2);
+                });
+            }
+        }
+        function del(targetId, fileId)
+        {
+            var action = "unsharing files by attribute";
+            var fileIds = "";
+            if (fileId != null)
+                fileIds = fileId;
+            else
+            {
+                selectedFiles = [];
+                $("#sharesTable .fileSelectBox:checked").each(function() {selectedFiles.push($(this).val());});
+                $.each(selectedFiles, function(index,value) {
+                    fileIds += value + ",";
+                });
+            }
+
+            if(fileIds === "" || fileIds === ",")
+                StatusResponse.create(action, "Select file(s) for unsharing.", false);
+            else
+            {
+                Filelocker.request("/share/delete_attribute_shares", action, {fileIds: fileIds, targetId: targetId}, true, function() {
+                    Share.prompt(fileIds, 2, 2);
+                });
+            }
+        }
+        return {
+            create:create,
+            del:del
+        };
+    }();
 
     Public = function() {
         function create()
@@ -71,7 +220,7 @@ Share = function() {
         function del(fileId, destination)
         {
             Filelocker.request("/share/delete_public_share", "deleting public share", { fileId:fileId }, true, function() {
-                if(destination == "files")
+                if(destination === "files")
                     File.load();
             });
         }
@@ -131,124 +280,15 @@ Share = function() {
         };
     }();
 
-
-    function privateShareFiles(shareType, targetId, fileId)
-    {
-        var fileIds = "";
-        if (fileId === null || fileId === undefined)
-            fileIds = $("#selectedFiles").val();
-        else
-            fileIds = fileId;
-        if(fileIds === "" || fileIds === ",")
-            generatePseudoResponse("sharing files", "Select file(s) for sharing.", false);
-        else
-        {
-            var shareOptions = {};
-            var notify = "no";
-            var selectedTab = 0;
-            if (shareType == "group")
-            {
-                if ($("#private_sharing_notifyGroup").is(":checked"))
-                    notify = "yes";
-                shareOptions = {fileIds: fileIds, groupId: targetId, notify: notify};
-                selectedTab = 1;
-            }
-            else if (shareType == "user")
-            {
-                if ($("#private_sharing_notifyUser").is(":checked"))
-                    notify = "yes";
-                shareOptions = {fileIds: fileIds, targetId: targetId, notify: notify};
-                selectedTab = 0;
-            }
-            $.post(FILELOCKER_ROOT+'/share/create_private_share?format=json', shareOptions, 
-            function(returnData) 
-            {
-                showMessages(returnData, "sharing files");
-                promptShareFiles(fileIds, selectedTab, selectedTab);
-            }, 'json');
-        }
-    }
-
-    function unPrivateShareFiles(targetId, shareType, fileId)
-    {
-        var fileIds = "";
-        if (fileId === null || fileId === undefined)
-        {
-            selectedFiles = [];
-            $("#sharesTable .fileSelectBox:checked").each(function() {selectedFiles.push($(this).val());});
-            $.each(selectedFiles, function(index,value) {
-                fileIds += value + ",";
-            });
-        }
-        else
-            fileIds = fileId;
-        
-        if(fileIds === "" || fileIds === ",")
-            generatePseudoResponse("sharing files", "Select file(s) for un-sharing.", false);
-        else
-        {
-            var selectedTab = 0;
-            switch(shareType)
-            {
-                case 'private': selectedTab = 0; break;
-                case 'private_group': selectedTab = 1; break;
-                case 'private_attribute': selectedTab = 2; break;
-                default: selectedTab = 0; break;
-            }
-            $.post(FILELOCKER_ROOT+'/share/delete_share?format=json', {fileIds: fileIds, shareType: shareType, targetId: targetId}, 
-            function(returnData) 
-            {
-                showMessages(returnData, "unsharing files");
-                promptShareFiles(fileIds, selectedTab, selectedTab);
-            }, 'json');
-        }
-    }
-
-    function hidePrivateShare(fileId)
-    {
-        $.post(FILELOCKER_ROOT+'/share/hide_share?format=json', {fileIds: fileId}, 
-        function(returnData) 
-        {
-            showMessages(returnData, "hiding share");
-            loadMyFiles();
-        }, 'json');
-    }
-
-    function unhideAllPrivateShares()
-    {
-        $.post(FILELOCKER_ROOT+'/share/unhide_all_shares?format=json', {}, 
-        function(returnData) 
-        {
-            showMessages(returnData, "unhiding shares");
-            $("#editAccountBox").dialog("close");
-            loadMyFiles();
-        }, 'json');
-    }
-
-    function privateAttributeShareFiles(attributeId, fileId)
-    {
-        var fileIds = "";
-        if (fileId === null || fileId === undefined)
-            fileIds = $("#selectedFiles").val();
-        else
-            fileIds = fileId;
-        if(fileIds === "" || fileIds === ",")
-            generatePseudoResponse("sharing files", "Select file(s) for sharing.", false);
-        else
-        {
-            $.post(FILELOCKER_ROOT+'/share/create_private_attribute_shares?format=json', {fileIds: fileIds, attributeId: attributeId}, 
-            function(returnData) 
-            {
-                showMessages(returnData, "sharing files");
-                promptShareFiles(fileIds, 2, 2);
-            }, 'json');
-        }
-    }
-    
     return {
+        prompt:prompt,
+        hide:hide,
+        unhide:unhide,
         hideMulti:hideMulti,
         showMulti:showMulti,
-        prompt:prompt,
+        User:User,
+        Group:Group,
+        Attribute:Attribute,
         Public:Public
-    }
+    };
 }();

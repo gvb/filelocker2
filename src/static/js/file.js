@@ -151,7 +151,7 @@ FLFile = function() {
                 {
                     init();
                     if($("#adminBackLink"))
-                        $("#adminBackLink").html("<div id='adminLink' class='settings'><a href='javascript:loadAdminInterface()' title='Launch the admin panel'>Admin</a></div>");
+                        $("#adminBackLink").html("<div id='adminLink' class='settings'><a href='javascript:Admin.load()' title='Launch the admin panel'>Admin</a></div>");
                     Utility.getRandomTip();
                     Utility.tipsyfy();
                 }

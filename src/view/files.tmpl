@@ -9,7 +9,7 @@
         <div class="button"><a href="javascript:FLFile.prompt();" title="Upload a new file to Filelocker" class="uploadButton"><span>Upload</span></a></div>
         <div class="button hidden" id="multiShare"><a href="javascript:StatusResponse.hide();javascript:Share.prompt();" title="Manage shares for the selected files" class="shareButton"><span>Manage Shares</span></a></div>
         <div class="button"><a href="javascript:StatusResponse.hide();javascript:Group.load();" title="Manage my groups of Filelocker users" class="manageGroupsButton"><span>Manage Groups</span></a></div>
-        <div class="button"><a href="javascript:deleteFiles();" title="Permanently delete the selected files from Filelocker" class="deleteButton"><span>Delete</span></a></div>
+        <div class="button"><a href="javascript:FLFile.deleteFiles();" title="Permanently delete the selected files from Filelocker" class="deleteButton"><span>Delete</span></a></div>
     </div>
     
     <div class="file_list"> <!--Files content area-->
@@ -57,8 +57,8 @@
                                 <li>
                                     #if $f.public_shares is not None and $len($f.public_shares) > 0
                                         #for $publicShare in $f.public_shares
-                                            <div class="itemTitleMedium"><span class="globe">Public Share:</span>&nbsp;&nbsp;&nbsp;&nbsp;<a href="javascript:viewPublicShareURL('$publicShare.id')">(view link)</a></div>
-                                            <input type="checkbox" name="publicShareCheckbox_row_$rowId" value="yes" class="publicShareCheckbox" title="Unshare this file with users outside of $config['org_name']" onClick="javascript:unPublicShareFile('$f.id', 'files')" checked="checked" />
+                                            <div class="itemTitleMedium"><span class="globe">Public Share:</span>&nbsp;&nbsp;&nbsp;&nbsp;<a href="javascript:Share.Public.promptView('$publicShare.id')">(view link)</a></div>
+                                            <input type="checkbox" name="publicShareCheckbox_row_$rowId" value="yes" class="publicShareCheckbox" title="Unshare this file with users outside of $config['org_name']" onClick="javascript:Share.Public.del('$f.id', 'files')" checked="checked" />
                                         #end for
                                     #else
                                     #set $fileExpiration = "Never"
@@ -66,7 +66,7 @@
                                     #set $fileExpiration = $f.date_expires.strftime("%m/%d/%Y")
                                     #end if
                                     <div class="itemTitleMedium"><span class="globe">Public Share:</span></div>
-                                    <input type="checkbox" name="publicShareCheckbox_$f.id" value="no" class="publicShareCheckbox" title="Share this file with users outside of $config['org_name']" onClick="javascript:promptPublicShareFile('$f.id', '$f.name', '$fileExpiration', 'files')"/>
+                                    <input type="checkbox" name="publicShareCheckbox_$f.id" value="no" class="publicShareCheckbox" title="Share this file with users outside of $config['org_name']" onClick="javascript:Share.Public.promptView('$f.id', '$f.name', '$fileExpiration', 'files')"/>
                                     #end if
                                 </li>
                                 #if $f.owner_id == $user.id
@@ -91,7 +91,7 @@
                                     #if $groupCount == 1
                                         #set $groupPlural = ""
                                     #end if
-                                    <div class="itemTitle"><span class="privatelyShared">Shares: </span></div><a href="javascript:promptShareFiles('$f.id');">$userCount user$userPlural, $groupCount group$groupPlural</a>
+                                    <div class="itemTitle"><span class="privatelyShared">Shares: </span></div><a href="javascript:Share.prompt('$f.id');">$userCount user$userPlural, $groupCount group$groupPlural</a>
                                 </li>
                                 #end if
                                 <hr />
@@ -119,7 +119,7 @@
                                     #if $fileGeoData and $config['geotagging']
                                         <li><div class="itemTitleMedium"><span class="map"><a href="http://maps.google.com/maps?q=${fileGeoData.group(1)},${fileGeoData.group(2)}" title="View this file's upload location on Google Maps" target="_blank">View Upload Location</a></span></div></li>
                                     #end if
-                                    <li><div class="button" style="width: 185px;"><a href="javascript:promptShareFiles('$f.id');" title="Share this file with Filelocker users and groups" class="shareButton"><span><center>Share This File</center></span></a></div></li>
+                                    <li><div class="button" style="width: 185px;"><a href="javascript:Share.prompt('$f.id');" title="Share this file with Filelocker users and groups" class="shareButton"><span><center>Share This File</center></span></a></div></li>
                                 #end if
                             </ul>
                             </div>
@@ -191,8 +191,8 @@
                                 <li>
                                     #if $f.public_shares is not None and $len($f.public_shares) > 0
                                     #for $publicShare in $f.public_shares
-                                        <div class="itemTitleMedium"><span class="globe">Public Share:</span>&nbsp;&nbsp;&nbsp;&nbsp;<a href="javascript:viewPublicShareURL('$publicShare.id')">(view link)</a></div>
-                                        <input type="checkbox" name="publicShareCheckbox_row_$rowId" value="yes" class="publicShareCheckbox" title="Unshare this file with users outside of $config['org_name']" onClick="javascript:unPublicShareFile('$f.id', 'files')" checked="checked" />
+                                        <div class="itemTitleMedium"><span class="globe">Public Share:</span>&nbsp;&nbsp;&nbsp;&nbsp;<a href="javascript:Share.Public.viewURL('$publicShare.id')">(view link)</a></div>
+                                        <input type="checkbox" name="publicShareCheckbox_row_$rowId" value="yes" class="publicShareCheckbox" title="Unshare this file with users outside of $config['org_name']" onClick="javascript:Share.Public.del('$f.id', 'files')" checked="checked" />
                                     #end for
                                     #else
                                     #set $fileExpiration = "Never"
@@ -200,7 +200,7 @@
                                     #set $fileExpiration = $f.date_expires.strftime("%m/%d/%Y")
                                     #end if
                                     <div class="itemTitleMedium"><span class="globe">Public Share:</span></div>
-                                    <input type="checkbox" name="publicShareCheckbox_$f.id" value="no" class="publicShareCheckbox" title="Share this file with users outside of $config['org_name']" onClick="javascript:promptPublicShareFile('$f.id', '$f.name', '$fileExpiration', 'files')"/>
+                                    <input type="checkbox" name="publicShareCheckbox_$f.id" value="no" class="publicShareCheckbox" title="Share this file with users outside of $config['org_name']" onClick="javascript:Share.Public.prompt('$f.id', '$f.name', '$fileExpiration', 'files')"/>
                                     #end if
                                 </li>
                                 #set $userCount = len($f.user_shares)
@@ -238,7 +238,7 @@
                                 #if $fileGeoData and $config['geotagging']
                                     <li><div class="itemTitleMedium"><span class="map"><a href="http://maps.google.com/maps?q=${fileGeoData.group(1)},${fileGeoData.group(2)}" title="View this file's upload location on Google Maps" target="_blank">View Upload Location</a></span></div></li>
                                 #end if
-                                <li><div class="button" style="width: 185px;"><a href="javascript:promptShareFiles('$f.id');" title="Share this file with Filelocker users and groups" class="shareButton"><span><center>Share This File</center></span></a></div></li>
+                                <li><div class="button" style="width: 185px;"><a href="javascript:Share.prompt('$f.id');" title="Share this file with Filelocker users and groups" class="shareButton"><span><center>Share This File</center></span></a></div></li>
                             </ul>
                             </div>
                         </div>
@@ -325,8 +325,8 @@
                                     #if $fileGeoData and $config['geotagging']
                                         <li><div class="itemTitleMedium"><span class="map"><a href="http://maps.google.com/maps?q=${fileGeoData.group(1)},${fileGeoData.group(2)}" title="View this file's upload location on Google Maps" target="_blank">View Upload Location</a></span></div></li>
                                     #end if
-                                    <li><div class="itemTitleMedium"><span class="hide"><a href="javascript:hidePrivateShare('$f.id');" title="Hide this share from Filelocker. Unhide shares in Account Settings" class="redText">Hide This Share</a></span></div></li>
-                                    <li><div class="itemTitleWide"><span id="takeOwnership_$f.id" class="take_ownership"><a href="javascript:takeFile('$f.id');" title="Move this file to 'My Files' for resharing">Take Ownership (to Reshare)</a></span></div></li>
+                                    <li><div class="itemTitleMedium"><span class="hide"><a href="javascript:Share.hide('$f.id');" title="Hide this share from Filelocker. Unhide shares in Account Settings" class="redText">Hide This Share</a></span></div></li>
+                                    <li><div class="itemTitleWide"><span id="takeOwnership_$f.id" class="take_ownership"><a href="javascript:FLFile.take('$f.id');" title="Move this file to 'My Files' for resharing">Take Ownership (to Reshare)</a></span></div></li>
                                     <li><div class="button" style="width: 185px"><a href="$config['root_url']/file/download?fileId=$f.id" title="Download this file from Filelocker" class="saveButton"><span><center>Download This File</center></span></a></div></li>
                                     </ul>
                                 </div>
@@ -415,7 +415,7 @@
                                             #if $fileGeoData and $config['geotagging']
                                                 <li><div class="itemTitleMedium"><span class="map"><a href="http://maps.google.com/maps?q=${fileGeoData.group(1)},${fileGeoData.group(2)}" title="View this file's upload location on Google Maps" target="_blank">View Upload Location</a></span></div></li>
                                             #end if
-                                            <li><div class="itemTitleWide"><span id="takeOwnership_$f.id" class="take_ownership"><a href="javascript:takeFile('$f.id');" title="Move this file to 'My Files' for resharing">Take Ownership (to Reshare)</a></span></div></li>
+                                            <li><div class="itemTitleWide"><span id="takeOwnership_$f.id" class="take_ownership"><a href="javascript:FLFile.take('$f.id');" title="Move this file to 'My Files' for resharing">Take Ownership (to Reshare)</a></span></div></li>
                                             <li><div class="button" style="width: 185px"><a href="$config['root_url']/file/download?fileId=$f.id" title="Download this file from Filelocker" class="saveButton"><span><center>Download This File</center></span></a></div></li>
                                             </ul>
                                         </div>
