@@ -120,7 +120,7 @@ class MessageController:
 
     @cherrypy.expose
     @cherrypy.tools.requires_login()
-    def delete_shared_messages(self, messageIds, format="json", **kwargs):
+    def delete_message_shares(self, messageIds, format="json", **kwargs):
         user, sMessages, fMessages = cherrypy.session.get("user"), [], []
         try:
             messageIdList = split_list_sanitized(messageIds)
@@ -133,7 +133,7 @@ class MessageController:
             session.commit()
             sMessages.append("Message(s) deleted")
         except Exception, e:
-            logging.error("[%s] [delete_received_messages] [Could not delete received message: %s]" % (user.id, str(e)))
+            logging.error("[%s] [delete_message_shares] [Could not delete received message: %s]" % (user.id, str(e)))
             fMessages.append("Could not delete received message: %s" % str(e))
         return fl_response(sMessages, fMessages, format)
 
@@ -145,15 +145,17 @@ class MessageController:
             messageIdList = split_list_sanitized(messageIds)
             for messageId in messageIdList:
                 message = session.query(Message).filter(Message.id==messageId).scalar()
-                if (message.recipient_id==user.id or message.owner_id == user.id):
+                if (message.owner_id==user.id or AccountController.user_has_permission(user, "admin")):
                     session.delete(message)
                 else:
                     fMessages.append("You do not have permission to delete message with ID: %s" % messageId)
+            session.commit()
             sMessages.append("Message(s) deleted")
         except Exception, e:
             logging.error("[%s] [delete_messages] [Could not delete message: %s]" % (user.id, str(e)))
             fMessages.append("Could not delete message: %s" % str(e))
         return fl_response(sMessages, fMessages, format)
+
 
 def decrypt_message(message):
     config = cherrypy.request.app.config['filelocker']
