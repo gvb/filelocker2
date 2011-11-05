@@ -10,11 +10,12 @@ Filelocker = function(){
     *       path (string):              Service function to call (with leading slash).
     *       action (string):            String for success/error messages in form of "[update or refresh]ing [section of valuation]".
     *       payloadObject (object):     Object to be consumed by endpoint.
-    *       showMessage (bool):         Determines whether to show a message if the request completes.
-    *       successFunction (function): OPTIONAL callback function.
+    *       showMessage (bool):         Determines whether to show a success message if the request completes and there are no failure messages from the server.
+    *       successFunction (function): OPTIONAL callback function to execute if the request completes.
     */
-    function request(path, action, payloadObject, showMessage, successFunction)
+    function request(path, action, payloadObject, showSuccessMessage, successFunction)
     {
+        console.log("Start \tN/A\t" + action);
         $.ajax({
             type: "POST",
             cache: false,
@@ -22,12 +23,14 @@ Filelocker = function(){
             url: FILELOCKER_ROOT + path,
             data: payloadObject,
             success: function(response) {
-                if (showMessage)
+                console.log("End \t" + 200 + "\t" + action);
+                if (response.fMessages.length > 0 || showSuccessMessage)
                     StatusResponse.show(response, action);
                 if (typeof (successFunction) === "function")
                     successFunction.call(this, response)
             },
             error: function(response, status, error) {
+                console.log("End \t" + status + "\t" + action);
                 StatusResponse.create(action, response.status + " " + status + ": " + error, false);
             }
         });
@@ -40,7 +43,12 @@ Filelocker = function(){
     
     function sawBanner()
     {
-        Filelocker.request("/saw_banner", "", "{}", false);
+        Filelocker.request("/saw_banner", "reading banner", "{}", false);
+    }
+
+    function checkMessages(actionName)
+    {
+        Filelocker.request("/get_server_messages", actionName, "{}", true);
     }
 
     function selectAll(destination)
@@ -104,6 +112,7 @@ Filelocker = function(){
         request:request,
         login:login,
         sawBanner:sawBanner,
+        checkMessages:checkMessages,
         selectAll:selectAll
     };
 }();
@@ -224,5 +233,5 @@ jQuery(document).ready(function() {
     }
     Message.getCount();
     Filelocker.messagePoller = setInterval(function() { Message.getCount(); }, 30000); //TODO Move this into poller with UpdateQuota
-    checkServerMessages("loading page");
+    Filelocker.checkMessages("loading page");
 });

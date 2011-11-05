@@ -111,7 +111,7 @@ Account = function() {
                         if (typeof returnData.data !== undefined && returnData.data.length > 0)
                             response(returnData.data);
                     }
-                    Filelocker.request("/account/search_users", "looking up user", data, true, callback);
+                    Filelocker.request("/account/search_users", "looking up user", data, false, callback);
                 },
                 minLength: 2,
                 focus: function (event, ui)
@@ -161,7 +161,7 @@ Account = function() {
                     });
                 }
             }
-            Filelocker.request("/account/search_users", "looking up user", data, true, callback);
+            Filelocker.request("/account/search_users", "looking up user", data, false, callback);
         }
         function toggleType(context, searchType)
         {

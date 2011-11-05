@@ -34,7 +34,7 @@ StatusResponse = function() {
     {
         var detailSection ="<span id=\"statusMessageDetails\" class=\"hidden\"><p class='errorDetails'><strong>Details:&nbsp;</strong>";
         $.each(response.fMessages, function(index,value) {
-            if (value == "expired")
+            if (value === "expired")
                 Filelocker.login();
             else
                 detailSection += value + "<br />";
@@ -248,11 +248,6 @@ Utility = function() {
         check:check
     }
 }();
-
-function checkServerMessages(actionName)
-{
-    Filelocker.request("/get_server_messages", actionName, "{}", true);
-}
 
 function poll()
 {

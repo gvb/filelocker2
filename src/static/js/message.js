@@ -1,7 +1,7 @@
 Message = function() {
     function load()
     {
-        Filelocker.request("/message/get_messages", "retrieving messages", "{}", true, function(returnData) {
+        Filelocker.request("/message/get_messages", "retrieving messages", "{}", false, function(returnData) {
             var recvhtml = "";
             $.each(returnData.data[0], function(index, value) {
                 var unreadMessage = "";
@@ -84,7 +84,7 @@ Message = function() {
             $("#"+messageId+"_sent").addClass("rowSelected leftborder rightborder");
         $("#messageSubject").html("<span class='messageHeader'>Subject:</span>" + $("#"+messageId+"_subject").text());
         $("#messageBody").html("<hr class='messageViewBreak' /><span class='messageHeader'>Body:</span>" + $("#"+messageId+"_body").text());
-        Filelocker.request("/message/read_message", "", { messageId:messageId }, false, function() {
+        Filelocker.request("/message/read_message", "reading message", { messageId:messageId }, false, function() {
             getCount();
         });
     }
@@ -132,7 +132,7 @@ Message = function() {
 
     function getCount()
     {
-        Filelocker.request("/message/get_new_message_count", "", "{}", false, function(returnData)
+        Filelocker.request("/message/get_new_message_count", "retrieving message unread count", "{}", false, function(returnData)
         {
             var noNewMessages = $("#messagesLink").hasClass("messages");
             if (returnData != null)
