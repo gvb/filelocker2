@@ -98,7 +98,10 @@ class FileController(object):
         for hiddenShare in hiddenShares:
             hiddenShareIds.append(hiddenShare.file_id)
         if fileIdList is None:
-            myFilesList = session.query(File).filter(File.owner_id == userId).filter(File.id not in hiddenShareIds).all()
+            allFilesList = session.query(File).filter(File.owner_id == userId).all()
+            for flFile in allFilesList:
+                if flFile.id not in hiddenShareIds:
+                    myFilesList.append(flFile)
         else:
             fileIdList = split_list_sanitized(fileIdList)
             for fileId in fileIdList:
