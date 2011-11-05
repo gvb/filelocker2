@@ -353,6 +353,8 @@ def port_database(config):
     uploadRequests = dbConverter.GetUploadRequests()
     deletedFiles = dbConverter.GetAllDeletedFiles()
     auditLogs = dbConverter.GetAuditLogs()
+    tpl = Template(file=get_template_file('login.tmpl'), searchList=[locals(),globals()])
+
 
             
 def build_database(configfile=None):

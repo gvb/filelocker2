@@ -280,8 +280,8 @@ class RootController:
     def manage_groups(self, **kwargs):
         sessionUser = cherrypy.session.get("user")
         config = cherrypy.request.app.config['filelocker']
-        user = session.query(User).filter(User.id==sessionUser.id).one()
-        tpl = Template(file=get_template_file('manageGroups.tmpl'), searchList=[locals(),globals()])
+        groups = session.query(Group).filter(Group.owner_id==user.id).all()
+        tpl = Template(file=get_template_file('manage_groups.tmpl'), searchList=[locals(),globals()])
         return str(tpl)
 
     @cherrypy.expose

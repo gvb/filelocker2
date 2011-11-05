@@ -22,7 +22,7 @@
                 </tr>
             </thead>
             <tbody id="groupsTable">
-            #for $group in $user.groups
+            #for $group in $groups
                 <tr id="group_$group.id" class="groupRow" onclick="javascript:Group.rowClick($group.id)">
                     <td id="groupNameElement_$group.id" class="groupNameElement">
                         <input type="checkbox" value="$group.id" onclick="javascript:Group.rowClick($group.id)" class="groupSelectBox" />
