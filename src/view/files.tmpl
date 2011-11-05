@@ -6,7 +6,7 @@
     </div>
     
     <div class="toolbar">
-        <div class="button"><a href="javascript:File2.prompt();" title="Upload a new file to Filelocker" class="uploadButton"><span>Upload</span></a></div>
+        <div class="button"><a href="javascript:FLFile.prompt();" title="Upload a new file to Filelocker" class="uploadButton"><span>Upload</span></a></div>
         <div class="button hidden" id="multiShare"><a href="javascript:StatusResponse.hide();javascript:Share.prompt();" title="Manage shares for the selected files" class="shareButton"><span>Manage Shares</span></a></div>
         <div class="button"><a href="javascript:StatusResponse.hide();javascript:Group.load();" title="Manage my groups of Filelocker users" class="manageGroupsButton"><span>Manage Groups</span></a></div>
         <div class="button"><a href="javascript:deleteFiles();" title="Permanently delete the selected files from Filelocker" class="deleteButton"><span>Delete</span></a></div>
@@ -108,7 +108,7 @@
                                 <div class="itemTitle"><span class="clock">Uploaded:</span></div>
                                 $f.date_uploaded</li>
                                 #if $f.owner_id == $user.id
-                                    <li><div class="itemTitleMedium"><span class="cross"><a href="javascript:promptConfirmation('deleteFile', ['$f.id']);" title="Permanently delete this file from Filelocker" class="redText">Delete This File</a></span></div></li>
+                                    <li><div class="itemTitleMedium"><span class="cross"><a href="javascript:Utility.promptConfirmation('FLFile.del', ['$f.id']);" title="Permanently delete this file from Filelocker" class="redText">Delete This File</a></span></div></li>
                                     <li><div class="itemTitleMedium"><span class="save"><a href="$config['root_url']/file/download?fileId=$f.id" title="Download this file from Filelocker">Download This File</a></span></div></li>
                                     <li><div class="itemTitleMedium"><span class="statistics"><a href="javascript:viewDownloadStatistics('$f.id');" title="View a chart of this file's downloads over time">View Download Statistics</a></span></div></li>
                                     #set $notesStripped = $re.sub(r'\[geo\]-?\d+\.\d+,-?\d+\.\d+\[/geo\]', '', $str($f.notes))
@@ -125,7 +125,7 @@
                             </div>
                         </div>
                     </td>
-                    <td onClick="fileRowClick($rowId)">
+                    <td onClick="javascript:FLFile.rowClick($rowId)">
                         <a class="$f.documentType" title="$f.name">
                             #if len($f.name) > 60
                                 $f.name[0:45]...$f.name[-10:]
@@ -134,13 +134,13 @@
                             #end if
                         </a>
                     </td>
-                    <td onClick="fileRowClick($rowId)">$fileSize $fsSuffix</td>
+                    <td onClick="javascript:FLFile.rowClick($rowId)">$fileSize $fsSuffix</td>
                     #set $fileExpiration = "Never"
                     #if $f.date_expires is not None
                     #set $fileExpiration = $f.date_expires.strftime("%m/%d/%Y")
                     #end if
-                    <td onClick="fileRowClick($rowId)">$fileExpiration</td>
-                    <td onClick="fileRowClick($rowId)" class="dropdownArrow rightborder"></td>
+                    <td onClick="javascript:FLFile.rowClick($rowId)">$fileExpiration</td>
+                    <td onClick="javascript:FLFile.rowClick($rowId)" class="dropdownArrow rightborder"></td>
                 </tr>
             #end for
             
@@ -228,7 +228,7 @@
                                 #end if
                                 </li>
                                 <li><div class="itemTitle"><span class="clock">Uploaded:</span></div>$f.date_uploaded</li>
-                                <li><div class="itemTitleMedium"><span class="cross"><a href="javascript:promptConfirmation('deleteFile', ['$f.id']);" title="Permanently delete this file from Filelocker" class="redText">Delete This File</a></span></div></li>
+                                <li><div class="itemTitleMedium"><span class="cross"><a href="javascript:Utility.promptConfirmation('FLFile.del', ['$f.id']);" title="Permanently delete this file from Filelocker" class="redText">Delete This File</a></span></div></li>
                                 <li><div class="itemTitleMedium"><span class="save"><a href="$config['root_url']/file/download?fileId=$f.id" title="Download this file from Filelocker">Download This File</a></span></div></li>
                                 #set $notesStripped = $re.sub(r'\[geo\]-?\d+\.\d+,-?\d+\.\d+\[/geo\]', '', $str($f.notes))
                                 #if $notesStripped != ""
@@ -243,7 +243,7 @@
                             </div>
                         </div>
                     </td>
-                    <td onClick="fileRowClick($rowId)">
+                    <td onClick="javascript:FLFile.rowClick($rowId)">
                         <a class="$f.documentType" title="$f.name">
                             #if len($f.name) > 60
                                 $f.name[0:45]...$f.name[-10:]
@@ -252,13 +252,13 @@
                             #end if
                         </a>
                     </td>
-                    <td onClick="fileRowClick($rowId)">$fileSize $fsSuffix</td>
+                    <td onClick="javascript:FLFile.rowClick($rowId)">$fileSize $fsSuffix</td>
                     #set $fileExpiration = "Never"
                     #if $f.date_expires is not None
                     #set $fileExpiration = $f.date_expires.strftime("%m/%d/%Y")
                     #end if
-                    <td onClick="fileRowClick($rowId)">$fileExpiration</td>
-                    <td onClick="fileRowClick($rowId)" class="dropdownArrow rightborder"></td>
+                    <td onClick="javascript:FLFile.rowClick($rowId)">$fileExpiration</td>
+                    <td onClick="javascript:FLFile.rowClick($rowId)" class="dropdownArrow rightborder"></td>
                 </tr>
             #end for
             </tbody>
@@ -301,7 +301,7 @@
                             #end if
                         #end if
                         <tr id="row_$rowId" class="fileRow">
-                        <td onClick="fileRowClick($rowId)" id="name_row_$f.id" class="nameElement spacer">
+                        <td onClick="javascript:FLFile.rowClick($rowId)" id="name_row_$f.id" class="nameElement spacer">
                             <div class="posrel">
                                 <div id="menu_row_$rowId" class="menuFiles hidden"><!--add class of hidden to hide this info box-->
                                     <ul class="menu">
@@ -332,7 +332,7 @@
                                 </div>
                             </div>
                         </td>
-                        <td onClick="fileRowClick($rowId)">
+                        <td onClick="javascript:FLFile.rowClick($rowId)">
                             <a class="document_person" title="$f.name">
                                 #if len($f.name) > 60
                                     $f.name[0:45]...$f.name[-10:]
@@ -341,13 +341,13 @@
                                 #end if
                             </a>
                         </td>
-                        <td onClick="fileRowClick($rowId)">$fileSize $fsSuffix</td>
+                        <td onClick="javascript:FLFile.rowClick($rowId)">$fileSize $fsSuffix</td>
                         #set $sfExpiration = "Never"
                         #if $f.date_expires is not None
                         #set $sfExpiration = $f.date_expires.strftime("%m/%d/%Y")
                         #end if
-                        <td onClick="fileRowClick($rowId)">$sfExpiration</td>
-                        <td onClick="fileRowClick($rowId)" class="dropdownArrow rightborder"></td>
+                        <td onClick="javascript:FLFile.rowClick($rowId)">$sfExpiration</td>
+                        <td onClick="javascript:FLFile.rowClick($rowId)" class="dropdownArrow rightborder"></td>
                         </tr>
                     #end for
                     </tbody>
@@ -391,7 +391,7 @@
                                     #end if
                                 #end if
                                 <tr id="row_$rowId" class="fileRow">
-                                <td onClick="fileRowClick($rowId)" id="name_row_$rowId" class="nameElement spacer">
+                                <td onClick="javascript:FLFile.rowClick($rowId)" id="name_row_$rowId" class="nameElement spacer">
                                     <div class="posrel">
                                         <div id="menu_row_$rowId" class="menuFiles hidden"><!--add class of hidden to hide this info box-->
                                             <ul class="menu">
@@ -421,7 +421,7 @@
                                         </div>
                                     </div>
                                 </td>
-                                <td onClick="fileRowClick($rowId)">
+                                <td onClick="javascript:FLFile.rowClick($rowId)">
                                     <a href="#" class="document_attribute" title="$f.name">
                                     #if len($f.name) > 50
                                         $f.name[0:28]...$f.name[-15:]
@@ -434,9 +434,9 @@
                                 #if $f.date_expires is not None
                                 #set $sfExpiration = $f.date_expires.strftime("%m/%d/%Y")
                                 #end if
-                                <td onClick="fileRowClick($rowId)">$fileSize $fsSuffix</td>
-                                <td onClick="fileRowClick($rowId)">$sfExpiration</td>
-                                <td onClick="fileRowClick($rowId)" class="dropdownArrow rightborder"></td>
+                                <td onClick="javascript:FLFile.rowClick($rowId)">$fileSize $fsSuffix</td>
+                                <td onClick="javascript:FLFile.rowClick($rowId)">$sfExpiration</td>
+                                <td onClick="javascript:FLFile.rowClick($rowId)" class="dropdownArrow rightborder"></td>
                                 </tr>
                             #end for
                         </tbody>
@@ -488,7 +488,7 @@
                         #end if
                         
                         <td>$uploadRequest.expiration.strftime("%m/%d/%Y")</td>
-                        <td><a href="javascript:promptConfirmation('deleteUploadRequest', ['$uploadRequest.id']);" class="inlineLink" title="Permanently delete this upload request from Filelocker"><span class="cross">&nbsp;</span></a></td>
+                        <td><a href="javascript:Utility.promptConfirmation('UploadRequest.del', ['$uploadRequest.id']);" class="inlineLink" title="Permanently delete this upload request from Filelocker"><span class="cross">&nbsp;</span></a></td>
                     </tr>
                     #end for
                     </tbody>

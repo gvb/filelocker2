@@ -208,6 +208,23 @@ Utility = function() {
             opacity: 0.9
         });
     }
+    function promptConfirmation(func, params)
+    {
+        $("#confirmBox").html("");
+        var paramStr = "";
+        $.each(params, function(index, value) {
+            paramStr += value;
+            if(index != params.length-1)
+                paramStr += ", ";
+        });
+        if(func == "FLFile.del")
+            $("#confirmBox").html("Are you sure you want to delete this file?");
+        else if(func == "Message.del")
+            $("#confirmBox").html("Are you sure you want to delete this message?");
+        else if(func == "UploadRequest.del")
+            $("#confirmBox").html("Are you sure you want to delete this upload request?");
+        $("#confirmBox").dialog("open").data("funcData", { "func":func, "params":paramStr }).dialog("open");
+    }
     function check(checkboxId)
     {
         if($("#"+checkboxId).is(":checked"))
@@ -226,6 +243,7 @@ Utility = function() {
     return {
         tipsyfy:tipsyfy,
         getRandomTip:getRandomTip,
+        promptConfirmation:promptConfirmation,
         check:check
     }
 }();
