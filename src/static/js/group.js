@@ -199,6 +199,7 @@ Group = function() {
         prompt:prompt,
         promptAdd:promptAdd,
         promptEdit:promptEdit,
+        rowClick:rowClick,
         Member:Member
     };
 }();

@@ -160,25 +160,28 @@ FLFile = function() {
     }
     function del(fileId)
     {
-        Filelocker.request("/file/delete_files", "deleting files", {"fileIds": fileId}, true, function() {
-            selectedFileRow = "";
-            load();
-        });
-    }
-    function deleteFiles()
-    {
+        var action = "deleting files";
         var fileIds = "";
-        selectedFiles = [];
-        $("#filesTable .fileSelectBox:checked").each(function() {selectedFiles.push($(this).val());});
-        if ($("#systemFilesTable").length >0)
-        {
-            $("#systemFilesTable .systemFileSelectBox:checked").each(function() {selectedFiles.push($(this).val());});
+        if (fileId != null)
+            fileIds = fileId;
+        else {
+            //TODO make this better
+            selectedFiles = [];
+            $("#filesTable .fileSelectBox:checked").each(function() {selectedFiles.push($(this).val());});
+            if ($("#systemFilesTable").length >0)
+            {
+                $("#systemFilesTable .systemFileSelectBox:checked").each(function() {selectedFiles.push($(this).val());});
+            }
+            $.each(selectedFiles, function(index,value) {
+                fileIds += value + ",";
+            });
         }
-        $.each(selectedFiles, function(index,value) {
-            fileIds += value + ",";
-        });
-        if(fileIds !== "")
-            del(fileIds);
+        if(fileIds != null && fileIds !== "") {
+            Filelocker.request("/file/delete_files", action, {"fileIds": fileIds}, true, function() {
+                selectedFileRow = "";
+                load();
+            });
+        }
         else
             StatusResponse.create("deleting files", "Select file(s) for deletion.", false);
     }
@@ -444,6 +447,7 @@ FLFile = function() {
     
     return {
         init:init,
+        load:load,
         del:del,
         take:take,
         prompt:prompt,

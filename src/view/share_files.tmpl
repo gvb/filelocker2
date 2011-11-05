@@ -40,7 +40,7 @@
                     #else
                         #for $share in $selectedFile.fileUserShares
                             <li><span class="itemTitleMedium"><span class="ownerItem memberTitle">$share.id</span></span>
-                            <a href="javascript:unPrivateShareFiles('$share['id']', 'private', $selectedFile.id);" title="Unshare this file from '$share.id'" class="deleteLink">Unshare</a></li>
+                            <a href="javascript:Share.User.del('$share['id']', $selectedFile.id);" title="Unshare this file from '$share.id'" class="deleteLink">Unshare</a></li>
                         #end for
                     #end if
                     </ul>
@@ -57,7 +57,7 @@
                                 #set $shortenedName = $share['name'][0:17] + "..." + $share['name'][-5:]
                             #end if
                             <li><span class="itemTitleMedium"><span class="groupItem memberTitle" title="$share['name']">$shortenedName</span></span>
-                            <a href="javascript:unPrivateShareFiles('$share['id']', 'private_group', $selectedFile.id);" title="Unshare this file from '$share['name']'" class="deleteLink">Unshare</a></li>
+                            <a href="javascript:Share.Group.del('$share['id']', $selectedFile.id);" title="Unshare this file from '$share['name']'" class="deleteLink">Unshare</a></li>
                         #end for
                     #end if
                     </ul>
@@ -75,7 +75,7 @@
                                 #set $shortenedName = $share['name'][0:17] + "..." + $share['name'][-5:]
                             #end if
                             <li><span class="itemTitleMedium"><span class="attributeItem memberTitle" title="$share['name']">$shortenedName</span></span>
-                            <a href="javascript:unPrivateShareFiles('$share['id']', 'private_attribute', $selectedFile.id);" title="Unshare this file from '$share['name']'" class="deleteLink">Unshare</a></li>
+                            <a href="javascript:Share.Attribute.del('$share['id']', $selectedFile.id);" title="Unshare this file from '$share['name']'" class="deleteLink">Unshare</a></li>
                         #end for
                     #end if
                     </ul>

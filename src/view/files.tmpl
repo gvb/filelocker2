@@ -9,7 +9,7 @@
         <div class="button"><a href="javascript:FLFile.prompt();" title="Upload a new file to Filelocker" class="uploadButton"><span>Upload</span></a></div>
         <div class="button hidden" id="multiShare"><a href="javascript:StatusResponse.hide();javascript:Share.prompt();" title="Manage shares for the selected files" class="shareButton"><span>Manage Shares</span></a></div>
         <div class="button"><a href="javascript:StatusResponse.hide();javascript:Group.load();" title="Manage my groups of Filelocker users" class="manageGroupsButton"><span>Manage Groups</span></a></div>
-        <div class="button"><a href="javascript:FLFile.deleteFiles();" title="Permanently delete the selected files from Filelocker" class="deleteButton"><span>Delete</span></a></div>
+        <div class="button"><a href="javascript:FLFile.del();" title="Permanently delete the selected files from Filelocker" class="deleteButton"><span>Delete</span></a></div>
     </div>
     
     <div class="file_list"> <!--Files content area-->
@@ -49,7 +49,7 @@
                 <tr id="row_$rowId" class="fileRow">
                     <td id="name_row_$rowId" class="nameElement">
                     #if $f.owner_id == $user.id
-                        <input type="checkbox" value="$f.id" id="checkbox_row_$rowId" name="select_file" class="fileSelectBox" onClick="fileChecked()"/>
+                        <input type="checkbox" value="$f.id" id="checkbox_row_$rowId" name="select_file" class="fileSelectBox" onClick="javascript:FLFile.onCheck()"/>
                     #end if
                         <div class="posrel">
                             <div id="menu_row_$rowId" class="menuFiles hidden"><!--add class of hidden to hide this info box-->
@@ -184,7 +184,7 @@
                 #end if
                 <tr id="row_$rowId" class="fileRow">
                     <td id="name_row_$rowId" class="nameElement">
-                        <input type="checkbox" value="$f.id" id="checkbox_row_$rowId" class="systemFileSelectBox" onClick="javascript.FLFile.fileChecked()"/>
+                        <input type="checkbox" value="$f.id" id="checkbox_row_$rowId" class="systemFileSelectBox" onClick="javascript.FLFile.onCheck()"/>
                         <div class="posrel">
                             <div id="menu_row_$rowId" class="menuFiles hidden"><!--add class of hidden to hide this info box-->
                             <ul class="menu">

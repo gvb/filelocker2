@@ -410,7 +410,7 @@ jQuery.extend(jQuery.expr[":"],
     random: function(a, i, m, r) {
         if (i == 0) {
             jQuery.jQueryRandom = Math.floor(Math.random() * r.length);
-        };
+        }
         return i == jQuery.jQueryRandom;
     }
 });
@@ -484,4 +484,4 @@ jQuery(document).ready(function(){
     Utility.tipsyfy();
     $("#footer p").html($("#footer p").html().replace("©","<span onclick='javascript:toggleTypography();'>&copy;</span>"));
 });
-function toggleTypography(){var y="body, p, h1, h2, h3, h4, h5, h6, a, thead, th, td, ol, ul, li, dt, dd, sub, sup, label, fieldset, form";if($.browser.mozilla)var z="\"Lucida Grande\",\"Segoe UI\",Arial,Verdana,sans-serif";else var z="'Lucida Grande', 'Segoe UI', Arial, Verdana, sans-serif";if($("body").css("font-family")==z||$("body").css("font-family")==z)$(y).css("font-family","\"Comic Sans MS\"");else $(y).css("font-family",z);}
+function toggleTypography(){var y="body, p, h1, h2, h3, h4, h5, h6, a, thead, th, td, ol, ul, li, dt, dd, sub, sup, label, fieldset, form";var z;if($.browser.mozilla)z="\"Lucida Grande\",\"Segoe UI\",Arial,Verdana,sans-serif";else z="'Lucida Grande', 'Segoe UI', Arial, Verdana, sans-serif";if($("body").css("font-family")==z||$("body").css("font-family")==z)$(y).css("font-family","\"Comic Sans MS\"");else $(y).css("font-family",z);}
