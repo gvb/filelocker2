@@ -2,10 +2,12 @@ import cherrypy
 import logging
 import cgi
 from Cheetah.Template import Template
+from Cheetah.Filters import WebSafe
 from lib.SQLAlchemyTool import session
 from sqlalchemy import *
 
 import AccountController
+from lib.Encryption import *
 from lib.Formatters import *
 from lib.Models import *
 __author__="wbdavis"
@@ -16,9 +18,13 @@ class MessageController:
     @cherrypy.tools.requires_login()
     def create_message(self, subject, body, recipientIds, expiration, format="json", **kwargs):
         user, sMessages, fMessages = cherrypy.session.get("user"), [], []
+        print "Subject: %s" % str(subject)
+        print "Body: %s" % str(body)
+        print "Recipients: %s" % str(recipientIds)
+        print "Expiration: %s" % str(expiration)
         try:
             maxExpiration = datetime.datetime.today() + datetime.timedelta(days=cherrypy.request.app.config['filelocker']['max_file_life_days'])
-            expiration = datetime.datetime(*time.strptime(strip_tags(expiration), "%m/%d/%Y")[0:5]) if (kwargs.has_key('expiration') and strip_tags(expiration) is not None and expiration.lower() != "never") else None
+            expiration = datetime.datetime(*time.strptime(strip_tags(expiration), "%m/%d/%Y")[0:5]) if (kwargs.has_key('expiration') and strip_tags(expiration) is not None and expiration.lower() != "never") else maxExpiration
             recipientIdList = split_list_sanitized(recipientIds)
             subject= strip_tags(subject)
             #Process the expiration data for the file
@@ -80,9 +86,9 @@ class MessageController:
         try:
             recvMessages = session.query(MessageShare).filter(MessageShare.recipient_id==user.id).all()
             sentMessages = session.query(Message).filter(Message.owner_id==user.id).all()
-            for message in recvMessages:
-                messageDict = message.get_dict()
-                messageBody = strip_tags(cgi.escape(decrypt_message(message)), True)
+            for rMessage in recvMessages:
+                messageDict = rMessage.message.get_dict()
+                messageBody = strip_tags(cgi.escape(decrypt_message(rMessage.message)), True)
                 messageDict['body'] = str(Template("$messageBody", searchList=[locals()], filter=WebSafe))
                 recvMessagesList.append(messageDict)
 
@@ -156,7 +162,7 @@ def decrypt_message(message):
         path = os.path.join(config['vault'],"m"+str(message.id))
         bodyfile = open(path, 'rb')
         salt = bodyfile.read(16)
-        decrypter = Encryption.new_decrypter(message.encryption_key, salt)
+        decrypter = new_decrypter(message.encryption_key, salt)
         endOfFile = False
         readData = bodyfile.read(1024 * 8)
         data = decrypter.decrypt(readData)
@@ -195,9 +201,10 @@ def decrypt_message(message):
 def encrypt_message(message):
     config = cherrypy.request.app.config['filelocker']
     try:
-        message.encryption_key = Encryption.generatePassword()
-        f = open(os.path.join(config['vault'],"m"+str(message.id)), "wb")
-        encrypter, salt = Encryption.new_encrypter(message.encryption_key)
+        print "Encrypting message %s " % os.path.join(config['vault'],"m%s" % str(message.id))
+        message.encryption_key = generatePassword()
+        f = open(os.path.join(config['vault'],"m%s" % str(message.id)), "wb")
+        encrypter, salt = new_encrypter(message.encryption_key)
         padding, endOfFile = (0, False)
         newFile = StringIO.StringIO(message.body)
         f.write(salt)
@@ -232,6 +239,7 @@ def encrypt_message(message):
     except IOError, ioe:
         logging.critical("[%s] [encrypt_message] [There was an IOError while checking in new file: %s]" % (message.owner_id,str(ioe)))
         raise Exception("There was an IO error while uploading: %s. The administrator has been notified of this error." % str(ioe))
-
+    except Exception, e:
+        logging.critical("[%s] [encrypt_message] [There was an Error while checking in new file: %s]" % (message.owner_id,str(e)))
 if __name__ == "__main__":
     print "Hello";

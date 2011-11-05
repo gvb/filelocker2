@@ -3,9 +3,8 @@
 import datetime
 import MySQLdb
 import logging
-from DAO import DAO
 import sys
-from models import *
+from Models import *
 
 class LegacyDBConverter():
     connection = None
@@ -46,7 +45,7 @@ class LegacyDBConverter():
         allFiles = []
         for row in results:
             currentFile = File(name=row['file_name'], type=row['file_type'], notes=row['file_notes'], size=row['file_size'], date_uploaded=row['file_uploaded_datetime'], owner_id=row['file_owner_id'], date_expires=row['file_expiration_datetime'], passed_avscan=row['file_passed_avscan'], encryption_key=row['file_encryption_key'], id=row['file_id'], status=row['file_status'],  notify_on_download=row['file_notify_on_download'], upload_request_id=row['file_upload_ticket_id'])
-            expiredFiles.append(currentFile)
+            allFiles.append(currentFile)
         return allFiles
 
 #Groups
@@ -80,10 +79,9 @@ class LegacyDBConverter():
 
 #Private Shares
     def GetAllUserShares(self):
-        files = self.getFilesByOwner(ownerId)
         sql = "SELECT * FROM private_share"
         privateShareList = []
-        results = self.execute(sql, sql_args)
+        results = self.execute(sql, None)
         for prShR in results:
             privateShareList.append(UserShare(file_id=prShR['private_share_file_id'], user_id=prShR['private_share_target_id']))
         return privateShareList
@@ -92,15 +90,14 @@ class LegacyDBConverter():
     def GetAllGroupShares(self):
         sql = "SELECT * FROM private_group_share"
         privateGroupShareList = []
-        results = self.execute(sql, sql_args)
+        results = self.execute(sql, None)
         for row in results:
             privateGroupShareList.append(GroupShare(file_idrow['private_group_share_file_id'], group_id=row['private_group_share_target_id']))
         return privateGroupShareList
 
     def GetAllHiddenShares(self):
         sql = "SELECT * FROM hidden_share"
-        sql_args = []
-        results = self.execute(sql, sql_args)
+        results = self.execute(sql, None)
         hidden_shares = []
         for row in results:
             hidden_shares.append(HiddenShare(owner_id=row['hidden_share_target_id'], file_id=row['hidden_share_file_id']))
@@ -109,8 +106,7 @@ class LegacyDBConverter():
 #Private Attribute Shares
     def GetAllAttributes(self):
         sql = "SELECT * FROM attribute"
-        sql_args = None
-        results = self.execute(sql, sql_args)
+        results = self.execute(sql, None)
         attributes = []
         for row in results:
             attr = Attribute(row['attribute_id'], row['attribute_name'])
@@ -119,9 +115,8 @@ class LegacyDBConverter():
 
     def GetAllAttributeShares(self):
         sql = "SELECT * FROM private_attribute_share"
-        sql_args = []
         attributeShares = []
-        results = self.execute(sql, sql_args)
+        results = self.execute(sql, None)
         for row in results:
             attributeShares.append(AttributeShare(attribute_id=row["private_attribute_share_attribute_id"], file_id=row["private_attribute_share_file_id"]))
         return attributeShares
@@ -129,8 +124,7 @@ class LegacyDBConverter():
 #Public Shares
     def GetAllPublicShares (self):
         sql = "SELECT * FROM public_share, file WHERE file.file_id = public_share.public_share_file_id"
-        sql_args = []
-        results = self.execute(sql, sql_args)
+        results = self.execute(sql, None)
         publicShares = []
         for row in results:
             currentPubShare = PublicShare(id=row['public_share_id'], owner_id=row['file_owner_id'], date_expires=row['public_share_expiration'], password=row['public_share_password_hash'], reuse=row['public_share_type'])
@@ -230,7 +224,7 @@ class LegacyDBConverter():
         results = self.execute(sql, sql_args)
         files = []
         for row in results:
-            files.append(DeletedFile(file_name=row['deletion_queue_file_path'])
+            files.append(DeletedFile(file_name=row['deletion_queue_file_path']))
         return files
 
     def GetAuditLogs(self):
@@ -286,7 +280,6 @@ class LegacyDBConverter():
             raise ie
         except Exception, e:
             logging.error("Unable to run SQL query: %s" % str(e))
-            raise FLError(False, ["Unable to run SQL query: %s" % str(e)])
 
 INIT_TABLE_CREATE_SQL = [ """
 CREATE TABLE `config` (

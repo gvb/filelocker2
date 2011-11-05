@@ -334,7 +334,7 @@ def port_database(config):
     db = raw_input("Database: ")
     username = raw_input("Username: ")
     password = getpass("Password: ")
-
+    from lib.LegacyDBConverter import LegacyDBConverter
     dbConverter = LegacyDBConverter(host, username, password, db)
     parameters = dbConverter.GetAllParameters()
     files = dbConverter.GetAllFiles()
@@ -353,7 +353,11 @@ def port_database(config):
     uploadRequests = dbConverter.GetUploadRequests()
     deletedFiles = dbConverter.GetAllDeletedFiles()
     auditLogs = dbConverter.GetAuditLogs()
-    tpl = Template(file=get_template_file('login.tmpl'), searchList=[locals(),globals()])
+    tpl = Template(file=get_template_file('DataSchema.tmpl'), searchList=[locals(),globals()])
+    f = open(os.getcwd(), "FL_Data_Export.xml", "wb")
+    f.write(tpl)
+    f.close()
+    print "Data has been exported"
 
 
             
@@ -408,6 +412,8 @@ if __name__ == '__main__':
             start(options.configfile, options.daemonize, options.pidfile)
         elif options.action == "init_db":
             build_database(options.configfile)
+        elif options.action == "port_database":
+            port_database(options.configfile)
         elif options.action == "create_admin":
             create_admin(options.configfile)
         elif options.action == "reconfig":

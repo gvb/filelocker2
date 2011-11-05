@@ -210,7 +210,7 @@ class Message(Base):
         return messageDict
 
 class MessageShare(Base):
-    __tablename__ = "message_recipients"
+    __tablename__ = "message_shares"
     message_id = Column(Integer, ForeignKey("messages.id"), primary_key=True)
     recipient_id = Column(String(30), ForeignKey("users.id"), primary_key=True)
     date_viewed = Column(DateTime, nullable=True, default=None)
