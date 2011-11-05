@@ -7,7 +7,7 @@ from DAO import DAO
 import sys
 from models import *
 
-class MySQLDAO(DAO):
+class LegacyDBConverter():
     connection = None
     dbHost = None
     dbUser = None
@@ -21,7 +21,6 @@ class MySQLDAO(DAO):
         self.dbPassword = dbPassword
         self.dbName = dbName
         self.get_connection()
-        self.localDirectory = LocalDirectory(self)
 
     def get_connection(self):
         self.db = MySQLdb.connect(self.dbHost, self.dbUser, self.dbPassword, self.dbName)
@@ -98,13 +97,13 @@ class MySQLDAO(DAO):
             privateGroupShareList.append(GroupShare(file_idrow['private_group_share_file_id'], group_id=row['private_group_share_target_id']))
         return privateGroupShareList
 
-    def getHiddenSharesDictList(self):
+    def GetAllHiddenShares(self):
         sql = "SELECT * FROM hidden_share"
         sql_args = []
         results = self.execute(sql, sql_args)
         hidden_shares = []
         for row in results:
-            hidden_shares.append({'user_id': row['hidden_share_target_id'], 'file_id':row['hidden_share_file_id']})
+            hidden_shares.append(HiddenShare(owner_id=row['hidden_share_target_id'], file_id=row['hidden_share_file_id']))
         return hidden_shares
 
 #Private Attribute Shares
@@ -205,7 +204,7 @@ class MySQLDAO(DAO):
             messages.append(Message(id=row['message_id'], subject=row['message_subject'], date_sent=row['message_create_datetime'], owner_id=row['message_owner_id'], date_expires=row['message_expiration_datetime'], encryption_key=row['message_encryption_key']))
         return messages
 
-    def GetReceivedMessages(self):
+    def GetAllMessageShares(self):
         messageRecipients = []
         sql = "SELECT * FROM message_recipient"
         results = self.execute(sql, None)
@@ -213,16 +212,6 @@ class MySQLDAO(DAO):
             messageRecipients.append(ReceivedMessage(message_id=row['message_recipient_message_id'], recipient_id=row['message_recipient_user_id'], date_viewed=row['message_recipient_viewed_datetime']))
         return messageRecipients
 
-#CLI Key Management
-    def getCLIKeyList(self, userId):
-        sql = "SELECT * FROM cli_key WHERE cli_key_user_id=%s"
-        sql_args = [userId]
-        CLIKeys = []
-        results = self.execute(sql, sql_args)
-        for row in results:
-            newKey = CLIKey(row['cli_key_host_ipv4'], row['cli_key_host_ipv6'], row['cli_key_value'])
-            CLIKeys.append(newKey)
-        return CLIKeys
 
 
 #Upload Tickets
@@ -254,6 +243,16 @@ class MySQLDAO(DAO):
                 relevantLogs.append(newLog)
         return relevantLogs
 
+#CLI Key Management
+    def getCLIKeyList(self, userId):
+        sql = "SELECT * FROM cli_key WHERE cli_key_user_id=%s"
+        sql_args = [userId]
+        CLIKeys = []
+        results = self.execute(sql, sql_args)
+        for row in results:
+            newKey = CLIKey(row['cli_key_host_ipv4'], row['cli_key_host_ipv6'], row['cli_key_value'])
+            CLIKeys.append(newKey)
+        return CLIKeys
 
     def execute(self, sql, sql_args, getId = False):
         """Executor function, takes arbitrary SQL and argument list, returns all results """

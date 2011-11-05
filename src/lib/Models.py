@@ -259,8 +259,6 @@ class PublicShare(Base):
     def set_password(self, password):
         self.password = hash_password(password)
 
-
-
 class AttributeShare(Base):
     __tablename__ = "attribute_shares"
     file_id = Column(Integer, ForeignKey("files.id"), primary_key=True)

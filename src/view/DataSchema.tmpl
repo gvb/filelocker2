@@ -5,12 +5,18 @@
     #end for
     </permissions>
 
+    <attributes>
+    #for $att in $attributes
+        <attribute id="$att.id" name="$att.name"/>
+    #end for
+    </attributes>
+
     <roles>
     #for $role in $roles
         <role id="$role.id" name="$role.name" quota="$role.quota" email="$role.email"/>
             <permissions>
-            #for $permission in $role.permissions
-                <permission id="$permission.id"/>
+            #for $permissionId in $role.permissions
+                <permission id="$permissionId"/>
             #end for
             </permissions>
     #end for
@@ -37,8 +43,8 @@
     #for $group in $groups
         <group id="$group.id" name="$group.name" scope="$group.scope">
             <members>
-            #for $member in $group.members
-                <user id="$user.id"/>
+            #for $memberId in $group.members
+                <user id="$memberId"/>
             #end for
             </members>
         </group>
@@ -84,12 +90,37 @@
 
     <public_shares>
     #for $ps in $publicShares
-        <public_share id="$ps.id" owner_id="$ps.owner_id"
+        <public_share id="$ps.id" owner_id="$ps.owner_id" date_expires="$ps.date_expires" password="$ps.password" reuse="$ps.reuse">
+            <files>
+            #for $fileId in $ps.files
+                <file id="$fileId">
+            #end for
+            </files>
+        </public_share>
     #end for
     </public_shares>
 
     <attribute_shares>
+    #for $as in $attributeShares
+        <attribute_share attribute_id="$as.attribute_id" file_id="$as.file_id"
+    #end for
     </attribute_shares>
 
+    <hidden_shares>
+    #for $hs in $hiddenShares
+        <hidden_share file_id="$hs.file_id" owner_id="$hs.owner_id"/>
+    #end for
+    </hidden_shares>
 
+    <upload_requests>
+    #for $u in $uploadRequests
+        <upload_request id="$u.id" owner_id="$u.owner_id" max_file_size="$u.max_file_size" scan_file="$u.scan_file" date_expires="$u.date_expires" password="$u.password" type="$u.type"/>
+    #end for
+    </upload_requests>
+
+    <config_parameters>
+    #for $cf in $configParameters
+        <config_parameter name="$cf.name" description="$cf.description" type="$cf.type" value="$cf.value"/>
+    #end for
+    </config_parameters>
 </data>

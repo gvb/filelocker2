@@ -328,6 +328,32 @@ def stop(pidfile=None):
             print "Error stopping: %s\n" % str(e)
         else:
             os.kill(pid, 9)
+
+def port_database(config):
+    host = raw_input("What is the host of the old DB server?: ")
+    db = raw_input("Database: ")
+    username = raw_input("Username: ")
+    password = getpass("Password: ")
+
+    dbConverter = LegacyDBConverter(host, username, password, db)
+    parameters = dbConverter.GetAllParameters()
+    files = dbConverter.GetAllFiles()
+    groups = dbConverter.GetAllGroups ()
+    permissions = dbConverter.GetAllPermissions()
+    userShares = dbConverter.GetAllUserShares()
+    groupShares = dbConverter.GetAllGroupShares()
+    hiddenShares = dbConverter.GetAllHiddenShares()
+    attributes = dbConverter.GetAllAttributes()
+    attributeShares = dbConverter.GetAllAttributeShares()
+    publicShares = dbConverter.GetAllPublicShares ()
+    users = dbConverter.GetAllUsers ()
+    roles = dbConverter.GetRoles()
+    messages = dbConverter.GetMessages()
+    messageShares = dbConverter.GetAllMessageShares()
+    uploadRequests = dbConverter.GetUploadRequests()
+    deletedFiles = dbConverter.GetAllDeletedFiles()
+    auditLogs = dbConverter.GetAuditLogs()
+
             
 def build_database(configfile=None):
     config = cherrypy._cpconfig._Parser()

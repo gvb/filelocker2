@@ -54,11 +54,14 @@ class ShareController:
             try:
                 flFile = session.query(File).filter(File.id==fileId).one()
                 if flFile.owner_id == user.id or AccountController.user_has_permission(user, "admin"):
-                    ps = session.query(UserShare).filter(UserShare.user_id == userId and UserShare.file_id == flFile.id).scalar()
+                    ps = session.query(UserShare).filter(and_(UserShare.user_id == userId, UserShare.file_id == flFile.id)).scalar()
                     if ps is not None:
                         session.delete(ps)
                         session.add(AuditLog(user.id, "Delete User Share", "You stopped sharing file %s with %s" % (flFile.name, userId)))
                         session.commit()
+                        sMessages.append("Share has been successfully deleted")
+                    else:
+                        fMessages.append("This share does not exist")
                 else:
                     fMessages.append("You do not have permission to modify shares for file with ID: %s" % str(flFile.id))
             except Exception, e:
