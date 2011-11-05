@@ -278,7 +278,7 @@ class RootController:
     @cherrypy.tools.requires_login()
     #TODO: This
     def manage_groups(self, **kwargs):
-        sessionUser = cherrypy.session.get("user")
+        user = cherrypy.session.get("user")
         config = cherrypy.request.app.config['filelocker']
         groups = session.query(Group).filter(Group.owner_id==user.id).all()
         tpl = Template(file=get_template_file('manage_groups.tmpl'), searchList=[locals(),globals()])
