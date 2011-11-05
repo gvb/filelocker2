@@ -24,15 +24,15 @@ class LocalDirectory(object):
     def get_user_matches(self, firstName=None, lastName=None, userId=None):
         query = session.query(User)
         if userId is not None:
-            query.filter(User.id.like("%"+userId+"%"))
+            query.filter(User.id.like("%s%%"%userId))
         elif firstName is not None and lastName is not None:
-            query.filter(User.first_name.like("%"+firstName+"%"))
-            query.filter(User.last_name.like("%"+lastName+"%"))
+            query.filter(User.first_name.like("%%%s%%" % firstName))
+            query.filter(User.last_name.like("%%%s%%" % lastName))
         elif firstName is None and lastName is not None:
-            query.filter(User.first_name.like("%"+lastName+"%"))
-            query.filter(User.last_name.like("%"+lastName+"%"))
+            query.filter(User.first_name.like("%%%s%%" % lastName))
+            query.filter(User.last_name.like("%%%s%%" % lastName))
         elif firstName is not None and lastName is None:
-            query.filter(User.first_name.like("%"+firstName+"%"))
+            query.filter(User.first_name.like("%%%s%%" % firstName))
         return query.order_by(User.last_name)
 
 
