@@ -74,17 +74,17 @@ class RootController:
             cherrypy.session['user'], cherrypy.response.cookie['filelocker']['expires'] = None, 0
             raise cherrypy.HTTPRedirect(config['root_url']+'/login?msg=2')
 
-#    @cherrypy.expose
-#    def logout_cas(self):
-#        from lib.CAS import CAS
-#        orgURL = cherrypy.response.cookie['filelocker']['org_url']
-#        orgName = cherrypy.response.cookie['filelocker']['org_name']
-#        rootURL = cherrypy.response.cookie['filelocker']['root_url']
-#        currentYear = datetime.date.today().year
-#        footerText = str(Template(file=get_template_file('footer_text.tmpl'), searchList=[locals(),globals()]))
-#        tpl = Template(file=get_template_file('cas_logout_confirmation.tmpl'), searchList=[locals(), globals()])
-#        return str(tpl)
-#
+    @cherrypy.expose
+    def logout_cas(self):
+        from lib.CAS import CAS
+        orgURL = cherrypy.response.cookie['filelocker']['org_url']
+        orgName = cherrypy.response.cookie['filelocker']['org_name']
+        rootURL = cherrypy.response.cookie['filelocker']['root_url']
+        currentYear = datetime.date.today().year
+        footerText = str(Template(file=get_template_file('footer_text.tmpl'), searchList=[locals(),globals()]))
+        tpl = Template(file=get_template_file('cas_logout_confirmation.tmpl'), searchList=[locals(), globals()])
+        return str(tpl)
+
     @cherrypy.expose
     def process_login(self, username, password, **kwargs):
         authType, rootURL = cherrypy.request.app.config['filelocker']['auth_type'], cherrypy.request.app.config['filelocker']['root_url']
@@ -176,84 +176,84 @@ class RootController:
                 return str(Template(file=get_template_file('tos.tmpl'), searchList=[locals(),globals()]))
         else:
             raise cherrypy.HTTPRedirect(rootURL)
-#
-#    @cherrypy.expose
-#    @cherrypy.tools.requires_login()
-#    def admin(self, **kwargs):
-#        user = cherrypy.session.get("user")
-#        userFiles = FileController.get_user_file_list(format="list")
-#        templateFiles = os.listdir(os.path.join(cherrypy.request.app.config['filelocker']['root_path'], "view"))
-#        configParameters = session.query(ConfigParameter).all()
-#        flUsers = session.query(User).slice(0,50)
-#        totalFileCount = session.query(func.count(File.id))
-#        totalUserCount = session.query(func.count(User.id))
-#        totalMessageCount = session.query(func.count(Message.id))
-#        currentUsersList = []
-#        currentUploads = len(cherrypy.file_uploads)
-#        logsFile = open(cherrypy.config["log.error_file"])
-#        logs = tail(logsFile, 50)
-#        attributes = ShareController.get_user_shareable_attributes(user)
-#        currentUserIds = []
-#        sessionCache = {}
-#        sessionCache = cherrypy.session.cache
-#        for key in sessionCache.keys():
-#            try:
-#                if sessionCache[key][0].has_key('user') and sessionCache[key][0]['user'] is not None and sessionCache[key][0]['user'].id not in currentUserIds:
-#                    currentUser = sessionCache[key][0]['user']
-#                    currentUsersList.append(currentUser)
-#                    currentUserIds.append(currentUser.id)
-#            except Exception, e:
-#                logging.error("[%s] [admin] [Unable to read user session: %s]" % (user.id, str(e)))
-#        tpl = Template(file=get_template_file('admin.tmpl'), searchList=[locals(),globals()])
-#        return str(tpl)
-#
-#    @cherrypy.expose
-#    @cherrypy.tools.requires_login()
-#    def history(self, userId=None, startDate=None, endDate=None, logAction=None, format="html", **kwargs):
-#        sMessages, fMessages, user= ([],[],cherrypy.session.get("user"))
-#        if (userId != user.id and AccountController.user_has_permission(user, "admin")==False):
-#            raise cherrypy.HTTPError(403)
-#        actionList, actionLogList = ([], [])
-#        try:
-#            startDateFormatted, endDateFormatted = None, None
-#            sevenDays = datetime.timedelta(days=7)
-#            today = datetime.datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
-#            sevenDaysAgo = today - sevenDays
-#            sevenDaysAgo = sevenDaysAgo.replace(hour=0, minute=0, second=0, microsecond=0)
-#            if startDate is not None:
-#                startDateFormatted = datetime.datetime(*time.strptime(strip_tags(startDate), "%m/%d/%Y")[0:5])
-#            else:
-#                startDateFormatted = sevenDaysAgo
-#            if endDate is not None:
-#                endDateFormatted = datetime.datetime(*time.strptime(strip_tags(endDate), "%m/%d/%Y")[0:5])
-#            else:
-#                endDateFormatted = today
-#            actionLogList = session.query(AuditLog).filter(and_(AuditLog.date > startDateFormatted, AuditLog.date < endDateFormatted))
-#
-#            if logAction is None or logAction == "":
-#                logAction = "all_minus_login"
-#                actionLogList.filter(AuditLog.action != "Login")
-#            if userId is None:
-#                userId = user.userId
-#
-#            for log in actionLogList:
-#                log.displayClass = "%s_%s" % ("audit", log.action.replace(" ", "_").lower())
-#                log.displayClass = re.sub('_\(.*?\)', '', log.displayClass) # Removes (You) and (Recipient) from Read Message actions
-#            actionNames = session.query(AuditLog.action).filter(or_(AuditLog.initiator_user_id==userId, AuditLog.affected_user_id==userId)).distinct()
-#            for actionLog in actionNames:
-#                if actionLog not in actionList:
-#                    actionList.append(actionLog)
-#        except Exception, e:
-#            fMessages.append(str(e))
-#        if format == "html":
-#            tpl = Template(file=fl.get_template_file('history.tmpl'), searchList=[locals(),globals()])
-#            return str(tpl)
-#        else:
-#            actionLogJSONlist = []
-#            for actionLog in actionLogList:
-#                actionLogJSONlist.append(actionLog.get_dict())
-#            return fl_response(sMessages, fMessages, format, data=actionLogJSONlist)
-#
+
+    @cherrypy.expose
+    @cherrypy.tools.requires_login()
+    def admin(self, **kwargs):
+        user = cherrypy.session.get("user")
+        templateFiles = os.listdir(os.path.join(cherrypy.request.app.config['filelocker']['root_path'], "view"))
+        configParameters = session.query(ConfigParameter).all()
+        flUsers = session.query(User).slice(0,50)
+        totalFileCount = session.query(func.count(File.id))
+        totalUserCount = session.query(func.count(User.id))
+        totalMessageCount = session.query(func.count(Message.id))
+        currentUsersList = []
+        currentUploads = len(cherrypy.file_uploads)
+        logsFile = open(cherrypy.config["log.error_file"])
+        logs = tail(logsFile, 50)
+        attributes = ShareController.get_user_shareable_attributes(user)
+        currentUserIds = []
+        sessionCache = {}
+        sessionCache = cherrypy.session.cache
+        for key in sessionCache.keys():
+            try:
+                if sessionCache[key][0].has_key('user') and sessionCache[key][0]['user'] is not None and sessionCache[key][0]['user'].id not in currentUserIds:
+                    currentUser = sessionCache[key][0]['user']
+                    currentUsersList.append(currentUser)
+                    currentUserIds.append(currentUser.id)
+            except Exception, e:
+                logging.error("[%s] [admin] [Unable to read user session: %s]" % (user.id, str(e)))
+        tpl = Template(file=get_template_file('admin.tmpl'), searchList=[locals(),globals()])
+        return str(tpl)
+
+    @cherrypy.expose
+    @cherrypy.tools.requires_login()
+    def history(self, userId=None, startDate=None, endDate=None, logAction=None, format="html", **kwargs):
+        sMessages, fMessages, user= ([],[],cherrypy.session.get("user"))
+        config = cherrypy.request.app.config['filelocker']
+        if (userId != user.id and AccountController.user_has_permission(user, "admin")==False):
+            raise cherrypy.HTTPError(403)
+        actionList, actionLogList = ([], [])
+        try:
+            startDateFormatted, endDateFormatted = None, None
+            sevenDays = datetime.timedelta(days=7)
+            today = datetime.datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+            sevenDaysAgo = today - sevenDays
+            sevenDaysAgo = sevenDaysAgo.replace(hour=0, minute=0, second=0, microsecond=0)
+            if startDate is not None:
+                startDateFormatted = datetime.datetime(*time.strptime(strip_tags(startDate), "%m/%d/%Y")[0:5])
+            else:
+                startDateFormatted = sevenDaysAgo
+            if endDate is not None:
+                endDateFormatted = datetime.datetime(*time.strptime(strip_tags(endDate), "%m/%d/%Y")[0:5])
+            else:
+                endDateFormatted = today
+            actionLogList = session.query(AuditLog).filter(and_(AuditLog.date > startDateFormatted, AuditLog.date < endDateFormatted))
+
+            if logAction is None or logAction == "":
+                logAction = "all_minus_login"
+                actionLogList.filter(AuditLog.action != "Login")
+            if userId is None:
+                userId = user.userId
+
+            for log in actionLogList:
+                log.displayClass = "%s_%s" % ("audit", log.action.replace(" ", "_").lower())
+                log.displayClass = re.sub('_\(.*?\)', '', log.displayClass) # Removes (You) and (Recipient) from Read Message actions
+            actionNames = session.query(AuditLog.action).filter(or_(AuditLog.initiator_user_id==userId, AuditLog.affected_user_id==userId)).distinct()
+            for actionLog in actionNames:
+                if actionLog not in actionList:
+                    actionList.append(actionLog)
+        except Exception, e:
+            fMessages.append(str(e))
+        if format == "html":
+            tpl = Template(file=get_template_file('history.tmpl'), searchList=[locals(),globals()])
+            return str(tpl)
+        else:
+            actionLogJSONlist = []
+            for actionLog in actionLogList:
+                actionLogJSONlist.append(actionLog.get_dict())
+            return fl_response(sMessages, fMessages, format, data=actionLogJSONlist)
+
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def files(self, **kwargs):
@@ -273,19 +273,20 @@ class RootController:
     def help(self, **kwargs):
         tpl = Template(file=get_template_file('halp.tmpl'), searchList=[locals(),globals()])
         return str(tpl)
-#
-#    @cherrypy.expose
-#    @cherrypy.tools.requires_login()
-#    #TODO: This
-#    def manage_groups(self, **kwargs):
-#        user = cherrypy.session.get("user")
-#        tpl = Template(file=fl.get_template_file('manageGroups.tmpl'), searchList=[locals(),globals()])
-#        return str(tpl)
-#
-#    @cherrypy.expose
-#    def toobig(self, **kwargs):
-#        return fl_response([], ['File is too big'], "json")
-#
+
+    @cherrypy.expose
+    @cherrypy.tools.requires_login()
+    #TODO: This
+    def manage_groups(self, **kwargs):
+        sessionUser = cherrypy.session.get("user")
+        user = session.query(User).filter(User.id==sessionUser.id).one()
+        tpl = Template(file=fl.get_template_file('manageGroups.tmpl'), searchList=[locals(),globals()])
+        return str(tpl)
+
+    @cherrypy.expose
+    def toobig(self, **kwargs):
+        return fl_response([], ['File is too big'], "json")
+
 #    @cherrypy.expose
 #    def public_upload(self, ticketId=None, password=None, **kwargs):
 #        ticketOwner, uploadTicket, tpl, messages  = (None, None, None, [])

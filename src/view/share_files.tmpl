@@ -7,11 +7,11 @@
         <td style="width: 310px;">
             <h3>Files selected for sharing</h3><br/>
             #for $selectedFile in $myFilesList
-            <a class="$selectedFile.documentType" title="$selectedFile.fileName">
-                #if len($selectedFile.fileName) > 60
-                    $selectedFile.fileName[0:45]...$selectedFile.fileName[-10:]
+            <a class="$selectedFile.documentType" title="$selectedFile.name">
+                #if len($selectedFile.name) > 60
+                    $selectedFile.name[0:45]...$selectedFile.name[-10:]
                 #else
-                    $selectedFile.fileName
+                    $selectedFile.name
                 #end if
             </a><br/>
             #end for
@@ -40,7 +40,7 @@
                     #else
                         #for $share in $selectedFile.fileUserShares
                             <li><span class="itemTitleMedium"><span class="ownerItem memberTitle">$share.id</span></span>
-                            <a href="javascript:unPrivateShareFiles('$share['id']', 'private', $selectedFile.fileId);" title="Unshare this file from '$share.id'" class="deleteLink">Unshare</a></li>
+                            <a href="javascript:unPrivateShareFiles('$share['id']', 'private', $selectedFile.id);" title="Unshare this file from '$share.id'" class="deleteLink">Unshare</a></li>
                         #end for
                     #end if
                     </ul>
@@ -57,7 +57,7 @@
                                 #set $shortenedName = $share['name'][0:17] + "..." + $share['name'][-5:]
                             #end if
                             <li><span class="itemTitleMedium"><span class="groupItem memberTitle" title="$share['name']">$shortenedName</span></span>
-                            <a href="javascript:unPrivateShareFiles('$share['id']', 'private_group', $selectedFile.fileId);" title="Unshare this file from '$share['name']'" class="deleteLink">Unshare</a></li>
+                            <a href="javascript:unPrivateShareFiles('$share['id']', 'private_group', $selectedFile.id);" title="Unshare this file from '$share['name']'" class="deleteLink">Unshare</a></li>
                         #end for
                     #end if
                     </ul>
@@ -75,7 +75,7 @@
                                 #set $shortenedName = $share['name'][0:17] + "..." + $share['name'][-5:]
                             #end if
                             <li><span class="itemTitleMedium"><span class="attributeItem memberTitle" title="$share['name']">$shortenedName</span></span>
-                            <a href="javascript:unPrivateShareFiles('$share['id']', 'private_attribute', $selectedFile.fileId);" title="Unshare this file from '$share['name']'" class="deleteLink">Unshare</a></li>
+                            <a href="javascript:unPrivateShareFiles('$share['id']', 'private_attribute', $selectedFile.id);" title="Unshare this file from '$share['name']'" class="deleteLink">Unshare</a></li>
                         #end for
                     #end if
                     </ul>
