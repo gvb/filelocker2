@@ -61,7 +61,7 @@ Share = function() {
             $("#multiShare").show("clip", {}, 500);
     }
 
-    User = function() {
+    UserShare = function() {
         function create(targetId, fileId)
         {
             var action = "sharing files with users";
@@ -106,7 +106,7 @@ Share = function() {
         }
     }();
 
-    Group = function() {
+    GroupShare = function() {
         function create(targetId, fileId)
         {
             var action = "sharing files with groups";
@@ -151,7 +151,7 @@ Share = function() {
         };
     }();
 
-    Attribute = function() {
+    AttributeShare = function() {
         function create(attributeId, fileId)
         {
             var action = "sharing files by attribute";
@@ -195,7 +195,7 @@ Share = function() {
         };
     }();
 
-    Public = function() {
+    PublicShare = function() {
         function create()
         {
             if ($("#publicSharePassword").val() != $("#publicSharePasswordConfirm").val())
@@ -286,9 +286,9 @@ Share = function() {
         unhide:unhide,
         hideMulti:hideMulti,
         showMulti:showMulti,
-        User:User,
-        Group:Group,
-        Attribute:Attribute,
-        Public:Public
+        User:UserShare,
+        Group:GroupShare,
+        Attribute:AttributeShare,
+        Public:PublicShare
     };
 }();

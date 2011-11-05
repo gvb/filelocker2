@@ -136,7 +136,7 @@ Group = function() {
     
     function addGroupIfEnter(event) { if (event.keyCode == 13) create(); }
     function editGroupIfEnter(event, groupId) { if (event.keyCode == 13) updateGroup(groupId); }
-    function groupRowClick(groupId)
+    function rowClick(groupId)
     {
         $(".menuGroups").each(function() { $(this).addClass("hidden");}); // Hide other menus
         if($("#group_"+groupId).hasClass("rowSelected"))
@@ -200,5 +200,5 @@ Group = function() {
         promptAdd:promptAdd,
         promptEdit:promptEdit,
         Member:Member
-    }
+    };
 }();
