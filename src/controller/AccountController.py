@@ -286,23 +286,23 @@ class AccountController:
                 lastName = strip_tags(lastName)
                 userId = strip_tags(userId)
                 directory = ExternalDirectory(config)
-                foundUsers = directory.search_users(external, firstName, lastName, userId)
+                foundUsers = directory.get_user_matches(external, firstName, lastName, userId)
             else:
                 fMessages.append("Please specify the first name, last name, or username of the user for whom you are searching")
         except Exception, e:
             if str(e)=="toomany":
                 tooManyResults = True
             else:
-                logging.error("[%s] [searchUsers] [Errors during directory search: %s]" % (user.id, str(fMessages)))
+                logging.error("[%s] [search_users] [Errors during directory search: %s]" % (user.id, str(fMessages)))
                 fMessages.append(str(e))
 
         if format=="autocomplete":
             shareLinkList = []
             if len(fMessages) > 0:
-                shareLinkList.append({'value': 0, 'label': fMessages[-1]})
+                shareLinkList.append({'value': 0, 'label': ""})
                 if tooManyResults:
                     fMessages = [] #no need for a failure message on too many results, that'll display in result window
-                sMessage = [] #We don't need to flash a success message every time a search completes
+                sMessage = ["Got users"] #We don't need to flash a success message every time a search completes
             else:
                 for foundUser in foundUsers:
                     shareLinkList.append({'value': foundUser.id, 'label': foundUser.display_name})
@@ -393,7 +393,7 @@ def get_user(userId, login=False):
                     if attr is not None:
                         user.attributes.append(attr)
                     uniqueAttributeList.append(attributeId)
-            user.date_last_login =datetime.datetime.now()
+            user.date_last_login = datetime.datetime.now()
             session.commit()
             setup_session(user.get_copy())
     return user
