@@ -67,7 +67,7 @@ class RootController:
             casLogoutUrl =  CAS.logout_url()+"?redirectUrl="+config['root_url']+"/logout_cas"
             currentYear = datetime.date.today().year
             footerText = str(Template(file=get_template_file('footer_text.tmpl'), searchList=[locals(),globals()]))
-            tpl = Template(file=fl.get_template_file('cas_logout.tmpl'), searchList=[locals(), globals()])
+            tpl = Template(file=get_template_file('cas_logout.tmpl'), searchList=[locals(), globals()])
             cherrypy.session['user'], cherrypy.response.cookie['filelocker']['expires'] = None, 0
             return str(tpl)
         else:
@@ -279,8 +279,9 @@ class RootController:
     #TODO: This
     def manage_groups(self, **kwargs):
         sessionUser = cherrypy.session.get("user")
+        config = cherrypy.request.app.config['filelocker']
         user = session.query(User).filter(User.id==sessionUser.id).one()
-        tpl = Template(file=fl.get_template_file('manageGroups.tmpl'), searchList=[locals(),globals()])
+        tpl = Template(file=get_template_file('manageGroups.tmpl'), searchList=[locals(),globals()])
         return str(tpl)
 
     @cherrypy.expose
