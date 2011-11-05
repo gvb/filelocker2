@@ -1,4 +1,5 @@
 import cherrypy
+import datetime
 import logging
 from twisted.plugin import getPlugins, IPlugin
 from lib.SQLAlchemyTool import session
@@ -392,6 +393,8 @@ def get_user(userId, login=False):
                     if attr is not None:
                         user.attributes.append(attr)
                     uniqueAttributeList.append(attributeId)
+            user.date_last_login =datetime.datetime.now()
+            session.commit()
             setup_session(user.get_copy())
     return user
 
