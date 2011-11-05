@@ -156,7 +156,7 @@ class ShareController:
         try:
             fileIds = split_list_sanitized(fileIds)
             for fileId in fileIds:
-                session.add(HiddenShare(file_id=fileIds, owner_id=user.id))
+                session.add(HiddenShare(file_id=fileId, owner_id=user.id))
             session.commit()
             sMessages.append("Share has been hidden.")
         except Exception, e:
