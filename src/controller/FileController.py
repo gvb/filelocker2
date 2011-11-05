@@ -13,6 +13,7 @@ import datetime
 import subprocess
 from Cheetah.Template import Template
 from lib.SQLAlchemyTool import session
+import sqlalchemy
 from sqlalchemy import *
 from sqlalchemy.sql import select, delete, insert
 from lib.Models import *

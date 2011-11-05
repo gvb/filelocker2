@@ -148,7 +148,7 @@ class File(Base):
     attribute_shares = relationship("AttributeShare", backref="files")
 
     def shared_with(self, user):
-        for share in user_shares:
+        for share in self.user_shares:
             if share.user_id == user.id:
                 return True
         groupIds = []
@@ -218,7 +218,7 @@ class MessageShare(Base):
 
 class UserShare(Base):
     __tablename__ = "user_shares"
-    user_id = Column(Integer, ForeignKey("users.id"), primary_key=True)
+    user_id = Column(String(30), ForeignKey("users.id"), primary_key=True)
     file_id = Column(Integer, ForeignKey("files.id"), primary_key=True)
     flFile = relationship("File")
     user = relationship("User")

@@ -14,6 +14,8 @@ class ShareController:
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def create_user_shares(self, fileIds, userId=None, notify="no", cc="no", format="json", **kwargs):
+        config = cherrypy.request.app.config['filelocker']
+        print "userId %s" % str(userId)
         user, sMessages, fMessages  = (cherrypy.session.get("user"), [], [])
         fileIds = split_list_sanitized(fileIds)
         userId = strip_tags(userId) if userId is not None and userId != "" else None
@@ -35,9 +37,12 @@ class ShareController:
                     else:
                         fMessages.append("You do not have permission to share file with ID: %s" % str(flFile.id))
                 if notify:
-                    Mail.notify(get_template_file('share_notification.tmpl'),{'sender':user.email,'recipient':shareUser.email, 'ownerId':user.id, 'ownerName':user.display_name, 'files':sharedFiles, 'filelockerURL': config['root_url']})
-                    session.add(AuditLog(user.userId, "Sent Email", "%s has been notified via email that you have shared a file with him or her." % (shareUser.email)))
-                    session.commit()
+                    try:
+                        Mail.notify(get_template_file('share_notification.tmpl'),{'sender':user.email,'recipient':shareUser.email, 'ownerId':user.id, 'ownerName':user.display_name, 'files':sharedFiles, 'filelockerURL': config['root_url']})
+                        session.add(AuditLog(user.userId, "Sent Email", "%s has been notified via email that you have shared a file with him or her." % (shareUser.email)))
+                        session.commit()
+                    except Exception, e:
+                        fMessages.append("Problem sending email notification: %s" % str(e))
                 sMessages.append("Shared file(s) successfully")
             else:
                 fMessages.append("You did not specify a user to share the file with")
