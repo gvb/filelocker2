@@ -286,7 +286,7 @@ class AccountController:
                 lastName = strip_tags(lastName)
                 userId = strip_tags(userId)
                 directory = ExternalDirectory(config)
-                foundUsers = directory.get_user_matches(external, firstName, lastName, userId)
+                foundUsers = directory.get_user_matches(firstName, lastName, userId)
             else:
                 fMessages.append("Please specify the first name, last name, or username of the user for whom you are searching")
         except Exception, e:
