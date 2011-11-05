@@ -23,14 +23,24 @@
     <groups>
     #for $group in $groups
         <group id="$group.id" name="$group.name" scope="$group.scope">
-        <members>
-        #for $member in $group.members
-            <user id="$user.id"
-        #end for
-        </members>
+            <members>
+            #for $member in $group.members
+                <user id="$user.id"/>
+            #end for
+            </members>
         </group>
     #end for
     </groups>
+    <roles>
+    #for $role in $roles
+        <role id="$role.id" name="$role.name" quota="$role.quota" email="$role.email"/>
+        <permissions>
+        #for $permission in $role.permissions
+            <permission id="$permission.id"/>
+        #end for
+        </permissions>
+    #end for
+    </roles>
 
 
 </data>

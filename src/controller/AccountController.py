@@ -46,6 +46,10 @@ class AccountController:
             if kwargs.has_key("emailAddress"):
                 currentUser.email = kwargs["emailAddress"]
                 sMessages.append("Email address successfully updated")
+            if kwargs.has_key("firstName") and strip_tags(kwargs['firstName']) is not None:
+                currentUser.first_name = strip_tags(kwargs['firstName'])
+            if kwargs.has_key("lastName") and strip_tags(kwargs['lastName']) is not None:
+                currentUser.first_name = strip_tags(kwargs['lastName'])
             session.commit()
         except Exception, e:
             fMessages.append(str(e))

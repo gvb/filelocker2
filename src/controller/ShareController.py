@@ -137,6 +137,35 @@ class ShareController:
 
     @cherrypy.expose
     @cherrypy.tools.requires_login()
+    def unhide_shares(self):
+        user, sMessages, fMessages  = (cherrypy.session.get("user"), [], [])
+        try:
+            session.query(HiddenShare).filter(owner_id==user.id).delete(synchronize_session=False)
+            session.commit()
+            sMessages.append("All shares have been unhidden")
+        except Exception, e:
+            fMessages.append("Could not unhide shares: %s" % str(e))
+            logging.error("[%s] [unhide_shares] [Could not unhide shares: %s]" % (user.id, str(e)))
+        return fl_response(sMessags, fMessages, format)
+        
+    
+    @cherrypy.expose
+    @cherrypy.tools.requires_login()
+    def hide_shares(self, fileIds):
+        user, sMessages, fMessages  = (cherrypy.session.get("user"), [], [])
+        try:
+            fileIds = split_list_sanitized(fileIds)
+            for fileId in fileIds:
+                session.add(HiddenShare(file_id=fileIds, owner_id=user.id))
+            session.commit()
+            sMessages.append("Share has been hidden.")
+        except Exception, e:
+            fMessages.append("Could not hide share: %s" % str(e))
+            logging.error("[%s] [unhide_shares] [Could not unhide shares: %s]" % (user.id, str(e)))
+        return fl_response(sMessags, fMessages, format)
+
+    @cherrypy.expose
+    @cherrypy.tools.requires_login()
     def create_attribute_shares(self, fileIds, attributeId, format="json", **kwargs):
         user, sMessages, fMessages  = (cherrypy.session.get("user"), [], [])
         try:

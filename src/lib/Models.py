@@ -175,10 +175,11 @@ class File(Base):
         'date_expires': self.date_expires.strftime("%m/%d/%Y"), 'passed_avscan':self.passed_avscan,\
         'document_type': self.document_type}
 
-hidden_share_table = Table("hidden_share_table", Base.metadata,
-    Column("user_id", String(30), ForeignKey("roles.id")),
-    Column("file_id", Integer, ForeignKey("files.id")))
-
+class HiddenShare(Base):
+    __tablename__ = "hidden_shares"
+    file_id = Column(Integer, ForeignKey("files.id"), primary_key=True)
+    owner_id = Column(String(30), ForeignKey("roles.id"), primary_key=True)
+    
 class DeletedFile(Base):
     __tablename__ = "deletion_queue"
     file_name = Column(String(255), primary_key=True)

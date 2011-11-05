@@ -93,12 +93,16 @@ class FileController(object):
             else:
                 raise cherrypy.HTTPError(413)
         myFilesList = []
+        hiddenShares = session.query(HiddenShare).filter(HiddenShare.owner_id==userId).all()
+        hiddenShareIds = []
+        for hiddenShare in hiddenShares:
+            hiddenShareIds.append(hiddenShare.file_id)
         if fileIdList is None:
-            myFilesList = session.query(File).filter(File.owner_id == userId).all()
+            myFilesList = session.query(File).filter(File.owner_id == userId).filter(File.id not in hiddenShareIds).all()
         else:
             fileIdList = split_list_sanitized(fileIdList)
             for fileId in fileIdList:
-                flFile = session.query(File).filter(File.id==fileId).one()
+                flFile = session.query(File).filter(File.id==fileId).filter(File.id not in hiddenShareIds).one()
                 if flFile.owner_id == userId or flFile.shared_with(user):
                     myFilesList.append(flFile)
         for flFile in myFilesList: #attachments to the file objects for this function, purely cosmetic
@@ -188,7 +192,6 @@ class FileController(object):
                 fileId = int(fileId)
                 flFile = session.query(File).filter(File.id == fileId).one()
                 if flFile.owner_id == user.id or AccountController.user_has_permission(user, "admin"):
-                    print "Queueing for deletion, everything looks good"
                     queue_for_deletion(flFile.id)
                     session.delete(flFile)
                     session.commit()
@@ -237,7 +240,7 @@ class FileController(object):
         if cherrypy.session.has_key("uploadTicket") and cherrypy.session.get("uploadTicket") is not None:
             uploadRequest = cherrypy.session.get("uploadTicket")
             user = AccountController.get_user(uploadTicket.ownerId)
-            uploadKey = user.id+":"+uploadTicket.id
+            uploadKey = "%s:%s" % (user.id, uploadTicket.id)
         else:
             cherrypy.tools.requires_login()
             user, sMessages, fMessages = cherrypy.session.get("user"), cherrypy.session.get("sMessages"), cherrypy.session.get("fMessages")
