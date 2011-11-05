@@ -18,10 +18,10 @@ Filelocker = function(){
         $.ajax({
             type: "POST",
             cache: false,
-            contentType: "application/json; charset=utf-8",
+            //contentType: "application/json; charset=utf-8",
             dataType: "json",
             url: FILELOCKER_ROOT + path,
-            data: JSON.stringify(payloadObject),
+            data: payloadObject,
             success: function(response) {
                 if (showMessage)
                     StatusResponse.show(response, action);

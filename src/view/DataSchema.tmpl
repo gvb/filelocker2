@@ -1,0 +1,36 @@
+<data>
+    <permissions>
+    #for $permission in $permissions
+    <permission id="$permission.id" name="$permission.name"/>
+    #end for
+    </permissions>
+    <users>
+    #for $user in $users
+        <user id="$user.id" first_name="$user.first_name" last_name="$user.last_name" quota="$user.quota" email="$user.email" date_last_login="$user.date_last_login" date_tos_accept="$user.date_tos_accept">
+            <permissions>
+            #for $permissionId in $permissions
+                <permission id="$permissionId"/>
+            #end for
+            </permissions>
+            <roles>
+            #for $roleId in $roles
+                <role id="$roleId"/>
+            #end for
+            </roles>
+        </user>
+    #end for
+    </users>
+    <groups>
+    #for $group in $groups
+        <group id="$group.id" name="$group.name" scope="$group.scope">
+        <members>
+        #for $member in $group.members
+            <user id="$user.id"
+        #end for
+        </members>
+        </group>
+    #end for
+    </groups>
+
+
+</data>

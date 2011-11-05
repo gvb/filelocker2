@@ -164,6 +164,7 @@ FLFile = function() {
             selectedFileRow = "";
             load();
         });
+        //$.post("http://localhost:8080/file/delete_files", {"fileIds": fileId}, function(){},"json");
     }
     function deleteFiles()
     {

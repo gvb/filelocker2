@@ -81,40 +81,6 @@ class FileController(object):
             fMessages.append(str(e))
         return fl_response(sMessages, fMessages, format, data=stats)
         
-#    TODO: Refactor
-#    @cherrypy.expose
-#    @cherrypy.tools.requires_login()
-#    def get_hourly_statistics(self, format="json", **kwargs):
-#        user, fl, sMessages, fMessages, stats = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [], None)
-#        try:
-#            stats = fl.get_hourly_statistics(user)
-#        except FLError, fle:
-#            fMessages.extend(fle.failureMessages)
-#            sMessages.extend(fle.successMessages)
-#        return fl_response(sMessages, fMessages, format, data=stats)
-#
-#    @cherrypy.expose
-#    @cherrypy.tools.requires_login()
-#    def get_daily_statistics(self, format="json", **kwargs):
-#        user, fl, sMessages, fMessages, stats = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [], None)
-#        try:
-#            stats = fl.get_daily_statistics(user)
-#        except FLError, fle:
-#            fMessages.extend(fle.failureMessages)
-#            sMessages.extend(fle.successMessages)
-#        return fl_response(sMessages, fMessages, format, data=stats)
-#
-#    @cherrypy.expose
-#    @cherrypy.tools.requires_login()
-#    def get_monthly_statistics(self, format="json", **kwargs):
-#        user, fl, sMessages, fMessages, stats = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [], None)
-#        try:
-#            stats = fl.get_monthly_statistics(user)
-#        except FLError, fle:
-#            fMessages.extend(fle.failureMessages)
-#            sMessages.extend(fle.successMessages)
-#        return fl_response(sMessages, fMessages, format, data=stats)
-
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def get_user_file_list(self, fileIdList=None, format="json", **kwargs):
@@ -214,14 +180,15 @@ class FileController(object):
 
     @cherrypy.expose
     @cherrypy.tools.requires_login()
-    def delete_files(self, fileIds=None, format="json", **kwargs):
+    def delete_files(self, fileIds, format="json", **kwargs):
         user, sMessages, fMessages = (cherrypy.session.get("user"), [], [])
         fileIds = split_list_sanitized(fileIds)
         for fileId in fileIds:
             try:
-                fileId = int(strip_tags(str(fileId)))
+                fileId = int(fileId)
                 flFile = session.query(File).filter(File.id == fileId).one()
                 if flFile.owner_id == user.id or AccountController.user_has_permission(user, "admin"):
+                    print "Queueing for deletion, everything looks good"
                     queue_for_deletion(flFile.id)
                     session.delete(flFile)
                     session.commit()
@@ -232,6 +199,7 @@ class FileController(object):
                 fMessages.append("Could not find file with ID: %s" % str(fileId))
             except Exception, e:
                 session.rollback()
+                logging.error("[%s] [delete_files] [Could not delete file: %s]" % (user.id, str(e)))
                 fMessages.append("File not deleted: %s" % str(e))
         return fl_response(sMessages, fMessages, format)
 
