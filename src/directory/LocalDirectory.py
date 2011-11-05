@@ -7,7 +7,7 @@ __date__ ="$Oct 5, 2011 2:09:08 AM$"
 class LocalDirectory(object):
 
     def lookup_user(self, userId):
-        return session.query(User).filter(User.id == userid).one()
+        return session.query(User).filter(User.id == userId).one()
 
     def authenticate(self, userId, password):
         #We have to support real-time conversion from less-secure MD5 hashed passwords
@@ -24,7 +24,7 @@ class LocalDirectory(object):
     def get_user_matches(self, firstName=None, lastName=None, userId=None):
         query = session.query(User)
         if userId is not None:
-            query.filter(User.id.like("%"+userid+"%"))
+            query.filter(User.id.like("%"+userId+"%"))
         elif firstName is not None and lastName is not None:
             query.filter(User.first_name.like("%"+firstName+"%"))
             query.filter(User.last_name.like("%"+lastName+"%"))

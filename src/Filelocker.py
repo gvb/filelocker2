@@ -57,6 +57,7 @@ def requires_login(permissionId=None, **kwargs):
                     if currentUser.authorized == False:
                         raise cherrypy.HTTPError(403, "Your user account does not have access to this system.")
                     session.add(AuditLog(currentUser.id, "Login", "User %s logged in successfully from IP %s" % (currentUser.id, cherrypy.request.remote.ip)))
+
                     session.commit()
                     if currentUser.date_tos_accept is None:
                         if format == None:

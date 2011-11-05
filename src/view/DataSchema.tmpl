@@ -4,6 +4,18 @@
     <permission id="$permission.id" name="$permission.name"/>
     #end for
     </permissions>
+
+    <roles>
+    #for $role in $roles
+        <role id="$role.id" name="$role.name" quota="$role.quota" email="$role.email"/>
+            <permissions>
+            #for $permission in $role.permissions
+                <permission id="$permission.id"/>
+            #end for
+            </permissions>
+    #end for
+    </roles>
+
     <users>
     #for $user in $users
         <user id="$user.id" first_name="$user.first_name" last_name="$user.last_name" quota="$user.quota" email="$user.email" date_last_login="$user.date_last_login" date_tos_accept="$user.date_tos_accept">
@@ -20,6 +32,7 @@
         </user>
     #end for
     </users>
+
     <groups>
     #for $group in $groups
         <group id="$group.id" name="$group.name" scope="$group.scope">
@@ -31,16 +44,52 @@
         </group>
     #end for
     </groups>
-    <roles>
-    #for $role in $roles
-        <role id="$role.id" name="$role.name" quota="$role.quota" email="$role.email"/>
-        <permissions>
-        #for $permission in $role.permissions
-            <permission id="$permission.id"/>
-        #end for
-        </permissions>
+
+
+    <files>
+    #for $f in $files
+        <file id="$f.id" name="$f.name" type="$f.type" date_uploaded="$f.date_uploaded" owner_id="$f.owner_id" date_expires="$f.date_expires" passed_avscan="$f.passed_avscan" encryption_key="$f.encryption_key" status="$f.status" notify_on_download="$f.notify_on_download" md5="$f.md5" upload_request_id="$f.upload_request_id" />
     #end for
-    </roles>
+    </files>
+
+    <deleted_files>
+    #for $f in $deletedFiles
+        <deleted_file file_name="$f.file_name"/>
+    #end for
+    </deleted_files>
+
+    <messages>
+    #for $m in $messages
+        <message id="$m.id" subject="$m.subject" date_sent="$m.date_sent" owner_id="$m.owner_id" date_expires="$m.date_expires" encryption_key="$m.encryption_key"/>
+    #end for
+    </messages>
+
+    <message_shares>
+    #for $ms in $messagesShares
+        <message_share message_id="$ms.message_id" recipient_id="$ms.recipient_id" date_viewed="$ms.date_viewed"/>
+    #end for
+    </message_shares>
+
+    <user_shares>
+    #for $us in $userShares
+        <user_share file_id="$ms.file_id" user_id="$ms.user_id" />
+    #end for
+    </user_shares>
+
+    <group_shares>
+    #for $gs in $groupShares
+        <group_share file_id="$ms.file_id" group_id="$ms.user_id" />
+    #end for
+    </group_shares>
+
+    <public_shares>
+    #for $ps in $publicShares
+        <public_share id="$ps.id" owner_id="$ps.owner_id"
+    #end for
+    </public_shares>
+
+    <attribute_shares>
+    </attribute_shares>
 
 
 </data>
