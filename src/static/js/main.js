@@ -21,7 +21,7 @@ Filelocker = function(){
             contentType: "application/json; charset=utf-8",
             dataType: "json",
             url: FILELOCKER_ROOT + path,
-            data: payloadObject,
+            data: JSON.stringify(payloadObject),
             success: function(response) {
                 if (showMessage)
                     StatusResponse.show(response, action);
