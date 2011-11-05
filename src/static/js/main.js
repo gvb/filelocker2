@@ -28,7 +28,7 @@ Filelocker = function(){
                     successFunction.call(this, response)
             },
             error: function(response, status, error) {
-                generateMessage(action, response.status + " " + status + ": " + error, false);
+                StatusResponse.create(action, response.status + " " + status + ": " + error, false);
             }
         });
     }

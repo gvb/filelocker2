@@ -73,9 +73,9 @@
                                 <li>
                                     <div class="itemTitleMedium"><span class="notifyOnDownload">Notify Me on Download:</span></div>
                                     #if $f.notify_on_download
-                                        <input type="checkbox" name="notifyOnDownload_$f.id" id="notifyOnDownloadYes_$f.id" class="notifyCheckbox" title="Email me when someone downloads this file" onClick="toggleNotifyOnDownload('$f.id', 'no')" checked="checked"/>
+                                        <input type="checkbox" name="notifyOnDownload_$f.id" id="notifyOnDownloadYes_$f.id" class="notifyCheckbox" title="Email me when someone downloads this file" onClick="javascript:FLFile.toggleNotify('$f.id', 'no')" checked="checked"/>
                                     #else
-                                        <input type="checkbox" name="notifyOnDownload_$f.id" id="notifyOnDownloadYes_$f.id" class="notifyCheckbox" title="Email me when someone downloads this file" onClick="toggleNotifyOnDownload('$f.id', 'yes')"/>
+                                        <input type="checkbox" name="notifyOnDownload_$f.id" id="notifyOnDownloadYes_$f.id" class="notifyCheckbox" title="Email me when someone downloads this file" onClick="javascript:FLFile.toggleNotify('$f.id', 'yes')"/>
                                     #end if
                                 </li>
                                 #end if
@@ -184,7 +184,7 @@
                 #end if
                 <tr id="row_$rowId" class="fileRow">
                     <td id="name_row_$rowId" class="nameElement">
-                        <input type="checkbox" value="$f.id" id="checkbox_row_$rowId" class="systemFileSelectBox" onClick="fileChecked()"/>
+                        <input type="checkbox" value="$f.id" id="checkbox_row_$rowId" class="systemFileSelectBox" onClick="javascript.FLFile.fileChecked()"/>
                         <div class="posrel">
                             <div id="menu_row_$rowId" class="menuFiles hidden"><!--add class of hidden to hide this info box-->
                             <ul class="menu">

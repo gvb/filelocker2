@@ -62,7 +62,7 @@ Share = function() {
     }
 
     UserShare = function() {
-        function create(targetId, fileId)
+        function create(userId, fileId)
         {
             var action = "sharing files with users";
             var fileIds = fileId || $("#selectedFiles").val();
@@ -71,12 +71,12 @@ Share = function() {
             else
             {
                 var notify = $("#private_sharing_notifyUser").is(":checked") ? "yes" : "no";
-                Filelocker.request("/share/create_user_shares", action, {fileIds: fileIds, targetId: targetId, notify: notify}, true, function() {
+                Filelocker.request("/share/create_user_shares", action, {fileIds: fileIds, userId: userId, notify: notify}, true, function() {
                     Share.prompt(fileIds, 0, 0);
                 });
             }
         }
-        function del(targetId, fileId)
+        function del(userId, fileId)
         {
             var action = "unsharing files with users";
             var fileIds = "";
@@ -95,7 +95,7 @@ Share = function() {
                 StatusResponse.create(action, "Select file(s) for unsharing.", false);
             else
             {
-                Filelocker.request("/share/delete_user_shares", action, {fileIds: fileIds, targetId: targetId}, true, function() {
+                Filelocker.request("/share/delete_user_shares", action, {fileIds: fileIds, userId: userId}, true, function() {
                     Share.prompt(fileIds, 0, 0);
                 });
             }
@@ -107,7 +107,7 @@ Share = function() {
     }();
 
     GroupShare = function() {
-        function create(targetId, fileId)
+        function create(groupId, fileId)
         {
             var action = "sharing files with groups";
             var fileIds = fileId || $("#selectedFiles").val();
@@ -116,12 +116,12 @@ Share = function() {
             else
             {
                 var notify = $("#private_sharing_notifyGroup").is(":checked") ? "yes" : "no";
-                Filelocker.request("/share/create_group_shares", action, {fileIds: fileIds, targetId: targetId, notify: notify}, true, function() {
+                Filelocker.request("/share/create_group_shares", action, {fileIds: fileIds, groupId: groupId, notify: notify}, true, function() {
                     Share.prompt(fileIds, 1, 1);
                 });
             }
         }
-        function del(targetId, fileId)
+        function del(groupId, fileId)
         {
             var action = "unsharing files with groups";
             var fileIds = "";
@@ -140,7 +140,7 @@ Share = function() {
                 StatusResponse.create(action, "Select file(s) for unsharing.", false);
             else
             {
-                Filelocker.request("/share/delete_group_shares", action, {fileIds: fileIds, targetId: targetId}, true, function() {
+                Filelocker.request("/share/delete_group_shares", action, {fileIds: fileIds, groupId: groupId}, true, function() {
                     Share.prompt(fileIds, 1, 1);
                 });
             }
@@ -165,7 +165,7 @@ Share = function() {
                 });
             }
         }
-        function del(targetId, fileId)
+        function del(attributeId, fileId)
         {
             var action = "unsharing files by attribute";
             var fileIds = "";
@@ -184,7 +184,7 @@ Share = function() {
                 StatusResponse.create(action, "Select file(s) for unsharing.", false);
             else
             {
-                Filelocker.request("/share/delete_attribute_shares", action, {fileIds: fileIds, targetId: targetId}, true, function() {
+                Filelocker.request("/share/delete_attribute_shares", action, {fileIds: fileIds, attributeId: attributeId}, true, function() {
                     Share.prompt(fileIds, 2, 2);
                 });
             }

@@ -164,7 +164,6 @@ FLFile = function() {
             selectedFileRow = "";
             load();
         });
-        //$.post("http://localhost:8080/file/delete_files", {"fileIds": fileId}, function(){},"json");
     }
     function deleteFiles()
     {
@@ -191,7 +190,6 @@ FLFile = function() {
             load();
         });
     }
-
     function prompt()
     {
         $("#uploadGeolocationOption").hide();
@@ -256,7 +254,63 @@ FLFile = function() {
             });
         }
     }
-    
+    function toggleNotify(fileId, notifyAction)
+    {
+        Filelocker.request("/file/update_file", "updating notification settings", {
+            fileId: fileId,
+            notifyOnDownload: notifyAction == "yes"
+        }, true);
+    }
+    function updateQuota()
+    {
+        Filelocker.request("/file/get_quota_usage", "updating quota usage", "{}", true, function(returnData)
+        {
+            if (returnData.data != null)
+            {
+                var percentFull = parseInt(parseFloat(returnData.data.quotaUsedMB) / parseFloat(returnData.data.quotaMB) * 100, 10);
+                $("#quotaProgressBar").progressbar("value", percentFull);
+                $("#quotaProgressBar").attr("title", returnData.data.quotaUsedMB + " MB used out of " + returnData.data.quotaMB + " MB");
+            }
+        });
+    }
+    function rowClick(rowId)
+    {
+        selectedFileRow = rowId;
+        if ($("#row_"+rowId).hasClass("rowSelected") === false) // Only go through this if it's not already selected
+        {
+            $(".menuFiles").each(function(index) { $(this).addClass("hidden");}); // Hide other menus
+            if($("#row_"+rowId).hasClass("rowSelected"))
+            {
+                $(".fileRow").each(function(index) { $(this).removeClass("rowSelected");}); // Deselects other rows
+                $("#row_"+rowId).removeClass("rowSelected");
+                $("#fileName_row_"+rowId).removeClass("leftborder");
+                $("#menu_row_"+rowId).addClass("hidden");
+            }
+            else
+            {
+                $(".fileRow").each(function(index) { $(this).removeClass("rowSelected");}); // Deselects other rows
+                $("#row_"+rowId).addClass("rowSelected"); //Select the row of the file
+                $("#fileName_row_"+rowId).addClass("leftborder");
+                $("#menu_row_"+rowId).removeClass("hidden"); //Show the menu on the selected file
+            }
+        }
+        else
+        {
+            $("#row_"+rowId).removeClass("rowSelected");
+            $("#fileNameElement_"+rowId).removeClass("leftborder");
+            $("#menu_row_"+rowId).addClass("hidden");
+        }
+    }
+    function onCheck()
+    {
+        var selectedFiles = $("#filesTable .fileSelectBox:checked").length + $("#systemFilesTable .systemFileSelectBox:checked").length;
+        if (selectedFiles > 1)
+            Share.showMulti();
+        else
+            Share.hideMulti();
+    }
+
+    //TODO fix these
     function setGeoData()
     {
         if($("#uploadGeolocation").is(":checked") && GEOTAGGING)
@@ -299,26 +353,6 @@ FLFile = function() {
             if($("#uploadFileNotes").val().match(/\[geo\]-?\d+\.\d+,-?\d+\.\d+\[\/geo\]/g))
                 $("#uploadFileNotes").val($("#uploadFileNotes").val().replace(/\[geo\]-?\d+\.\d+,-?\d+\.\d+\[\/geo\]/g, ""));
         }
-    }
-    function fileChecked()
-    {
-//         var selectedFilesCounter = 0;
-//         $("#filesTable .fileSelectBox:checked").each(function() {
-//             selectedFilesCounter ++;
-//         });
-//         if ($("#systemFilesTable").length >0)
-//         {
-//             $("#systemFilesTable .systemFileSelectBox:checked").each(function() {
-//                 selectedFilesCounter++;
-//             });
-//         }
-        
-        var selectedFiles = $("#filesTable .fileSelectBox:checked").length + $("#systemFilesTable .systemFileSelectBox:checked").length;
-
-        if (selectedFiles > 1)
-            Share.showMulti();
-        else
-            Share.hideMulti();
     }
     function viewFileNotes(fileNotes)
     {
@@ -406,65 +440,18 @@ FLFile = function() {
             $("#fileStatisticsBox").dialog("open");
         }, 'json');
     }
-    function rowClick(rowId)
-    {
-        selectedFileRow = rowId;
-        if ($("#row_"+rowId).hasClass("rowSelected") === false) // Only go through this if it's not already selected
-        {
-            $(".menuFiles").each(function(index) { $(this).addClass("hidden");}); // Hide other menus
-            if($("#row_"+rowId).hasClass("rowSelected"))
-            {
-                $(".fileRow").each(function(index) { $(this).removeClass("rowSelected");}); // Deselects other rows
-                $("#row_"+rowId).removeClass("rowSelected");
-                $("#fileName_row_"+rowId).removeClass("leftborder");
-                $("#menu_row_"+rowId).addClass("hidden");
-            }
-            else
-            {
-                $(".fileRow").each(function(index) { $(this).removeClass("rowSelected");}); // Deselects other rows
-                $("#row_"+rowId).addClass("rowSelected"); //Select the row of the file
-                $("#fileName_row_"+rowId).addClass("leftborder");
-                $("#menu_row_"+rowId).removeClass("hidden"); //Show the menu on the selected file
-            }
-        }
-        else
-        {
-            $("#row_"+rowId).removeClass("rowSelected");
-            $("#fileNameElement_"+rowId).removeClass("leftborder");
-            $("#menu_row_"+rowId).addClass("hidden");
-        }
-    }
-
-    //AJAX
-    function toggleNotifyOnDownload(fileId, notifyAction)
-    {
-        var data = {
-            "fileId": fileId,
-            "notifyOnDownload": notifyAction == "yes"
-        };
-        Filelocker.request("/file/update_file", "updating notification settings", data, true);
-    }
-    
-    function updateQuota()
-    {
-        Filelocker.request("/file/get_quota_usage", "updating quota usage", "{}", true, function(returnData)
-        {
-            if (returnData.data != null)
-            {
-                var percentFull = parseInt(parseFloat(returnData.data.quotaUsedMB) / parseFloat(returnData.data.quotaMB) * 100, 10);
-                $("#quotaProgressBar").progressbar("value", percentFull);
-                $("#quotaProgressBar").attr("title", returnData.data.quotaUsedMB + " MB used out of " + returnData.data.quotaMB + " MB");
-            }
-        });
-    }
+    //TODO end stuff to fix.
     
     return {
         init:init,
         del:del,
-        updateQuota:updateQuota,
+        take:take,
         prompt:prompt,
-        rowClick:rowClick
-    }
+        toggleNotify:toggleNotify,
+        updateQuota:updateQuota,
+        rowClick:rowClick,
+        onCheck:onCheck
+    };
 }();
 
 UploadRequest = function() {
@@ -543,6 +530,6 @@ UploadRequest = function() {
         prompt:prompt,
         promptView:promptView,
         togglePassword:togglePassword,
-        toggleType:toggleType,
+        toggleType:toggleType
     }
 }();
