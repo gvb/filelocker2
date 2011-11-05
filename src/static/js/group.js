@@ -1,7 +1,7 @@
 Group = function() {
     function load()
     {
-        $("#wrapper_2col").load(FILELOCKER_ROOT+"/group?format=text&ms=" + new Date().getTime(), function (responseText, textStatus, xhr) {
+        $("#wrapper_2col").load(FILELOCKER_ROOT+"/manage_groups?format=text&ms=" + new Date().getTime(), function (responseText, textStatus, xhr) {
             if (textStatus == "error")
                 StatusResponse.create("loading groups", "Error "+xhr.status+": "+xhr.textStatus, false);
             else 

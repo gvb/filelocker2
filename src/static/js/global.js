@@ -241,6 +241,7 @@ Utility = function() {
     }
     
     return {
+        limitCharacters:limitCharacters,
         tipsyfy:tipsyfy,
         getRandomTip:getRandomTip,
         promptConfirmation:promptConfirmation,

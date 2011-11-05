@@ -2,59 +2,54 @@ Message = function() {
     function load()
     {
         Filelocker.request("/message/get_messages", "retrieving messages", "{}", true, function(returnData) {
-            if (returnData.fMessages.length !== 0)
-                showMessages(returnData, "retrieving messages");
-            else
+            var recvhtml = "";
+            $.each(returnData.data[0], function(index, value) {
+                var unreadMessage = "";
+                if(value.viewedDatetime === null)
+                    unreadMessage = "unreadMessage";
+                var shortenedSubject = value.subject;
+                if(shortenedSubject.length > 30)
+                    shortenedSubject = shortenedSubject.substring(0,22) + "..." + shortenedSubject.substring(shortenedSubject.length-5,shortenedSubject.length);
+                recvhtml += "<tr id='"+value.id+"_inbox' class='groupRow "+unreadMessage+"' onClick='javascript:Message.read(\""+value.id+"\",\"inbox\");'>";
+                recvhtml += "<td class='leftborder'><input id='"+value.id+"' type='checkbox' class='messageInboxSelectBox' /><span id='"+value.id+"_subject' class='hidden'>"+value.subject+"</span><span id='"+value.id+"_body' class='hidden'>"+value.body+"</span></td>";
+                recvhtml += "<td><a href='javascript:Message.read(\""+value.id+"\",\"inbox\");' class='messageLink'>"+value.ownerId+"</a></td><td><a class='messageLink' href='javascript:Message.read(\""+value.id+"\",\"inbox\");'>"+shortenedSubject+"</a></td><td>"+value.creationDatetime+"</td><td class='rightborder'><a href='javascript:Message.promptCreateReply(\""+value.subject+"\",\""+value.ownerId+"\");javascript:Account.Search.manual(\""+value.ownerId+"\", \"messages\");' class='inlineLink' title='Reply to this message'><span class='replyMessage'>&nbsp;</span></a><a href='javascript:Utility.promptConfirmation(\"Message.del\", [\""+value.id+"\"]);' class='inlineLink' title='Delete this message'><span class='cross'>&nbsp;</span></a></td>";
+                recvhtml += "</tr>";
+            });
+            if(recvhtml === "")
             {
-                var recvhtml = "";
-                $.each(returnData.data[0], function(index, value) {
-                    var unreadMessage = "";
-                    if(value.viewedDatetime === null)
-                        unreadMessage = "unreadMessage";
-                    var shortenedSubject = value.subject;
-                    if(shortenedSubject.length > 30)
-                        shortenedSubject = shortenedSubject.substring(0,22) + "..." + shortenedSubject.substring(shortenedSubject.length-5,shortenedSubject.length);
-                    recvhtml += "<tr id='"+value.id+"_inbox' class='groupRow "+unreadMessage+"' onClick='javascript:Message.read(\""+value.id+"\",\"inbox\");'>";
-                    recvhtml += "<td class='leftborder'><input id='"+value.id+"' type='checkbox' class='messageInboxSelectBox' /><span id='"+value.id+"_subject' class='hidden'>"+value.subject+"</span><span id='"+value.id+"_body' class='hidden'>"+value.body+"</span></td>";
-                    recvhtml += "<td><a href='javascript:Message.read(\""+value.id+"\",\"inbox\");' class='messageLink'>"+value.ownerId+"</a></td><td><a class='messageLink' href='javascript:Message.read(\""+value.id+"\",\"inbox\");'>"+shortenedSubject+"</a></td><td>"+value.creationDatetime+"</td><td class='rightborder'><a href='javascript:Message.promptCreateReply(\""+value.subject+"\",\""+value.ownerId+"\");javascript:Account.Search.manual(\""+value.ownerId+"\", \"messages\");' class='inlineLink' title='Reply to this message'><span class='replyMessage'>&nbsp;</span></a><a href='javascript:Utility.promptConfirmation(\"Message.del\", [\""+value.id+"\"]);' class='inlineLink' title='Delete this message'><span class='cross'>&nbsp;</span></a></td>";
-                    recvhtml += "</tr>";
-                });
-                if(recvhtml === "")
-                {
-                    recvhtml = "<tr><td></td><td><i>No messages.</i></td><td></td><td></td><td></td></tr>";
-                    $("#messageSubject").html("");
-                    $("#messageBody").html("<a href='javascript:Help.view(\"help_message\");' class='helpLink'>Learn more about Filelocker Messaging.</a>");
-                }
-                $("#messageInboxTable").append(recvhtml);
-                
-                var senthtml = "";
-                $.each(returnData.data[1], function(index, value) {
-                    var shortenedSubject = value.subject;
-                    if(shortenedSubject.length > 30)
-                        shortenedSubject = shortenedSubject.substring(0,22) + "..." + shortenedSubject.substring(shortenedSubject.length-5,shortenedSubject.length);
-                    senthtml += "<tr id='"+value.id+"_sent' class='groupRow ' onClick='javascript:Message.read(\""+value.id+"\",\"sent\");'>";
-                    senthtml += "<td class='leftborder'><input id='"+value.id+"' type='checkbox' class='messageSentSelectBox' /><span id='"+value.id+"_subject' class='hidden'>"+value.subject+"</span><span id='"+value.id+"_body' class='hidden'>"+value.body+"</span></td>";
-                    senthtml += "<td><a href='javascript:Message.read(\""+value.id+"\",\"sent\");' class='messageLink'>"+value.messageRecipients+"</a></td><td><a href='javascript:Message.read(\""+value.id+"\",\"sent\");' class='messageLink'>"+shortenedSubject+"</a></td><td>"+value.creationDatetime+"</td><td class='rightborder'><a href='javascript:Utility.promptConfirmation(\"Message.del\", [\""+value.id+"\"]);' class='inlineLink' title='Delete this message'><span class='cross'>&nbsp;</span></a></td>";
-                    senthtml += "</tr>";
-                });
-                if(senthtml === "")
-                {
-                    senthtml = "<tr><td></td><td><i>No messages.</i></td><td></td><td></td><td></td></tr>";
-                    $("#messageSubject").html("");
-                    $("#messageBody").html("<a href='javascript:Help.view(\"help_message\");' class='helpLink'>Learn more about Filelocker Messaging.</a>");
-                }
-                $("#messageSentTable").append(senthtml);
-                
-                $("#messageInboxTableSorter").trigger("update");
-                $("#messageInboxTableSorter").trigger("sorton",[[[3,1],[2,0]]]);
-                $("#messageSentTableSorter").trigger("update");
-                $("#messageSentTableSorter").trigger("sorton",[[[3,1],[2,0]]]);
-                
-                $("#messagesBoxTitle").removeClass("loading");
-                $("#messagesBoxTitle").addClass("messagesTitle");
-                $("#messagesBoxTitle").html("Messages");
-                Utility.tipsyfy();
+                recvhtml = "<tr><td></td><td><i>No messages.</i></td><td></td><td></td><td></td></tr>";
+                $("#messageSubject").html("");
+                $("#messageBody").html("<a href='javascript:Help.view(\"help_message\");' class='helpLink'>Learn more about Filelocker Messaging.</a>");
             }
+            $("#messageInboxTable").append(recvhtml);
+
+            var senthtml = "";
+            $.each(returnData.data[1], function(index, value) {
+                var shortenedSubject = value.subject;
+                if(shortenedSubject.length > 30)
+                    shortenedSubject = shortenedSubject.substring(0,22) + "..." + shortenedSubject.substring(shortenedSubject.length-5,shortenedSubject.length);
+                senthtml += "<tr id='"+value.id+"_sent' class='groupRow ' onClick='javascript:Message.read(\""+value.id+"\",\"sent\");'>";
+                senthtml += "<td class='leftborder'><input id='"+value.id+"' type='checkbox' class='messageSentSelectBox' /><span id='"+value.id+"_subject' class='hidden'>"+value.subject+"</span><span id='"+value.id+"_body' class='hidden'>"+value.body+"</span></td>";
+                senthtml += "<td><a href='javascript:Message.read(\""+value.id+"\",\"sent\");' class='messageLink'>"+value.messageRecipients+"</a></td><td><a href='javascript:Message.read(\""+value.id+"\",\"sent\");' class='messageLink'>"+shortenedSubject+"</a></td><td>"+value.creationDatetime+"</td><td class='rightborder'><a href='javascript:Utility.promptConfirmation(\"Message.del\", [\""+value.id+"\"]);' class='inlineLink' title='Delete this message'><span class='cross'>&nbsp;</span></a></td>";
+                senthtml += "</tr>";
+            });
+            if(senthtml === "")
+            {
+                senthtml = "<tr><td></td><td><i>No messages.</i></td><td></td><td></td><td></td></tr>";
+                $("#messageSubject").html("");
+                $("#messageBody").html("<a href='javascript:Help.view(\"help_message\");' class='helpLink'>Learn more about Filelocker Messaging.</a>");
+            }
+            $("#messageSentTable").append(senthtml);
+
+            $("#messageInboxTableSorter").trigger("update");
+            $("#messageInboxTableSorter").trigger("sorton",[[[3,1],[2,0]]]);
+            $("#messageSentTableSorter").trigger("update");
+            $("#messageSentTableSorter").trigger("sorton",[[[3,1],[2,0]]]);
+
+            $("#messagesBoxTitle").removeClass("loading");
+            $("#messagesBoxTitle").addClass("messagesTitle");
+            $("#messagesBoxTitle").html("Messages");
+            Utility.tipsyfy();
         });
     }
 
@@ -68,7 +63,7 @@ Message = function() {
         };
         Filelocker.request("/message/create_message", "sending message", data, true, function() {
             $("#createMessageBox").dialog("close");
-            view();
+            load();
         });
     }
 
@@ -140,7 +135,7 @@ Message = function() {
         Filelocker.request("/message/get_new_message_count", "", "{}", false, function(returnData)
         {
             var noNewMessages = $("#messagesLink").hasClass("messages");
-            if (returnData !== null)
+            if (returnData != null)
             {
                 if(returnData.data !== 0)
                 {
