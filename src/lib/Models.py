@@ -194,7 +194,7 @@ class Message(Base):
     date_expires = Column(DateTime)
     encryption_key = Column(String(64))
     date_viewed = None #This is for readers of recieved messages
-    recipients = []
+    #recipients = []
 
     def get_dict(self):
         messageViewedDatetime, messageCreateDatetime, messageExpirationDatetime = (None, None, None)
@@ -205,8 +205,10 @@ class Message(Base):
         if self.date_expires is not None:
             messageExpirationDatetime = self.date_expires.strftime("%m/%d/%Y")
         messageDict = {'subject': self.subject, 'body': self.body, 'creationDatetime': messageCreateDatetime, 'ownerId': self.owner_id, 'expirationDatetime': messageExpirationDatetime, 'id': self.id, 'viewedDatetime': messageViewedDatetime}
-        if self.recipients is not None:
-            messageDict['messageRecipients'] = self.recipients
+        messageDict['messageRecipients'] = []
+        if self.message_shares is not None:
+            for messageShare in self.message_shares:
+                messageDict['messageRecipients'].append(messageShare.recipient_id)
         return messageDict
 
 class MessageShare(Base):
@@ -214,7 +216,7 @@ class MessageShare(Base):
     message_id = Column(Integer, ForeignKey("messages.id"), primary_key=True)
     recipient_id = Column(String(30), ForeignKey("users.id"), primary_key=True)
     date_viewed = Column(DateTime, nullable=True, default=None)
-    message = relationship("Message")
+    message = relationship("Message", backref="message_shares")
 
 class UserShare(Base):
     __tablename__ = "user_shares"
