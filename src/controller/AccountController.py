@@ -121,7 +121,7 @@ class AccountController:
 
     @cherrypy.tools.requires_login()
     @cherrypy.expose
-    def remove_users_from_group(self, userId, groupId, format="json", **kwargs):
+    def remove_users_from_group(self, userIds, groupId, format="json", **kwargs):
         user, sMessages, fMessages = (cherrypy.session.get("user"), [], [])
         try:
             userIds = split_list_sanitized(userIds)
@@ -129,7 +129,7 @@ class AccountController:
             group = session.query(Group).filter(Group.id==groupId).one()
             if group.owner_id == user.id or user_has_permission(user, "admin"):
                 for userId in userIds:
-                    user = AccountController.get_user(userId)
+                    user = get_user(userId)
                     group.remove(user)
                 session.commit()
                 sMessages.append("Group members removed successfully")
