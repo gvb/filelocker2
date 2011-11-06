@@ -317,8 +317,8 @@ class RootController:
                 try:
                     uploadRequest = session.query(UploadRequest).filter(UploadRequest.id == ticketId).one()
                     if Encryption.compare_password_hash(password, uploadRequest.password):
-                        cherrypy.session['uploadTicket'] = uploadTicket
-                        requestOwner = session.query(User).filter(User.id == uploadTicket.owner_id).one()
+                        cherrypy.session['uploadRequest'] = uploadRequest
+                        requestOwner = session.query(User).filter(User.id == uploadRequest.owner_id).one()
                 except Exception, e:
                     logging.warning("Unable to load upload ticket: %s" % str(e))
                     messages.append("Unable to load upload ticket: %s " % str(e))
