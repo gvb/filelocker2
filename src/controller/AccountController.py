@@ -147,7 +147,7 @@ class AccountController:
 
     @cherrypy.expose
     @cherrypy.tools.requires_login()
-    def add_users_to_group(self, userId, groupId, format="json", **kwargs):
+    def add_user_to_group(self, userId, groupId, format="json", **kwargs):
         user, sMessages, fMessages  = (cherrypy.session.get("user"), [], [])
         try:
             userId = strip_tags(userId)
