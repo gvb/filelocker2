@@ -192,7 +192,7 @@ class AccountController:
     @cherrypy.tools.requires_login()
     def get_group_members(self, groupId, **kwargs):
         user, sMessages, fMessages = (cherrypy.session.get("user"),  [], [])
-        searchWidget = get_search_widget("manage_groups")
+        searchWidget = self.get_search_widget("manage_groups")
         groupId = strip_tags(groupId)
         group = session.query(Group).filter(Group.id == groupId).one()
         if group.owner_id == user.id or user_has_permission(user, "admin"):
