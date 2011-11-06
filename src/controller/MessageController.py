@@ -84,10 +84,11 @@ class MessageController:
             sentMessages = session.query(Message).filter(Message.owner_id==user.id).all()
             for rMessage in recvMessages:
                 messageDict = rMessage.message.get_dict()
+                messageDict['viewedDatetime'] = rMessage.date_viewed.strftime("%m/%d/%Y") if rMessage.date_viewed is not None else None
                 messageBody = strip_tags(cgi.escape(decrypt_message(rMessage.message)), True)
                 messageDict['body'] = str(Template("$messageBody", searchList=[locals()], filter=WebSafe))
                 recvMessagesList.append(messageDict)
-
+    
             for message in sentMessages:
                 messageDict = message.get_dict()
                 messageBody = strip_tags(cgi.escape(decrypt_message(message)), True)
