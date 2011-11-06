@@ -158,7 +158,7 @@ class ShareController:
 #                sharedFilesList.append(sharedFile)
         except Exception, e:
             fMessages.append(str(e))
-        return fl_response(sMessags, fMessages, format, data=sharedFiles)
+        return fl_response(sMessages, fMessages, format, data=sharedFiles)
 
     @cherrypy.expose
     @cherrypy.tools.requires_login()
@@ -183,7 +183,7 @@ class ShareController:
             for fileId in fileIds:
                 session.add(HiddenShare(file_id=fileId, owner_id=user.id))
             session.commit()
-            sMessages.append("Share has been hidden.")
+            sMessages.append("Share has been hidden")
         except Exception, e:
             fMessages.append("Could not hide share: %s" % str(e))
             logging.error("[%s] [unhide_shares] [Could not unhide shares: %s]" % (user.id, str(e)))
