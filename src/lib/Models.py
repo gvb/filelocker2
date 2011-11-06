@@ -321,6 +321,7 @@ class AuditLog(Base):
         self.action = action
         self.message = message
         self.affected_user_id = affectedId
+        self.date = date
 
     def __str__(self):
         return "[%s] [%s] [%s] [%s] [%s]" % (self.message, self.date.strftime("%m/%d/%Y"), self.initiator_user_id, self.action, self.affected_user_id)
