@@ -329,11 +329,17 @@ class ShareController:
 def get_files_shared_with_user(user):
     sharedFiles = []
     attachedUser = session.query(User).filter(User.id == user.id).one()
+    hiddenFileIds = []
+    hiddenShares = session.query(HiddenShare).filter(HiddenShare.owner_id == user.id).all()
+    for hiddenShare in hiddenShares:
+        hiddenFileIds.append(hiddenShare.file_id)
     for share in attachedUser.user_shares:
-        sharedFiles.append(share.flFile)
+        if (share.flFile.id not in hiddenFileIds):
+            sharedFiles.append(share.flFile)
     for group in attachedUser.groups:
         for share in group.group_shares:
-            sharedFiles.append(share.flFile)
+            if (share.flFile.id not in hiddenFileIds):
+                sharedFiles.append(share.flFile)
     return sharedFiles
 
 def get_user_shareable_attributes(user):
