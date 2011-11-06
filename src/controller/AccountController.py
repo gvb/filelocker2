@@ -87,8 +87,10 @@ class AccountController:
             groupIds = split_list_sanitized(groupIds)
             for groupId in groupIds:
                 group = session.query(Group).filter(Group.id==groupId).one()
-            groupName = fl.delete_group(user, groupId)
-            sMessages.append("Group %s deleted successfully" % groupName)
+                if group.owner_id == user.id or user_has_permission(user, "admin"):
+                    session.delete(group)
+                    sMessages.append("Group %s deleted successfully" % group.name)
+            session.commit()
         except sqlalchemy.orm.exc.NoResultFound, nrf:
             fMessages.append("Could not find group with ID: %s" % str(groupId))
         except Exception, e:
@@ -130,7 +132,7 @@ class AccountController:
             if group.owner_id == user.id or user_has_permission(user, "admin"):
                 for userId in userIds:
                     user = get_user(userId)
-                    group.remove(user)
+                    group.members.remove(user)
                 session.commit()
                 sMessages.append("Group members removed successfully")
             else:
