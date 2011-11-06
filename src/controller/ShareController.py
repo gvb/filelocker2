@@ -134,7 +134,7 @@ class ShareController:
 
     @cherrypy.expose
     @cherrypy.tools.requires_login()
-    def get_files_shared_with_user(self, fileIdList=None, format="json", **kwargs):
+    def get_files_shared_with_user(self, format="json", **kwargs):
         #Determine which files are shared with the user
         user, sMessages, fMessages, sharedFiles = (cherrypy.session.get("user"), [], [], [])
         try:

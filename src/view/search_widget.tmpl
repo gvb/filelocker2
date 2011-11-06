@@ -24,18 +24,18 @@
             <h3>Search for Users by Last or Full Name</h3><br />
         </div>
         <div id="${context}_searchTypeChooser">
-            <input type="radio" id="${context}_searchUserId" name="searchType" onClick="toggleSearchType('${context}','userId')" checked="checked" /><label for="${context}_searchUserId" style="width: 91px;">User ID</label>
-            <input type="radio" id="${context}_searchName" name="searchType" onClick="toggleSearchType('${context}','name')" /><label for="${context}_searchName" style="width: 91px;">Name</label>
+            <input type="radio" id="${context}_searchUserId" name="searchType" onClick="javascript:Account.Search.toggleType('${context}','userId')" checked="checked" /><label for="${context}_searchUserId" style="width: 91px;">User ID</label>
+            <input type="radio" id="${context}_searchName" name="searchType" onClick="javascript:Account.Search.toggleType('${context}','name')" /><label for="${context}_searchName" style="width: 91px;">Name</label>
         </div>
         <div id="${context}_externalSearchSelector" class="hidden">
         #if $cherrypy.request.app.config['filelocker']['auth_type'] != "local"
-            <br /><h4>Can't find who you're looking for?</h4><input type="checkbox" name="${context}_externalSearch" id="${context}_externalSearch" onclick="javascript:updateSearch('${context}');" /><span onclick="javascript:check('${context}_externalSearch');javascript:updateSearch('${context}');">Search the entire ${cherrypy.request.app.config['filelocker']['org_name']} directory.</span>
+            <br /><h4>Can't find who you're looking for?</h4><input type="checkbox" name="${context}_externalSearch" id="${context}_externalSearch" onclick="javascript:Account.Search.update('${context}');" /><span onclick="javascript:Utility.check('${context}_externalSearch');javascript:Account.Search.update('${context}');">Search the entire ${cherrypy.request.app.config['filelocker']['org_name']} directory.</span>
         #end if
         </div>
         <div>
             <br />
             <input type="text" name="${context}_searchBox" id="${context}_searchBox" onkeypress="javascript:if (event.which == 13) manualSearch(\$(this).val(), '${context}');"/>
-            <a href="javascript:manualSearch(\$('#${context}_searchBox').val(), '${context}');" class="inlineLink"><span class="view">&nbsp;</span></a>
+            <a href="javascript:Account.Search.manual(\$('#${context}_searchBox').val(), '${context}');" class="inlineLink"><span class="view">&nbsp;</span></a>
             <br />
         </div>
         <div id="${context}_searchResult" class="hidden"></div>
@@ -53,12 +53,12 @@
             <li>
                 <span class="itemTitleWide"><span class="groupItem memberTitle groupName" title="$group.name">$shortenedName</span></span>
                 #if $context == "private_sharing"
-                <a href="javascript:privateShareFiles('group', $group.id)" title="Share file with '$group.name'" class="shareGroup">Share</a>
+                <a href="javascript:Share.Group.create($group.id)" title="Share file with '$group.name'" class="shareGroup">Share</a>
                 #end if
             </li>
         #end for
         <span class="itemTitleMedium">
-            <li><input type='checkbox' id='${context}_notifyGroup' checked='checked' /><span onclick="javascript:check('${context}_notifyGroup');">Notify via email</span></li>
+            <li><input type='checkbox' id='${context}_notifyGroup' checked='checked' /><span onclick="javascript:Utility.check('${context}_notifyGroup');">Notify via email</span></li>
         </span>
         #else
             <li>You haven't added any groups yet.</li>
@@ -79,7 +79,7 @@
             <li>
                 <span class="itemTitleWide"><span class="attributeItem memberTitle attributeName" title="$attribute.name">$shortenedName</span></span>
                 #if $context == "private_sharing"
-                <a href="javascript:privateAttributeShareFiles('$attribute.id')" title="Share file with users having the '$attribute.name' attribute" class="shareAttribute">Share</a>
+                <a href="javascript:Share.Attribute.create('$attribute.id')" title="Share file with users having the '$attribute.name' attribute" class="shareAttribute">Share</a>
                 #end if
             </li>
         #end for

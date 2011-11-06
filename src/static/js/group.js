@@ -66,7 +66,7 @@ Group = function() {
         $("#groupsTable :checked").each(function() {groupIds+=$(this).val()+",";});
         if(groupIds !== "")
         {
-            Filelocker.request("/account/delete_group", "deleting groups", {"groupId": groupIds}, true, function() {
+            Filelocker.request("/account/delete_groups", "deleting groups", {groupIds: groupIds}, true, function() {
                 load();
             });
         }
@@ -75,7 +75,7 @@ Group = function() {
     }
     function prompt(groupId)
     {
-        $("#viewGroupBox").load(FILELOCKER_ROOT+"/group/get_group_members?format=searchbox_html&ms=" + new Date().getTime(), {groupId: groupId}, function (responseText, textStatus, xhr) {
+        $("#viewGroupBox").load(FILELOCKER_ROOT+"/account/get_group_members?format=searchbox_html&ms=" + new Date().getTime(), {groupId: groupId}, function (responseText, textStatus, xhr) {
             if (textStatus == "error")
                 StatusResponse.create("loading group membership", "Error "+xhr.status+": "+xhr.textStatus, false);
             else {
@@ -166,7 +166,7 @@ Group = function() {
                     groupId: groupId
                 };
                 Filelocker.request("/account/add_user_to_group", "adding user to group", data, true, function() {
-                    promptView(groupId);
+                    Group.prompt(groupId);
                 });
             }
             else
@@ -175,20 +175,20 @@ Group = function() {
         function remove(userIds, groupId, context)
         {
             var data = {
-                userId: userIds,
+                userIds: userIds,
                 groupId: groupId
             };
-            Filelocker.request("/account/remove_user_from_group", "removing user from group", data, true, function() {
-                if(context == "rollout")
-                    load();
-                else if(context == "viewGroupBox")
-                    promptView(groupId);
+            Filelocker.request("/account/remove_users_from_group", "removing users from group", data, true, function() {
+                if(context === "rollout")
+                    Group.load();
+                else if(context === "viewGroupBox")
+                    Group.prompt(groupId);
             });
         }
         return {
             add:add,
             remove:remove
-        }
+        };
     }();
     
     return {

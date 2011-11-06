@@ -66,7 +66,6 @@ Account = function() {
     Search = function() {
         function init(context)
         {
-            console.log("search init");
             $("#"+context+"_externalSearchSelector").hide();
             //Context Must be a valid ID for which to inject the search HTML
             $("#"+context+"_searchTypeChooser").buttonset();

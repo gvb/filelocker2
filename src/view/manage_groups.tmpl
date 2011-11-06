@@ -33,7 +33,7 @@
                                     <li><i>This group contains no members.</i></li>
                                 #else if len($group.members) <= 5
                                     #for $member in $group.members
-                                        <li><div class="itemTitle"><span class="ownerItem memberTitle groupMember" title="$member.display_name">$member.userId</span></div>
+                                        <li><div class="itemTitle"><span class="ownerItem memberTitle groupMember" title="$member.display_name">$member.id</span></div>
                                         <a class="deleteLink" href="javascript:Group.Member.remove('$member.id','$group.id', 'rollout')" title="Remove '$member.id' from '$group.name'">Remove</a></li>
                                     #end for
                                 #else
