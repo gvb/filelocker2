@@ -289,17 +289,17 @@ class RootController:
         return fl_response([], ['File is too big'], "json")
 
     @cherrypy.expose
-    def public_upload(self, ticketId=None, password=None, **kwargs):
+    def public_upload(self, requestId=None, password=None, **kwargs):
         requestOwner, uploadRequest, tpl, messages  = (None, None, None, [])
         config = cherrypy.request.app.config['filelocker']
         defaultExpiration = datetime.date.today() + (datetime.timedelta(days=config['max_file_life_days']))
-        ticketFiles = []
-        if ticketId is not None and ticketId != "":
-            ticketId = strip_tags(ticketId)
+        requestFiles = []
+        if requestId is not None and requestId != "":
+            requestId = strip_tags(requestId)
             if cherrypy.session.has_key("uploadRequest"):
-                if cherrypy.session.get("uploadRequest").id != ticketId:
+                if cherrypy.session.get("uploadRequest").id != requestId:
                     del(cherrypy.session['uploadRequest'])
-            if cherrypy.session.has_key("uploadRequest"): #Their ticketId and the session uploadTicket's ID matched, let them keep the session
+            if cherrypy.session.has_key("uploadRequest"): #Their requestId and the session uploadTicket's ID matched, let them keep the session
                 uploadRequest = cherrypy.session.get("uploadRequest")
                 try:
                     requestOwner = session.query(User).filter(User.id == uploadRequest.owner_id).one()
@@ -308,14 +308,14 @@ class RootController:
                     messages.append("Unable to load upload request: %s " % str(e))
             elif password is None or password =="": #If they come in with a ticket - fill it in a prompt for password
                 try:
-                    uploadRequest = session.query(UploadRequest).filter(UploadRequest.id == ticketId).one()
+                    uploadRequest = session.query(UploadRequest).filter(UploadRequest.id == requestId).one()
                     #cherrypy.session['uploadRequest'] = uploadRequest
                     requestOwner = session.query(User).filter(User.id == uploadRequest.owner_id).one()
                 except Exception, e:
                     messages.append(str(e))
-            elif password is not None and password!="": # if they do have a password and ticketId, try to load the whole upload ticket
+            elif password is not None and password!="": # if they do have a password and requestId, try to load the whole upload ticket
                 try:
-                    uploadRequest = session.query(UploadRequest).filter(UploadRequest.id == ticketId).one()
+                    uploadRequest = session.query(UploadRequest).filter(UploadRequest.id == requestId).one()
                     if Encryption.compare_password_hash(password, uploadRequest.password):
                         cherrypy.session['uploadRequest'] = uploadRequest
                         requestOwner = session.query(User).filter(User.id == uploadRequest.owner_id).one()
@@ -331,7 +331,7 @@ class RootController:
                 flFile.documentType = "document"
                 if flFile.date_expires is not None:
                     flFile.date_expires = flFile.fileExpirationDatetime.strftime("%m/%d/%Y")
-                ticketFiles.append({'fileName': flFile.name, 'fileId': flFile.id, 'fileOwnerId': flFile.owner_id, 'fileSizeBytes': flFile.size, 'fileUploadedDatetime': flFile.date_uploaded.strftime("%m/%d/%Y"), 'fileExpirationDatetime': flFile.date_expires, 'filePassedAvScan':flFile.passed_avscan, 'documentType': flFile.document_type})
+                requestFiles.append({'fileName': flFile.name, 'fileId': flFile.id, 'fileOwnerId': flFile.owner_id, 'fileSizeBytes': flFile.size, 'fileUploadedDatetime': flFile.date_uploaded.strftime("%m/%d/%Y"), 'fileExpirationDatetime': flFile.date_expires, 'filePassedAvScan':flFile.passed_avscan, 'documentType': flFile.document_type})
         content = Template(file=get_template_file('public_upload_content.tmpl'), searchList=[locals(),globals()])
         tpl = ""
         if kwargs.has_key("format") and kwargs['format']=="content_only":

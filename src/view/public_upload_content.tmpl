@@ -27,9 +27,9 @@
             </tr>
             </thead>
             <tbody id="filesTable">
-            #for $ticketFile in $ticketFiles
+            #for $requestFile in $requestFiles
                 #set $fsSuffix = "B"
-                #set $fileSize = $ticketFile['fileSizeBytes']
+                #set $fileSize = $requestFile['fileSizeBytes']
                 #if $fileSize > 1024
                     #set $fileSize = $fileSize / 1024
                     #set $fsSuffix = "kB"
@@ -42,17 +42,17 @@
                         #end if
                     #end if
                 #end if
-                <tr id="file_$ticketFile['fileId']" class="fileRow">
+                <tr id="file_$requestFile['fileId']" class="fileRow">
                     <td></td>
-                    <td><span class="$ticketFile['documentType'] pseudoLink">
-                        #if len($ticketFile['fileName']) > 60
-                            $ticketFile['fileName'][0:45]...$ticketFile['fileName'][-10:]
+                    <td><span class="$requestFile['documentType'] pseudoLink">
+                        #if len($requestFile['fileName']) > 60
+                            $requestFile['fileName'][0:45]...$requestFile['fileName'][-10:]
                         #else
-                            $ticketFile['fileName']
+                            $requestFile['fileName']
                         #end if
                     </span></td>
                     <td>$fileSize $fsSuffix</td>
-                    <td>$ticketFile['fileExpirationDatetime']</td>
+                    <td>$requestFile['fileExpirationDatetime']</td>
                     <td></td>
                 </tr>
             #end for
@@ -82,7 +82,7 @@
             #end if
             <div>This file cannot be larger than $maxSize $suffix</div>
         #end if
-        <input type="hidden" id="ticketId" value="$uploadRequest.id"/>
+        <input type="hidden" id="requestId" value="$uploadRequest.id"/>
         <div>
             <label for="puExpiration">Expiration date:</label>
             <input type="text" class="dateFuture" name="puExpiration" id="puExpiration" size="9" maxlength="10" value="$defaultExpiration.strftime('%m/%d/%Y')" />
@@ -108,12 +108,12 @@
     #elif $uploadRequest is None
     <form action="$config['root_url']/public_upload" name="form" method="POST" id="verifyTicketForm">
         <div>
-            #if $ticketId is None or $ticketId == ""
-            <label for="ticketId">Ticket ID: </label>
-            <input type="text" name="ticketId" value=""/>
+            #if $requestId is None or $requestId == ""
+            <label for="requestId">Ticket ID: </label>
+            <input type="text" name="requestId" value=""/>
             #else
-            <p>Ticket ID: <b>$ticketId</b></p>
-            <input type="hidden" name="ticketId" value="$ticketId" />
+            <p>Ticket ID: <b>$requestId</b></p>
+            <input type="hidden" name="requestId" value="$requestId" />
             #end if
         </div>
         <div>
@@ -125,7 +125,7 @@
         </div>
     </form>
     #else
-    <p><b>This upload ticket is now expired. Once your session ends you will no longer be able to view this ticket</b></p>
+    <p><b>This upload request is now expired. Once your session ends you will no longer be able to view this request</b></p>
     #end if
 </div> <!--End Form Area-->
 </div> <!-- End conten col 1 div -->
