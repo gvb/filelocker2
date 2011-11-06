@@ -187,7 +187,7 @@ class ShareController:
         except Exception, e:
             fMessages.append("Could not hide share: %s" % str(e))
             logging.error("[%s] [unhide_shares] [Could not unhide shares: %s]" % (user.id, str(e)))
-        return fl_response(sMessags, fMessages, format)
+        return fl_response(sMessages, fMessages, format)
 
     @cherrypy.expose
     @cherrypy.tools.requires_login()

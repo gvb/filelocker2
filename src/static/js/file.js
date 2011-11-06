@@ -236,8 +236,8 @@ FLFile = function() {
                     //checkServerMessages("uploading file");
                 },
                 onComplete: function(id, fileName, response){
-                    var serverMsg = checkServerMessages("uploading file");
-                    if(!serverMsg)
+                    var hasServerMsg = Filelocker.checkMessages("uploading file");
+                    if(!hasServerMsg)
                         StatusResponse.show(response, "uploading file");
                     load();
                 },

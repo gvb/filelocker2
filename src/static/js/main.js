@@ -52,7 +52,9 @@ Filelocker = function(){
 
     function checkMessages(actionName)
     {
-        Filelocker.request("/get_server_messages", actionName, "{}", false);
+        Filelocker.request("/get_server_messages", actionName, "{}", false, function(returnData) {
+            return returnData.sMessages.length > 0 || returnData.fMessages.length > 0;
+        });
     }
 
     function selectAll(destination)
