@@ -111,9 +111,9 @@ def parse_date(stringDate, minDate=None, maxDate=None):
         return None
     try:
         parsedDate = datetime.datetime(*time.strptime(strip_tags(stringDate), "%m/%d/%Y")[0:5])
-        if parsedDate > maxDate:
+        if maxDate is not None and parsedDate > maxDate:
                 raise Exception("Date cannot be after %s" % maxDate.strftime("%m/%d/%Y"))
-        if parsedDate < minDate:
+        if minDate is not None and parsedDate < minDate:
             raise Exception("Date date cannot be before %s" % minDate.strftime("%m/%d/%Y"))
         return parsedDate
     except Exception, e:
