@@ -192,7 +192,7 @@ class AccountController:
         try:
             searchWidget = get_search_widget("manage_groups")
             templateFile = fl.get_template_file('view_group.tmpl')
-                groupId = strip_tags(groupId)
+            groupId = strip_tags(groupId)
             group = session.query(Group).filter(Group.id == groupId).one()
             if group.owner_id == user.id or user_has_permission(user, "admin"):
                 pass

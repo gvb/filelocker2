@@ -3,7 +3,7 @@ Account = function() {
     {
         var runUpdate = true;
         var emailRegEx = /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,4}$/i;
-        if($("#userPassword").val() != $("#userConfirmPassword").val())
+        if($("#userPassword").val() != $("#userPasswordConfirm").val())
         {
             StatusResponse.create("updating user account", "Passwords do not match.", false);
             runUpdate = false;
@@ -32,7 +32,7 @@ Account = function() {
     {
         $("#userPassword").val("");
         $("#userPasswordConfirm").val("");
-        getCLIKeyList();
+        //getCLIKeyList();
         $("#editAccountBox").dialog("open");
     }
     function toggleRoles()
@@ -66,6 +66,7 @@ Account = function() {
     Search = function() {
         function init(context)
         {
+            console.log("search init");
             $("#"+context+"_externalSearchSelector").hide();
             //Context Must be a valid ID for which to inject the search HTML
             $("#"+context+"_searchTypeChooser").buttonset();
@@ -73,12 +74,12 @@ Account = function() {
             $("#"+context+"_searchName").button({ icons: {primary:'ui-icon-search'} });
             $("#"+context+"_sections").tabs();
             $("#"+context+"_externalSearch").prop("checked", false);
-            $("#"+context+"_searchBox").autocomplete({
+            $("#"+context+"_searchBox").val("").autocomplete({
                 source: function(request, response)
                 {
                     var data = {format: "autocomplete"};
                     var nameText = "";
-                    if ($("#"+context+"_searchName").is(":checked"))
+                    if ($("#"+context+"_searchName").prop("checked"))
                     {
                         nameText = $("#"+context+"_searchBox").val().replace(/\s+/g, " ").split(" ");
                         if (nameText.length == 1)
@@ -92,7 +93,7 @@ Account = function() {
                     else // Searching by user ID but entered a full name, let's help them out a little...
                     {
                         nameText = $("#"+context+"_searchBox").val().replace(/\s+/g, " ").split(" ");
-                        if (nameText.length == 1)
+                        if (nameText.length === 1)
                             data.userId = $("#"+context+"_searchBox").val();
                         else
                         {
@@ -100,11 +101,8 @@ Account = function() {
                             data.lastName = nameText[1];
                         }
                     }
-
-                    if ($("#"+context+"_externalSearch").is(":checked"))
-                        data.external = true;
-                    else
-                        data.external = false;
+                    
+                    data.external = $("#"+context+"_externalSearch").prop("checked");
 
                     var callback = function(returnData) {
                         $("#"+context+"_externalSearchSelector").show();
@@ -151,13 +149,14 @@ Account = function() {
         function manual(userId, context)
         {
             var data = {
-                userId:userId
+                userId:userId,
+                format: "autocomplete"
             };
             var callback = function(returnData) {
                 if (returnData.data != null && returnData.data.length > 0)
                 {
-                    $.each(returnData.data, function(index, value) {
-                        select(value.userId, value.displayName, context);
+                    $.each(returnData.data, function(index, result) {
+                        select(result.value, result.label, context);
                     });
                 }
             }

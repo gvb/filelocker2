@@ -448,7 +448,7 @@
 
             <h3 tabindex="0" aria-expanded="false" role="tab" class="head ui-accordion-header ui-helper-reset ui-state-default ui-corner-all"><a tabindex="0" href="#">Upload Requests ($len($uploadRequests))</a></h3>
             <div class="ui-accordion-content-main ui-helper-reset ui-widget-content ui-corner-bottom ui-accordion-content-active" style="padding: 0px 0px 0px 0px; overflow: visible">
-                <table class="file_table" id="fileAttributeSharesTableSorter">
+                <table class="file_table" id="uploadRequestsTableSorter">
                     <thead>
                         <tr>
                             <th class="spacerCol"></th>
@@ -464,7 +464,7 @@
                             <td colspan="5" class="dotted"></td>
                         </tr>
                     </thead>
-                    <tbody id="fileAttributeSharesTable">
+                    <tbody id="uploadRequestsTable">
                     #for $uploadRequest in $uploadRequests
                     <tr class="fileRow">
                         <td class="spacer"></td>
@@ -487,7 +487,7 @@
                             <!--<td>str($uploadRequest.max_file_size $suffix</td>-->
                         #end if
                         
-                        <td>$uploadRequest.expiration.strftime("%m/%d/%Y")</td>
+                        <td>$uploadRequest.date_expires.strftime("%m/%d/%Y")</td>
                         <td><a href="javascript:Utility.promptConfirmation('UploadRequest.del', ['$uploadRequest.id']);" class="inlineLink" title="Permanently delete this upload request from Filelocker"><span class="cross">&nbsp;</span></a></td>
                     </tr>
                     #end for

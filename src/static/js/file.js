@@ -133,7 +133,7 @@ FLFile = function() {
         }).next().hide();
         $("#fileStatistics").tabs();
         $("#sharedFilesSection").show();
-        updateQuota();
+        getQuota();
         if(selectedFileRow !== "")
             rowClick(selectedFileRow);
     }
@@ -264,9 +264,9 @@ FLFile = function() {
             notifyOnDownload: notifyAction == "yes"
         }, true);
     }
-    function updateQuota()
+    function getQuota()
     {
-        Filelocker.request("/file/get_quota_usage", "updating quota usage", "{}", true, function(returnData)
+        Filelocker.request("/file/get_quota_usage", "retrieving quota usage", "{}", false, function(returnData)
         {
             if (returnData.data != null)
             {
@@ -452,7 +452,7 @@ FLFile = function() {
         take:take,
         prompt:prompt,
         toggleNotify:toggleNotify,
-        updateQuota:updateQuota,
+        getQuota:getQuota,
         rowClick:rowClick,
         onCheck:onCheck
     };
@@ -463,10 +463,10 @@ UploadRequest = function() {
     {
         if ($("#uploadRequestPassword").val() != $("#uploadRequestPasswordConfirm").val())
             StatusResponse.create("creating upload request", "Passwords must match for upload request.", false);
-        else if (isNaN(parseInt($("#uploadRequestMaxSize").val())))
-            StatusResponse.create("creating upload request", "Max upload size must be a number.", false);
-        else if (parseInt($("#uploadRequestMaxSize").val() > USER_QUOTA))
-            StatusResponse.create("creating upload request", "Max upload size must be lower than your user quota.", false);
+        //else if (isNaN(parseInt($("#uploadRequestMaxSize").val())))
+        //    StatusResponse.create("creating upload request", "Max upload size must be a number.", false);
+        //else if (parseInt($("#uploadRequestMaxSize").val() > USER_QUOTA))
+        //    StatusResponse.create("creating upload request", "Max upload size must be lower than your user quota.", false);
         else if ($("#uploadRequestPassword").val() === "" && $("#uploadRequestShareType").is(":checked"))
             StatusResponse.create("creating upload request", "You must enter a password when creating a multi-use upload request.", false);
         else
@@ -474,23 +474,23 @@ UploadRequest = function() {
             var requestType = $("#uploadRequestShareType").is(":checked") ? "multi" : "single";
             var data = {
                 password: $("#uploadRequestPassword").val(),
-                maxFileSize: $("#uploadRequestMaxSize").val(),
+                //maxFileSize: $("#uploadRequestMaxSize").val(),
                 expiration: $("#uploadRequestExpiration").val(),
                 scanFile: $("#uploadRequestScanFile").is(":checked"),
                 emailAddresses: $("#uploadRequestEmail").val(),
                 personalMessage: $("#uploadRequestMessage").val(),
                 requestType: requestType
             };
-            Filelocker.request("/file/generate_upload_ticket", "creating upload request", data, true, function() {
+            Filelocker.request("/file/create_upload_request", "creating upload request", data, true, function() {
                 $("#uploadRequestBox").dialog("close");
-                load();
+                FLFile.load();
             });
         }
     }
     function del(ticketId)
     {
-        Filelocker.request("/file/delete_upload_ticket", "deleting upload request", {ticketId: ticketId}, true, function() {
-            load();
+        Filelocker.request("/file/delete_upload_request", "deleting upload request", {ticketId: ticketId}, true, function() {
+            FLFile.load();
         });
     }
     function prompt()
@@ -523,7 +523,7 @@ UploadRequest = function() {
     {
         if ($("#uploadRequestShareType").is(":checked") && !$("#uploadRequestPasswordSelector").is(":checked"))
         {
-            check("uploadRequestPasswordSelector");
+            Utility.check("uploadRequestPasswordSelector");
             togglePassword();
         }
     }

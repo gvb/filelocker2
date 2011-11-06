@@ -4,15 +4,13 @@ Message = function() {
         Filelocker.request("/message/get_messages", "retrieving messages", "{}", false, function(returnData) {
             var recvhtml = "";
             $.each(returnData.data[0], function(index, value) {
-                var unreadMessage = "";
-                if(value.viewedDatetime === null)
-                    unreadMessage = "unreadMessage";
-                var shortenedSubject = value.subject;
-                if(shortenedSubject.length > 30)
-                    shortenedSubject = shortenedSubject.substring(0,22) + "..." + shortenedSubject.substring(shortenedSubject.length-5,shortenedSubject.length);
+                var unreadMessage = (value.viewedDatetime === null) ? "unreadMessage" : "";
+                var shortenedSubject = (value.subject.length > 30)
+                    ? value.subject.substring(0,22) + "..." + value.subject.substring(value.subject.length-5,value.subject.length)
+                    : value.subject;
                 recvhtml += "<tr id='"+value.id+"_inbox' class='groupRow "+unreadMessage+"' onClick='javascript:Message.read(\""+value.id+"\",\"inbox\");'>";
                 recvhtml += "<td class='leftborder'><input id='"+value.id+"' type='checkbox' class='messageInboxSelectBox' /><span id='"+value.id+"_subject' class='hidden'>"+value.subject+"</span><span id='"+value.id+"_body' class='hidden'>"+value.body+"</span></td>";
-                recvhtml += "<td><a href='javascript:Message.read(\""+value.id+"\",\"inbox\");' class='messageLink'>"+value.ownerId+"</a></td><td><a class='messageLink' href='javascript:Message.read(\""+value.id+"\",\"inbox\");'>"+shortenedSubject+"</a></td><td>"+value.creationDatetime+"</td><td class='rightborder'><a href='javascript:Message.promptCreateReply(\""+value.subject+"\",\""+value.ownerId+"\");javascript:Account.Search.manual(\""+value.ownerId+"\", \"messages\");' class='inlineLink' title='Reply to this message'><span class='replyMessage'>&nbsp;</span></a><a href='javascript:Utility.promptConfirmation(\"Message.del\", [\""+value.id+"\"]);' class='inlineLink' title='Delete this message'><span class='cross'>&nbsp;</span></a></td>";
+                recvhtml += "<td><a href='javascript:Message.read(\""+value.id+"\",\"inbox\");' class='messageLink'>"+value.ownerId+"</a></td><td><a class='messageLink' href='javascript:Message.read(\""+value.id+"\",\"inbox\");'>"+shortenedSubject+"</a></td><td>"+value.creationDatetime+"</td><td class='rightborder'><a href='javascript:Message.promptCreateReply(\""+value.subject+"\",\""+value.ownerId+"\");javascript:Account.Search.manual(\""+value.ownerId+"\", \"messages\");' class='inlineLink' title='Reply to this message'><span class='replyMessage'>&nbsp;</span></a><a href='javascript:Utility.promptConfirmation(\"Message.delShare\", [\""+value.id+"\"]);' class='inlineLink' title='Delete this message'><span class='cross'>&nbsp;</span></a></td>";
                 recvhtml += "</tr>";
             });
             if(recvhtml === "")
@@ -25,9 +23,9 @@ Message = function() {
 
             var senthtml = "";
             $.each(returnData.data[1], function(index, value) {
-                var shortenedSubject = value.subject;
-                if(shortenedSubject.length > 30)
-                    shortenedSubject = shortenedSubject.substring(0,22) + "..." + shortenedSubject.substring(shortenedSubject.length-5,shortenedSubject.length);
+                var shortenedSubject = (value.subject.length > 30)
+                    ? value.subject.substring(0,22) + "..." + value.subject.substring(value.subject.length-5,value.subject.length)
+                    : value.subject;
                 senthtml += "<tr id='"+value.id+"_sent' class='groupRow ' onClick='javascript:Message.read(\""+value.id+"\",\"sent\");'>";
                 senthtml += "<td class='leftborder'><input id='"+value.id+"' type='checkbox' class='messageSentSelectBox' /><span id='"+value.id+"_subject' class='hidden'>"+value.subject+"</span><span id='"+value.id+"_body' class='hidden'>"+value.body+"</span></td>";
                 senthtml += "<td><a href='javascript:Message.read(\""+value.id+"\",\"sent\");' class='messageLink'>"+value.messageRecipients+"</a></td><td><a href='javascript:Message.read(\""+value.id+"\",\"sent\");' class='messageLink'>"+shortenedSubject+"</a></td><td>"+value.creationDatetime+"</td><td class='rightborder'><a href='javascript:Utility.promptConfirmation(\"Message.del\", [\""+value.id+"\"]);' class='inlineLink' title='Delete this message'><span class='cross'>&nbsp;</span></a></td>";
@@ -75,7 +73,7 @@ Message = function() {
         $.each($("#messageSentTable tr"), function() {
             $(this).removeClass("rowSelected leftborder");
         });
-        if(context == "inbox")
+        if(context === "inbox")
         {
             $("#"+messageId+"_inbox").addClass("rowSelected leftborder rightborder");
             $("#"+messageId+"_inbox").removeClass("unreadMessage");
@@ -84,9 +82,11 @@ Message = function() {
             $("#"+messageId+"_sent").addClass("rowSelected leftborder rightborder");
         $("#messageSubject").html("<span class='messageHeader'>Subject:</span>" + $("#"+messageId+"_subject").text());
         $("#messageBody").html("<hr class='messageViewBreak' /><span class='messageHeader'>Body:</span>" + $("#"+messageId+"_body").text());
-        Filelocker.request("/message/read_message", "reading message", { messageId:messageId }, false, function() {
-            getCount();
-        });
+        if (context === "inbox") {
+            Filelocker.request("/message/read_message", "reading message", { messageId:messageId }, false, function() {
+                getCount();
+            });
+        }
     }
     
     function del(messageId)
@@ -96,7 +96,15 @@ Message = function() {
         });
     }
 
-    function prompt() {
+    function delShare(messageId)
+    {
+        Filelocker.request("/message/delete_message_shares", "deleting messages", { messageIds:messageId }, true, function() {
+            prompt();
+        });
+    }
+
+    function prompt()
+    {
         $("#selectAllMessageInbox").prop("checked", false);
         $("#selectAllMessageSent").prop("checked", false);
         $("#messageInboxTable").html("");
@@ -128,6 +136,7 @@ Message = function() {
         $("#flMessageBody").val("");
         Account.Search.init("messages");
         $("#createMessageBox").dialog("open");
+        return false;
     }
 
     function getCount()

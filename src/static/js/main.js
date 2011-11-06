@@ -10,12 +10,12 @@ Filelocker = function(){
     *       path (string):              Service function to call (with leading slash).
     *       action (string):            String for success/error messages in form of "[update or refresh]ing [section of valuation]".
     *       payloadObject (object):     Object to be consumed by endpoint.
-    *       showMessage (bool):         Determines whether to show a success message if the request completes and there are no failure messages from the server.
+    *       verboseMode (bool):         Determines whether to show a success message if the request completes and there are no failure messages from the server.
     *       successFunction (function): OPTIONAL callback function to execute if the request completes.
     */
-    function request(path, action, payloadObject, showSuccessMessage, successFunction)
+    function request(path, action, payloadObject, verboseMode, successFunction)
     {
-        console.log("Start \tN/A\t" + action);
+        console.log("Start \tN/A\tverbose:" + verboseMode + "\t" + action);
         $.ajax({
             type: "POST",
             cache: false,
@@ -23,14 +23,18 @@ Filelocker = function(){
             url: FILELOCKER_ROOT + path,
             data: payloadObject,
             success: function(response) {
-                console.log("End \t" + 200 + "\t" + action);
-                if (response.fMessages.length > 0 || showSuccessMessage)
+                console.log("End \t" + 200 + "\tverbose:" + verboseMode + "\t" + action);
+                if (response.fMessages.length > 0) {
+                    console.error(action + " " + response.fMessages);
+                    StatusResponse.show(response, action);
+                }
+                else if (verboseMode)
                     StatusResponse.show(response, action);
                 if (typeof (successFunction) === "function")
                     successFunction.call(this, response)
             },
             error: function(response, status, error) {
-                console.log("End \t" + status + "\t" + action);
+                console.log("End \t" + status + "\tverbose:" + verboseMode + "\t" + action);
                 StatusResponse.create(action, response.status + " " + status + ": " + error, false);
             }
         });
@@ -48,7 +52,7 @@ Filelocker = function(){
 
     function checkMessages(actionName)
     {
-        Filelocker.request("/get_server_messages", actionName, "{}", true);
+        Filelocker.request("/get_server_messages", actionName, "{}", false);
     }
 
     function selectAll(destination)

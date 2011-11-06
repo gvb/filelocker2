@@ -88,7 +88,7 @@
         #if $AccountController.user_has_permission($user, "admin")
             <td id="adminBackLink"><div id="adminLink" class="settings"><a href="javascript:Admin.load()" title="Launch the admin panel">Admin</a></div></td>
         #else
-            <td><div id="accountLink" class="settings"><a href="javascript:StatusResponse.hide();javascript:Account.load()" title="Edit your account settings">Account</a></div></td>
+            <td><div id="accountLink" class="settings"><a href="javascript:StatusResponse.hide();javascript:Account.prompt()" title="Edit your account settings">Account</a></div></td>
         #end if
       </tr>
       <tr>
