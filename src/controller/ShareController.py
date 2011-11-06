@@ -162,7 +162,7 @@ class ShareController:
 
     @cherrypy.expose
     @cherrypy.tools.requires_login()
-    def unhide_shares(self):
+    def unhide_shares(self, format="json", **kwargs):
         user, sMessages, fMessages  = (cherrypy.session.get("user"), [], [])
         try:
             session.query(HiddenShare).filter(HiddenShare.owner_id==user.id).delete(synchronize_session=False)
@@ -176,7 +176,7 @@ class ShareController:
     
     @cherrypy.expose
     @cherrypy.tools.requires_login()
-    def hide_shares(self, fileIds):
+    def hide_shares(self, fileIds, format="json", **kwargs):
         user, sMessages, fMessages  = (cherrypy.session.get("user"), [], [])
         try:
             fileIds = split_list_sanitized(fileIds)
