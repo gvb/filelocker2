@@ -241,10 +241,10 @@ class FileController(object):
         user, uploadRequest, uploadKey, config, sMessages, fMessages = None, None, None, cherrypy.request.app.config['filelocker'], [], []
 
         #Check Permission to upload since we can't wrap in requires login for public uploads
-        if cherrypy.session.has_key("uploadTicket") and cherrypy.session.get("uploadTicket") is not None:
-            uploadRequest = cherrypy.session.get("uploadTicket")
-            user = AccountController.get_user(uploadTicket.ownerId)
-            uploadKey = "%s:%s" % (user.id, uploadTicket.id)
+        if cherrypy.session.has_key("uploadRequest") and cherrypy.session.get("uploadRequest") is not None and cherrypy.session.get("uploadRequest").expired == False:
+            uploadRequest = cherrypy.session.get("uploadRequest")
+            user = AccountController.get_user(uploadRequest.owner_id)
+            uploadKey = "%s:%s" % (user.id, uploadRequest.id)
         else:
             cherrypy.tools.requires_login()
             user, sMessages, fMessages = cherrypy.session.get("user"), cherrypy.session.get("sMessages"), cherrypy.session.get("fMessages")
@@ -396,7 +396,7 @@ class FileController(object):
                     session.add(AuditLog(cherrypy.request.remote.ip, "Upload Requested File", "File %s has been uploaded by an external user to your Filelocker account. This was a single user request and the request has now expired." % (newFile.name), uploadRequest.owner_id))
                     attachedUploadRequest = session.query(UploadRequest).filter(UploadRequest.id == uploadRequest.id).one()
                     session.delete(attachedUploadRequest)
-                    cherrypy.session['uploadTicket'].expired = True
+                    cherrypy.session['uploadRequest'].expired = True
                 else:
                     session.add(AuditLog(cherrypy.request.remote.ip, "Upload Requested File", "File %s has been uploaded by an external user to your Filelocker account." % (newFile.name), uploadRequest.owner_id))
             sMessages.append("File %s uploaded successfully." % str(fileName))

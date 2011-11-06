@@ -43,7 +43,9 @@ class User(Base):
     is_role = False
     authorized = True
     attributes = []
-    received_messages = relationship("MessageShare", backref="messages")
+    received_messages = relationship("MessageShare")
+    upload_requests = relationship("UploadRequest", backref="owner")
+
     
     def set_display_name(self, value):
         self._display_name = value
@@ -275,6 +277,9 @@ class UploadRequest(Base):
     password = Column(String(80))
     type = Column(Enum("single", "multi"))
     expired = False
+
+    def get_copy(self):
+        return UploadRequest(id=self.id, owner_id=self.owner_id, max_file_size=self.max_file_size, scan_file=self.scan_file, date_expires=self.date_expires, password=self.password, type=self.type)
 
     def generate_id(self):
         import random

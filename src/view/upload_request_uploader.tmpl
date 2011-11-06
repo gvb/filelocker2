@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="description" content="Developed at Purdue University, Filelocker allows you to share files with other people both inside and outside of your organization. It is a temporary and secure storage system for sharing files and data."/>
+    <meta name="keywords" content="filelocker, encryption, security application, enterprise, auditing, secure storage, information security, online storage, file sharing, share files, online backup, sharing, collaboration" />
+    <title>Filelocker</title>
+    <link rel="stylesheet" href="$config['root_url']/css?style=jquery-ui" />
+    <link rel="stylesheet" href="$config['root_url']/css?style=filelocker" />
+    <link rel="shortcut icon" href="$config['root_url']/static/images/favicon.ico" />
+    <script type="text/javascript" src="$config['root_url']/static/js/lib/jquery-1.6.4.js"></script>
+    <script type="text/javascript" src="$config['root_url']/static/js/lib/jquery-ui-1.8.11.js"></script>
+    <script type="text/javascript" src="$config['root_url']/static/js/lib/jquery.tablesorter.js"></script>
+    <script type="text/javascript" src="$config['root_url']/static/js/lib/jquery.tipsy.js"></script>
+    <script type="text/javascript" src="$config['root_url']/static/js/lib/fileuploader.js"></script>
+    <script type="text/javascript" src="$config['root_url']/static/js/global.js"></script>
+    <script type="text/javascript" src="$config['root_url']/static/js/public.js"></script>
+    <script type="text/javascript">
+        var FILELOCKER_ROOT = "$config['root_url']";
+    </script>
+</head>
+<body class="greyBackground">
+
+<div id="background">
+    <div id="wrapper_all">
+        <!--header-->
+        <div id="wrapper_header">
+            <div class="logo"><a href="$config['root_url']"><img src="$config['root_url']/static/images/logos/filelocker_logo.png" alt="Filelocker" /></a></div>
+        </div>
+
+        <!--CONTENT area-->
+        <div id="wrapper_2col">
+            <!--file area-->
+            <div id="wrapper_col1">
+            <!-- Content Area>
+                <div class="section_title">
+                #if $uploadRequest is not None
+                <h1 class="files_title">Upload a file for $uploadRequest.owner.display_name</h1>
+                #else
+                <h1 class="files_title">Upload a file for a Filelocker user</h1>
+                 #end if
+                </div>
+
+                <div> <!-- col 1 content -->
+                #for $message in $messages
+                <p style="color: red">$message</p>
+                #end for
+
+                #if $uploadRequest is not None
+                    <div class="file_list">
+                        <table class="file_table" id="fileTableSorter">
+                            <thead>
+                            <tr>
+                                <th class="selectAllCol"></th>
+                                <th class="nameCol pseudoLink">Name</th>
+                                <th class="sizeCol pseudoLink">Size</th>
+                                <th class="expiresCol pseudoLink">Expires</th>
+                                <th class="menuCol"></th>
+                            </tr>
+                            <tr>
+                                <td></td>
+                                <td colspan="4" class="dotted"></td>
+                            </tr>
+                            </thead>
+                            <tbody id="filesTable">
+                            #for $requestFile in $requestFiles
+                                #set $fsSuffix = "B"
+                                #set $fileSize = $requestFile['fileSizeBytes']
+                                #if $fileSize > 1024
+                                    #set $fileSize = $fileSize / 1024
+                                    #set $fsSuffix = "kB"
+                                    #if $fileSize > 1024
+                                        #set $fileSize = $fileSize / 1024
+                                        #set $fsSuffix = "MB"
+                                        #if $fileSize > 1024
+                                            #set $fileSize = $fileSize / 1024
+                                            #set $fsSuffix = "GB"
+                                        #end if
+                                    #end if
+                                #end if
+                                <tr id="file_$requestFile['fileId']" class="fileRow">
+                                    <td></td>
+                                    <td><span class="$requestFile['documentType'] pseudoLink">
+                                        #if len($requestFile['fileName']) > 60
+                                            $requestFile['fileName'][0:45]...$requestFile['fileName'][-10:]
+                                        #else
+                                            $requestFile['fileName']
+                                        #end if
+                                    </span></td>
+                                    <td>$fileSize $fsSuffix</td>
+                                    <td>$requestFile['fileExpirationDatetime']</td>
+                                    <td></td>
+                                </tr>
+                            #end for
+                            </tbody>
+                            <tfoot id="progressBarSection">
+                            </tfoot>
+                        </table>
+                    </div> <!-- End File List -->
+                    #end if
+
+
+                    <div id="formArea" style="margin-left: 25px;">
+                    #if $uploadRequest is not None and $uploadRequest.expired == False
+                        <form action="$config['root_url']/file_interface/public_upload" name="form" id="form">
+                        #if $uploadRequest.max_file_size is not None
+                            #set $suffix = "bytes"
+                            #set $maxSize = $uploadRequest.max_file_size
+                            #if $maxSize > 1024
+                                #set $maxSize = $maxSize / 1024
+                                #set $suffix = "kB"
+                                #if $maxSize > 1024
+                                    #set $maxSize = $maxSize / 1024
+                                    #set $suffix = "MB"
+                                    #if $maxSize > 1024
+                                        #set $maxSize = $maxSize / 1024
+                                        #set $suffix = "GB"
+                                    #end if
+                                #end if
+                            #end if
+                            <div>This file cannot be larger than $maxSize $suffix</div>
+                        #end if
+                        <input type="hidden" id="requestId" value="$uploadRequest.id"/>
+                        <div>
+                            <label for="puExpiration">Expiration date:</label>
+                            <input type="text" class="dateFuture" name="puExpiration" id="puExpiration" size="9" maxlength="10" value="$defaultExpiration.strftime('%m/%d/%Y')" />
+                        </div>
+                        <div>
+                            <label for="fileNotes">Add notes to file:</label>
+                            <textarea name="fileNotes" id="fileNotes" cols="38" rows="3" onKeyUp="javascript:limitCharacters('public_upload');"></textarea>
+                            <div id="publicUploadNotesInfo"></div>
+                        </div>
+                        <div>
+                            <label for="uploadScanFile">Other options:</label>
+                            #if $uploadRequest.scan_file
+                                <input type="checkbox" disabled="disabled" checked="checked" name="scanFile" id="scanFile" />Scan for viruses (The user has requested that this file undergo a virus scan)
+                            #else
+                                <input type="checkbox" name="scanFile" id="scanFile"/><span onclick="javascript:check('scanFile');">Scan for viruses?</span>
+                            #end if
+                        </div>
+                        <div>
+                            <div class="button" id="uploadButton" class="uploadButton"></div>
+                        </div>
+                        <div class="clear"></div>
+                    </form>
+                    #end if
+                </div> <!--End Form Area-->
+
+
+            <!-- End CONTENT -->
+            </div> <!-- End wrapper_col1 -->
+
+            <!--right side-->
+            <div id="statusMessageWrapper"><div id="statusMessage" class="ui-widget ui-state-error hidden"></div></div>
+            <div id="wrapper_col2">
+                <div class="text_col2">
+                    <a href="$config['org_url']" target="_blank" title="Take me to the $config['org_name'] home page"><img src="$config['root_url']/static/images/logos/logo.gif" alt="$config['org_name']" class="orgLogo" /></a>
+                    <img src="$config['root_url']/static/images/page_elements/horizontal_rule.gif" alt="" class="horizontal_rule" />
+                    <p><span class="strong">Public Upload</span> <br/> This area allows you to upload files for a user who has requested them. Once a file is uploaded, it will be available to the requestor on their Files page.</p>
+                    <img src="$config['root_url']/static/images/page_elements/horizontal_rule.gif" alt="" class="horizontal_rule" />
+                </div>
+            </div>
+		</div><!--end content area-->
+
+        <!--footer area-->
+        <div id="footer">$footerText</div>
+    </div>
+</div>
+
+<div id="helpBox" class="hidden">
+    <div class="popup_wrapper">
+        <div class="popup_large">
+            <table id="help">
+            <tr>
+                <td>
+                    <table class="file_table" style="width: 180px;">
+                        <thead>
+                            <tr>
+                                <th class="spacerCol"></th>
+                                <th class="helpTableOfContentsCol pseudoLink">Topic</th>
+                            </tr>
+                            <tr>
+                                <td></td>
+                                <td class="dotted"></td>
+                            </tr>
+                        </thead>
+                        <tbody id="helpTableOfContents"></tbody>
+                    </table>
+                </td>
+                <td id="helpViewer"></td>
+            </tr>
+            </table>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

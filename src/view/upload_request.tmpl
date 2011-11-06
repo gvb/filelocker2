@@ -13,11 +13,8 @@
     <script type="text/javascript" src="$config['root_url']/static/js/lib/jquery.tablesorter.js"></script>
     <script type="text/javascript" src="$config['root_url']/static/js/lib/jquery.tipsy.js"></script>
     <script type="text/javascript" src="$config['root_url']/static/js/lib/fileuploader.js"></script>
-
-    <script src="$config['root_url']/static/js/global.js"></script>
-    <script src="$config['root_url']/static/js/public.js"></script>
-    <script src="$config['root_url']/static/js/main.js"></script>
-
+    <script type="text/javascript" src="$config['root_url']/static/js/global.js"></script>
+    <script type="text/javascript" src="$config['root_url']/static/js/public.js"></script>
     <script type="text/javascript">
         var FILELOCKER_ROOT = "$config['root_url']";
     </script>
@@ -31,11 +28,43 @@
             <div class="logo"><a href="$config['root_url']"><img src="$config['root_url']/static/images/logos/filelocker_logo.png" alt="Filelocker" /></a></div>
         </div>
         
-        <!--content area-->
+        <!--CONTENT area-->
         <div id="wrapper_2col">
             <!--file area-->
             <div id="wrapper_col1">
-                $content
+            <!-- Content Area>
+                <div class="section_title">
+                #if $uploadRequest is not None
+                <h1 class="files_title">Upload a file for $uploadRequest.owner.display_name</h1>
+                #else
+                <h1 class="files_title">Upload a file for a Filelocker user</h1>
+                 #end if
+                </div>
+
+                <div> <!-- col 1 content -->
+                #for $message in $messages
+                <p style="color: red">$message</p>
+                #end for
+                <form action="$config['root_url']/upload_request_uploader" name="form" method="POST" id="verifyTicketForm">
+                <div>
+                    #if $requestId is None or $requestId == ""
+                    <label for="requestId">Request ID: </label>
+                    <input type="text" name="requestId" value=""/>
+                    #else
+                    <p>Request ID: <b>$requestId</b></p>
+                    <input type="hidden" name="requestId" value="$requestId" />
+                    #end if
+                </div>
+                <div>
+                    <label for="password">Password:</label>
+                    <input type="password" name="password" id="password" />
+                </div>
+                <div>
+                    <div class="button"><a href="javascript:verifyUploadTicket();" title="Verify password for upload request" class="uploadButton"><span>Login</span></a></div>
+                </div>
+                </form>
+
+            <!-- End CONTENT -->
             </div> <!-- End wrapper_col1 -->
             
             <!--right side-->
