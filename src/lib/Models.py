@@ -37,6 +37,7 @@ class User(Base):
     password = Column(String(80), nullable=True)
     _display_name = Column("display_name", Text, nullable=True)
     permissions = relationship("Permission", secondary=lambda: user_permissions_table)
+    groups = relationship("Group", secondary=lambda: group_membership_table, backref="members")
     quota_used = 0
     salt = None
     is_role = False
@@ -67,7 +68,7 @@ class User(Base):
 
     def get_dict(self):
         return {'userFirstName':self.first_name, 'userLastName':self.last_name, 'userDisplayName': self.display_name, 'userEmail': self.email, 'isRole': self.is_role, 'userId': self.id, 'userQuotaUsed': self.quota_used, 'userQuota': self.quota}
-#mapper(User, "users", properties={'permissions': relationship("Permission", lazy='joined')})
+
 role_membership_table = Table("role_membership", Base.metadata,
     Column("role_id", String(30), ForeignKey("roles.id")),
     Column("user_id", String(30), ForeignKey("users.id")))
@@ -102,8 +103,8 @@ class Permission(Base):
 
 
 group_membership_table = Table("group_membership", Base.metadata,
-    Column("group_id", Integer, ForeignKey("groups.id")),
-    Column("user_id", String(30), ForeignKey("users.id")))
+    Column("group_id", Integer, ForeignKey("groups.id"), primary_key=True),
+    Column("user_id", String(30), ForeignKey("users.id"), primary_key=True))
 
 group_permissions_table = Table("group_permissions", Base.metadata,
     Column("group_id", Integer, ForeignKey("groups.id"), primary_key=True),
@@ -115,8 +116,8 @@ class Group(Base):
     name = Column(String(255), nullable=False)
     owner_id = Column(String(30), ForeignKey("users.id"), nullable=False)
     scope = Column(Enum("public", "private", "reserved"), default="private")
-    members = relationship("User", secondary=lambda: group_membership_table, backref="groups")
-    permissions = relationship("Permission", secondary=lambda: group_permissions_table)
+#    members = relationship("User", secondary=group_membership_table, backref="groups")
+    permissions = relationship("Permission", secondary=group_permissions_table)
     
     def get_dict(self):
         users = {}
@@ -219,14 +220,14 @@ class UserShare(Base):
     user_id = Column(String(30), ForeignKey("users.id"), primary_key=True)
     file_id = Column(Integer, ForeignKey("files.id"), primary_key=True)
     flFile = relationship("File")
-    user = relationship("User")
+    user = relationship("User", backref="user_shares")
 
 class GroupShare(Base):
     __tablename__ = "group_shares"
     group_id = Column(Integer, ForeignKey("groups.id"), primary_key=True)
     file_id = Column(Integer, ForeignKey("files.id"), primary_key=True)
     flFile = relationship("File")
-    group = relationship("Group")
+    group = relationship("Group", backref="group_shares")
 
 public_share_files = Table("public_share_files", Base.metadata,
     Column("share_id", String(64), ForeignKey("public_shares.id")),

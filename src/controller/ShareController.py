@@ -22,7 +22,7 @@ class ShareController:
         notify = True if notify.lower() == "yes" else False
         try:
             if userId is not None:
-                sharedFiles = []
+                sharedFiles, recipients = [], []
                 for fileId in fileIds:
                     flFile = session.query(File).filter(File.id==fileId).one()
                     shareUser = AccountController.get_user(userId)
@@ -32,17 +32,20 @@ class ShareController:
                             session.add(UserShare(user_id=userId, file_id=fileId))
                             session.commit()
                             sharedFiles.append(flFile)
+                            recipients.append(shareUser)
                         else:
                             fMessages.append("File with ID:%s is already shared with user %s" % (fileId, userId))
                     else:
                         fMessages.append("You do not have permission to share file with ID: %s" % str(flFile.id))
                 if notify:
-                    try:
-                        Mail.notify(get_template_file('share_notification.tmpl'),{'sender':user.email,'recipient':shareUser.email, 'ownerId':user.id, 'ownerName':user.display_name, 'files':sharedFiles, 'filelockerURL': config['root_url']})
-                        session.add(AuditLog(user.userId, "Sent Email", "%s has been notified via email that you have shared a file with him or her." % (shareUser.email)))
-                        session.commit()
-                    except Exception, e:
-                        fMessages.append("Problem sending email notification: %s" % str(e))
+                    for recipient in recipients:
+                        try:
+                            Mail.notify(get_template_file('share_notification.tmpl'),{'sender':user.email,'recipient':recipient.email, 'ownerId':user.id, 'ownerName':user.display_name, 'files':sharedFiles, 'filelockerURL': config['root_url']})
+                            session.add(AuditLog(user.userId, "Sent Email", "%s has been notified via email that you have shared a file with him or her." % (recipient.display_name)))
+                        except Exception, e:
+                            session.rollback()
+                            fMessages.append("Problem sending email notification to %s: %s" % (recipient.display_name, str(e)))
+                    session.commit()
                 sMessages.append("Shared file(s) successfully")
             else:
                 fMessages.append("You did not specify a user to share the file with")
@@ -77,7 +80,7 @@ class ShareController:
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def create_group_shares(self, fileIds, groupId, notify="no", format="json"):
-        user, sMessages, fMessages  = (cherrypy.session.get("user"), [], [])
+        user, sMessages, fMessages, config  = (cherrypy.session.get("user"), [], [], cherrypy.request.app.config['filelocker'])
         fileIds = split_list_sanitized(fileIds)
         groupId = strip_tags(groupId) if groupId is not None and groupId != "" else None
         notify = True if notify.lower() == "yes" else False
@@ -88,7 +91,10 @@ class ShareController:
                     sharedFiles = []
                     for fileId in fileIds:
                         flFile = session.query(File).filter(File.id == fileId).one()
-                        if flFile.owner_id == user.id or AccountController.user_has_permission(user, "admin"):
+                        existingShare = session.query(GroupShare).filter(and_(GroupShare.group_id==group.id, GroupShare.file_id==fileId)).scalar()
+                        if existingShare is not None:
+                            fMessages.append("File %s is already shared with group %s" % (flFile.name, group.name))
+                        elif flFile.owner_id == user.id or AccountController.user_has_permission(user, "admin"):
                             session.add(GroupShare(group_id=groupId, file_id=fileId))
                             sharedFiles.append(flFile)
                         else:
@@ -99,9 +105,13 @@ class ShareController:
                 session.commit()
                 if notify:
                     for groupMember in group.members:
-                        Mail.notify(get_template_file('share_notification.tmpl'),{'sender':user.email,'recipient':shareUser.email, 'ownerId':user.id, 'ownerName':user.display_name, 'files':sharedFiles, 'filelockerURL': config['root_url']})
-                        session.add(AuditLog(user.id, "Sent Email", "%s has been notified via email that you have shared a file with him or her." % (shareUser.email)))
-                        session.commit()
+                        try:
+                            Mail.notify(get_template_file('share_notification.tmpl'),{'sender':user.email,'recipient':groupMember.email, 'ownerId':user.id, 'ownerName':user.display_name, 'files':sharedFiles, 'filelockerURL': config['root_url']})
+                            session.add(AuditLog(user.id, "Sent Email", "%s has been notified via email that you have shared a file with him or her." % (groupMember.email)))
+                            session.commit()
+                        except Exception, e:
+                            session.rollback()
+                            fMessages.append("Problem sending email notification to %s: %s" % (groupMember.display_name, str(e)))
         except Exception, e:
             session.rollback
             fMessages.append(str(e))
@@ -318,9 +328,10 @@ class ShareController:
 
 def get_files_shared_with_user(user):
     sharedFiles = []
-    for share in session.query(UserShare).filter(UserShare.user_id==user.id).all():
+    attachedUser = session.query(User).filter(User.id == user.id).one()
+    for share in attachedUser.user_shares:
         sharedFiles.append(share.flFile)
-    for group in user.groups:
+    for group in attachedUser.groups:
         for share in group.group_shares:
             sharedFiles.append(share.flFile)
     return sharedFiles
