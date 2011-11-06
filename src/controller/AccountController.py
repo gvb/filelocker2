@@ -62,7 +62,7 @@ class AccountController:
         user, sMessages, fMessages = (cherrypy.session.get("user"), [], [])
         try:
             scope = strip_tags(groupScope.lower()) if strip_tags(groupScope) is not None else "private"
-            group = Group(name=strip_tags(groupName), scope=scope)
+            group = Group(name=strip_tags(groupName), scope=scope, owner_id=user.id)
             session.add(group)
             memberIds = split_list_sanitized(groupMemberIds)
             for memberId in memberIds:

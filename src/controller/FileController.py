@@ -469,7 +469,7 @@ class FileController(object):
             emailAddresses = emailAddresses.replace(";", ",") if (emailAddresses is not None and emailAddresses != "") else []
             personalMessage = strip_tags(personalMessage)
             requestType = "multi" if requestType.lower() == "multi" else "single"
-            uploadRequest = UploadRequest(date_expires=expiration, max_file_size=maxFileSize, scan_file=scanFile, type=requestType)
+            uploadRequest = UploadRequest(date_expires=expiration, max_file_size=maxFileSize, scan_file=scanFile, type=requestType, owner_id=user.id)
             if password is not None:
                 uploadRequest.set_password(password)
             if requestType == "multi" and password == None:
