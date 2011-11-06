@@ -112,6 +112,9 @@ class MessageController:
             session.commit()
         except sqlalchemy.exc.orm.NoResultFound, nrf:
             fMessages.append("Invalid message id")
+        except Exception, e:
+            logging.error("[%s] [read_message] [Could not mark message as read: %s]" % (user.id, str(e)))
+            fMessages.append("Could not mark message as read: %s" % str(e))
         return fl_response(sMessages, fMessages, format)
 
     @cherrypy.expose
