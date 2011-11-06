@@ -165,13 +165,13 @@ class ShareController:
     def unhide_shares(self):
         user, sMessages, fMessages  = (cherrypy.session.get("user"), [], [])
         try:
-            session.query(HiddenShare).filter(owner_id==user.id).delete(synchronize_session=False)
+            session.query(HiddenShare).filter(HiddenShare.owner_id==user.id).delete(synchronize_session=False)
             session.commit()
             sMessages.append("All shares have been unhidden")
         except Exception, e:
             fMessages.append("Could not unhide shares: %s" % str(e))
             logging.error("[%s] [unhide_shares] [Could not unhide shares: %s]" % (user.id, str(e)))
-        return fl_response(sMessags, fMessages, format)
+        return fl_response(sMessages, fMessages, format)
         
     
     @cherrypy.expose
@@ -223,7 +223,7 @@ class ShareController:
             if permission:
                 fileIdList = split_list_sanitized(fileIds)
                 for fileId in fileIdList:
-                    share = session.query(AttributeShare).filter(AttributeShare.attribute_id==attributeId and rivateAttributeShare.fileId==fileId).one()
+                    share = session.query(AttributeShare).filter(AttributeShare.attribute_id==attributeId and AttributeShare.fileId==fileId).one()
                     session.delete(share)
                 sMessages.append("Successfully unshared file(s) with users having the %s attribute") % attributeId
             else:

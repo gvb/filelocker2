@@ -48,7 +48,7 @@ Share = function() {
         Filelocker.request("/share/unhide_shares", "unhiding shares", {}, true, function() {
             $("#editAccountBox").dialog("close");
             FLFile.load();
-        })
+        });
     }
     function hideMulti()
     {
