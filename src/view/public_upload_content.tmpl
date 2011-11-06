@@ -64,7 +64,7 @@
     #end if
     <div id="formArea" style="margin-left: 25px;">
     #if $uploadRequest is not None and $uploadRequest.expired == False
-        <form action="$fl.rootURL/file_interface/public_upload" name="form" id="form">
+        <form action="$config['root_url']/file_interface/public_upload" name="form" id="form">
         #if $uploadRequest.max_file_size is not None
             #set $suffix = "bytes"
             #set $maxSize = $uploadRequest.max_file_size
