@@ -504,7 +504,7 @@ UploadRequest = function() {
     }
     function promptView(requestId)
     {
-        var linkText = FILELOCKER_ROOT+"/public_upload?requestId="+requestId;
+        var linkText = FILELOCKER_ROOT+"/upload_request?requestId="+requestId;
         $("#uploadRequestURL").html("<p><a href='"+linkText+"' target='_blank'>"+linkText+"</a></p>");
         $("#uploadRequestLinkBox").dialog("open");
     }

@@ -70,15 +70,10 @@ PublicUpload = function() {
             init();
         });
     }
-    function verify()
-    {
-        $("#verifyTicketForm").submit();
-    }
     
     return {
         init:init,
-        load:load,
-        verify:verify
+        load:load
     };
 }();
 jQuery(document).ready(function(){
