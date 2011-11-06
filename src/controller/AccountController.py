@@ -150,14 +150,13 @@ class AccountController:
     def add_users_to_group(self, userId, groupId, format="json", **kwargs):
         user, sMessages, fMessages  = (cherrypy.session.get("user"), [], [])
         try:
-            userIds = split_list_sanitized(userIds)
+            userId = strip_tags(userId)
             groupId = int(strip_tags(groupId))
             group = session.query(Group).filter(Group.id == groupId).one()
             if group.owner_id == user.id or user_has_permission(user, "admin"):
                 try:
-                    for userId in userIds:
-                        user = get_user(userId)
-                        group.members.append(user)
+                    user = get_user(userId)
+                    group.members.append(user)
                     session.commit()
                 except sqlalchemy.orm.exc.NoResultFound, nrf:
                     fMessages.append("Invalid user ID: %s, not added to group" % str(userId))
