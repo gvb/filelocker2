@@ -198,13 +198,11 @@ class Message(Base):
 
     def get_dict(self):
         messageViewedDatetime, messageCreateDatetime, messageExpirationDatetime = (None, None, None)
-        if self.date_viewed is not None:
-            messageViewedDatetime = self.date_viewed.strftime("%m/%d/%Y")
         if self.date_sent is not None:
             messageCreateDatetime = self.date_sent.strftime("%m/%d/%Y")
         if self.date_expires is not None:
             messageExpirationDatetime = self.date_expires.strftime("%m/%d/%Y")
-        messageDict = {'subject': self.subject, 'body': self.body, 'creationDatetime': messageCreateDatetime, 'ownerId': self.owner_id, 'expirationDatetime': messageExpirationDatetime, 'id': self.id, 'viewedDatetime': messageViewedDatetime}
+        messageDict = {'subject': self.subject, 'body': self.body, 'creationDatetime': messageCreateDatetime, 'ownerId': self.owner_id, 'expirationDatetime': messageExpirationDatetime, 'id': self.id}
         messageDict['messageRecipients'] = []
         if self.message_shares is not None:
             for messageShare in self.message_shares:
@@ -406,12 +404,12 @@ def create_database_tables(dburi):
     
 def drop_database_tables(dburi):
     from sqlalchemy.engine import reflection
-    from sqlalchemy.schema import (DropTable, Table, ForeignKeyConstraint, DropConstraint)
+    from sqlalchemy.schema import (DropTable, Table, ForeignKeyConstraint, DropConstraint, MetaData)
     engine = create_engine(dburi, echo=True)
     conn = engine.connect()
     trans = conn.begin()
     inspector = reflection.Inspector.from_engine(engine)
-    metadata = Base.metadata
+    metadata = MetaData()
     tbs = []
     all_fks = []
     for table_name in inspector.get_table_names():
