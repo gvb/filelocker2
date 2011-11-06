@@ -2,6 +2,7 @@ import cherrypy
 import datetime
 import logging
 from twisted.plugin import getPlugins, IPlugin
+import sqlalchemy
 from lib.SQLAlchemyTool import session
 from Cheetah.Template import Template
 from lib.Formatters import *
@@ -191,15 +192,17 @@ class AccountController:
         user, sMessages, fMessages = (cherrypy.session.get("user"),  [], [])
         try:
             searchWidget = get_search_widget("manage_groups")
-            templateFile = fl.get_template_file('view_group.tmpl')
             groupId = strip_tags(groupId)
             group = session.query(Group).filter(Group.id == groupId).one()
             if group.owner_id == user.id or user_has_permission(user, "admin"):
-                pass
+                tpl = Template(file=get_template_file('view_group.tmpl'), searchList=[locals(),globals()])
+                return str(tpl)
+            else:
+                raise cherrypy.HTTPError(413, "Not permitted")
         except Exception, e:
-            pass
-        tpl = Template(file=get_template_file('files.tmpl'), searchList=[locals(),globals()])
-        return str(tpl)
+            raise Exception(str(e))
+        
+    
     @cherrypy.expose
     @cherrypy.tools.requires_login(permission="admin")
     def create_role(self, roleId, roleName, email, quota, format="json", **kwargs):
