@@ -288,58 +288,59 @@ class RootController:
     def toobig(self, **kwargs):
         return fl_response([], ['File is too big'], "json")
 
-#    @cherrypy.expose
-#    def public_upload(self, ticketId=None, password=None, **kwargs):
-#        ticketOwner, uploadTicket, tpl, messages  = (None, None, None, [])
-#        defaultExpiration = datetime.date.today() + (datetime.timedelta(days=cherrypy.request.app.config['filelocker']['max_file_life_days']))
-#        ticketFiles = []
-#        if ticketId is not None and ticketId != "":
-#            ticketId = strip_tags(ticketId)
-#            if cherrypy.session.has_key("uploadTicket"):
-#                if cherrypy.session.get("uploadTicket").ticketId != ticketId:
-#                    del(cherrypy.session['uploadTicket'])
-#            if cherrypy.session.has_key("uploadTicket"): #Their ticketId and the session uploadTicket's ID matched, let them keep the session
-#                uploadTicket = cherrypy.session.get("uploadTicket")
-#                try:
-#                    ticketOwner = session.query(User).filter(User.id == uploadTicket.owner_id).one()
-#                except Exception, e:
-#                    logging.warning("Unable to load upload ticket: %s" % str(e))
-#                    messages.append("Unable to load upload ticket: %s " % str(e))
-#            elif password is None or password =="": #If they come in with a ticket - fill it in a prompt for password
-#                try:
-#                    uploadTicket = FileController.get_upload_ticket_by_password(ticketId, None)
-#                    if uploadTicket is not None:
-#                        cherrypy.session['uploadTicket'] = uploadTicket
-#                        ticketOwner = session.query(User).filter(User.id == uploadTicket.owner_id).one()
-#                except Exception, e:
-#                    messages.append(str(e))
-#            elif password is not None and password!="": # if they do have a password and ticketId, try to load the whole upload ticket
-#                try:
-#                    uploadTicket = FileController.get_upload_ticket_by_password(ticketId, password)
-#                    cherrypy.session['uploadTicket'] = uploadTicket
-#                    ticketOwner = session.query(User).filter(User.id == uploadTicket.owner_id).one()
-#                except Exception, e:
-#                    logging.warning("Unable to load upload ticket: %s" % str(e))
-#                    messages.append("Unable to load upload ticket: %s " % str(e))
-#        elif cherrypy.session.has_key("uploadTicket"):
-#            uploadTicket = cherrypy.session.get("uploadTicket")
-#            ticketOwner = session.query(User).filter(User.id == uploadTicket.owner_id).one()
-#        if uploadTicket is not None:
-#            fileList = session.query(File).filter(File.upload_request_id==uploadTicket.id).all()
-#            for flFile in fileList:
-#                flFile.documentType = "document"
-#                if flFile.date_expires is not None:
-#                    flFile.date_expires = flFile.fileExpirationDatetime.strftime("%m/%d/%Y")
-#                ticketFiles.append({'fileName': flFile.name, 'fileId': flFile.id, 'fileOwnerId': flFile.owner_id, 'fileSizeBytes': flFile.size, 'fileUploadedDatetime': flFile.date_uploaded.strftime("%m/%d/%Y"), 'fileExpirationDatetime': flFile.date_expires, 'filePassedAvScan':flFile.passed_avscan, 'documentType': flFile.documentType})
-#        content = Template(file=get_template_file('public_upload_content.tmpl'), searchList=[locals(),globals()])
-#        tpl = ""
-#        if kwargs.has_key("format") and kwargs['format']=="content_only":
-#            tpl = content
-#        else:
-#            currentYear = datetime.date.today().year
-#            footerText = str(Template(file=get_template_file('footer_text.tmpl'), searchList=[locals(),globals()]))
-#            tpl = Template(file=get_template_file('public_upload.tmpl'), searchList=[locals(),globals()])
-#        return str(tpl)
+    @cherrypy.expose
+    def public_upload(self, ticketId=None, password=None, **kwargs):
+        requestOwner, uploadRequest, tpl, messages  = (None, None, None, [])
+        config = cherrypy.request.app.config['filelocker']
+        defaultExpiration = datetime.date.today() + (datetime.timedelta(days=config['max_file_life_days']))
+        ticketFiles = []
+        if ticketId is not None and ticketId != "":
+            ticketId = strip_tags(ticketId)
+            if cherrypy.session.has_key("uploadRequest"):
+                if cherrypy.session.get("uploadRequest").id != ticketId:
+                    del(cherrypy.session['uploadRequest'])
+            if cherrypy.session.has_key("uploadRequest"): #Their ticketId and the session uploadTicket's ID matched, let them keep the session
+                uploadRequest = cherrypy.session.get("uploadRequest")
+                try:
+                    requestOwner = session.query(User).filter(User.id == uploadRequest.owner_id).one()
+                except sqlalchemy.orm.exc.NoResultFound, nrf:
+                    logging.warning("Unable to load upload request: %s" % str(e))
+                    messages.append("Unable to load upload request: %s " % str(e))
+            elif password is None or password =="": #If they come in with a ticket - fill it in a prompt for password
+                try:
+                    uploadRequest = session.query(UploadRequest).filter(UploadRequest.id == ticketId).one()
+                    #cherrypy.session['uploadRequest'] = uploadRequest
+                    requestOwner = session.query(User).filter(User.id == uploadRequest.owner_id).one()
+                except Exception, e:
+                    messages.append(str(e))
+            elif password is not None and password!="": # if they do have a password and ticketId, try to load the whole upload ticket
+                try:
+                    uploadRequest = session.query(UploadRequest).filter(UploadRequest.id == ticketId).one()
+                    if Encryption.compare_password_hash(password, uploadRequest.password):
+                        cherrypy.session['uploadTicket'] = uploadTicket
+                        requestOwner = session.query(User).filter(User.id == uploadTicket.owner_id).one()
+                except Exception, e:
+                    logging.warning("Unable to load upload ticket: %s" % str(e))
+                    messages.append("Unable to load upload ticket: %s " % str(e))
+        elif cherrypy.session.has_key("uploadRequest"):
+            uploadRequest = cherrypy.session.get("uploadRequest")
+            requestOwner = session.query(User).filter(User.id == uploadRequest.owner_id).one()
+        if uploadRequest is not None:
+            fileList = session.query(File).filter(File.upload_request_id==uploadRequest.id).all()
+            for flFile in fileList:
+                flFile.documentType = "document"
+                if flFile.date_expires is not None:
+                    flFile.date_expires = flFile.fileExpirationDatetime.strftime("%m/%d/%Y")
+                ticketFiles.append({'fileName': flFile.name, 'fileId': flFile.id, 'fileOwnerId': flFile.owner_id, 'fileSizeBytes': flFile.size, 'fileUploadedDatetime': flFile.date_uploaded.strftime("%m/%d/%Y"), 'fileExpirationDatetime': flFile.date_expires, 'filePassedAvScan':flFile.passed_avscan, 'documentType': flFile.document_type})
+        content = Template(file=get_template_file('public_upload_content.tmpl'), searchList=[locals(),globals()])
+        tpl = ""
+        if kwargs.has_key("format") and kwargs['format']=="content_only":
+            tpl = content
+        else:
+            currentYear = datetime.date.today().year
+            footerText = str(Template(file=get_template_file('footer_text.tmpl'), searchList=[locals(),globals()]))
+            tpl = Template(file=get_template_file('public_upload.tmpl'), searchList=[locals(),globals()])
+        return str(tpl)
 #
 ##    @cherrypy.expose
 ##    def public_download(self, shareId, **kwargs):
