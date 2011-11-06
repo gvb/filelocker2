@@ -1,10 +1,17 @@
 # -*- coding: utf-8 -*-
-
+import os
 import datetime
 import MySQLdb
 import logging
 import sys
 from Models import *
+
+def export_db(exportFile):
+    pass
+    
+def import_db(importFile=None):
+    pass
+
 
 class LegacyDBConverter():
     connection = None
@@ -14,11 +21,12 @@ class LegacyDBConverter():
     dbName = None
     db = None
     cursor = None
-    def __init__(self, dbHost, dbUser, dbPassword, dbName):
+    def __init__(self, dbHost, dbUser, dbPassword, dbName, config):
         self.dbHost = dbHost
         self.dbUser = dbUser
         self.dbPassword = dbPassword
         self.dbName = dbName
+        self.config = config
         self.get_connection()
 
     def get_connection(self):
@@ -27,6 +35,35 @@ class LegacyDBConverter():
 
     def get_db(self):
         return MySQLdb.connect(self.dbHost, self.dbUser, self.dbPassword, self.dbName)
+
+    def port_database():
+        host = raw_input("What is the host of the old DB server?: ")
+        db = raw_input("Database: ")
+        username = raw_input("Username: ")
+        password = getpass("Password: ")
+        configParameters = self.GetAllParameters()
+        files = self.GetAllFiles()
+        groups = self.GetAllGroups ()
+        permissions = self.GetAllPermissions()
+        userShares = self.GetAllUserShares()
+        groupShares = self.GetAllGroupShares()
+        hiddenShares = self.GetAllHiddenShares()
+        attributes = self.GetAllAttributes()
+        attributeShares = self.GetAllAttributeShares()
+        publicShares = self.GetAllPublicShares ()
+        users = self.GetAllUsers ()
+        roles = self.GetRoles()
+        messages = self.GetMessages()
+        messageShares = self.GetAllMessageShares()
+        uploadRequests = self.GetUploadRequests()
+        deletedFiles = self.GetAllDeletedFiles()
+        auditLogs = self.GetAuditLogs()
+        templatePath = os.path.join(self.config['root_path'], "lib", "DataSchema.tmpl")
+        tpl = str(Template(file=templatePath, searchList=[locals(),globals()]))
+        f = open(os.path.join(os.getcwd(), "FL_Data_Export.xml"), "wb")
+        f.write(tpl)
+        f.close()
+        print "Data has been exported to %s" % templatePath
 
     def GetAllParameters(self):
         params = []
@@ -189,7 +226,8 @@ class LegacyDBConverter():
             for userRow in roleUserResults:
                 roleName = "%s %s" % (row['user_first_name'], row['user_last_name'])
                 roles.append(Role(name=roleName, quota=int(row['user_quota']), email=row['user_email'], id=row['user_id']))
-
+        return roles
+    
     def GetMessages(self):
         messages = []
         sql = "SELECT * FROM message"
@@ -206,16 +244,14 @@ class LegacyDBConverter():
             messageRecipients.append(ReceivedMessage(message_id=row['message_recipient_message_id'], recipient_id=row['message_recipient_user_id'], date_viewed=row['message_recipient_viewed_datetime']))
         return messageRecipients
 
-
-
 #Upload Tickets
     def GetUploadRequests(self):
-        sql = "SELECT * FROM upload_ticket WHERE upload_ticket_owner_id=%s"
-        sql_args = []
-        ticketRows = self.execute(sql, sql_args)
+        sql = "SELECT * FROM upload_ticket"
+        results = self.execute(sql, None)
         tickets = []
-        for ticketRow in ticketRows:
-            tickets.append(UploadRequest(owner_id=ticketRow['upload_ticket_owner_id'], max_size=ticketRow['upload_ticket_max_size'], date_expires=ticketRow['upload_ticket_expiration'], password=ticketRow['upload_ticket_password_hash'], scan_file=ticketRow['upload_ticket_scan_file'], type=ticketRow['upload_ticket_type'], id=ticketRow['upload_ticket_id']))
+        if results is not None:
+            for row in results:
+                tickets.append(UploadRequest(owner_id=row['upload_ticket_owner_id'], max_size=row['upload_ticket_max_size'], date_expires=row['upload_ticket_expiration'], password=row['upload_ticket_password_hash'], scan_file=row['upload_ticket_scan_file'], type=row['upload_ticket_type'], id=row['upload_ticket_id']))
         return tickets
 
     def GetAllDeletedFiles(self):
@@ -228,14 +264,14 @@ class LegacyDBConverter():
         return files
 
     def GetAuditLogs(self):
-        relevantLogs, sql_args = [], []
+        logs = []
         sql = "SELECT * FROM audit_log"
-        results = self.execute(sql, sql_args)
+        results = self.execute(sql, None)
         if results is not None and len(results) > 0:
             for row in results:
-                newLog = ActionLog(row['audit_log_initiator_user_id'], row['audit_log_action'], row['audit_log_action_affected_user_id'], row['audit_log_message'], row['audit_log_datetime'], row['audit_log_id'])
-                relevantLogs.append(newLog)
-        return relevantLogs
+                newLog = AuditLog(row['audit_log_initiator_user_id'], row['audit_log_action'], row['audit_log_message'], row['audit_log_action_affected_user_id'], date=row['audit_log_datetime'], id=row['audit_log_id'])
+                logs.append(newLog)
+        return logs
 
 #CLI Key Management
     def getCLIKeyList(self, userId):
@@ -280,155 +316,5 @@ class LegacyDBConverter():
             raise ie
         except Exception, e:
             logging.error("Unable to run SQL query: %s" % str(e))
-
-INIT_TABLE_CREATE_SQL = [ """
-CREATE TABLE `config` (
-  `config_parameter_name` varchar(30) NOT NULL,
-  `config_parameter_description` text NOT NULL,
-  `config_parameter_type` enum('boolean', 'number', 'text') NOT NULL,
-  `config_parameter_value` text default NULL,
-  PRIMARY KEY (`config_parameter_name`)
-)
-""", """
-CREATE TABLE `user` (
-  `user_id` varchar(30) NOT NULL,
-  `user_quota` int(15) default NULL,
-  `user_last_login_datetime` datetime default NULL,
-  `user_tos_accept_datetime` datetime default NULL,
-  `user_email` varchar(320) default 'directory',
-  `user_first_name` varchar(100) NOT NULL,
-  `user_last_name` varchar(100) NOT NULL,
-  `user_password_hash` varchar(64) default NULL,
-  PRIMARY KEY  (`user_id`)
-)""",  """
-CREATE TABLE `deletion_queue` (
-  `deletion_queue_file_path` varchar(255) NOT NULL,
-  PRIMARY KEY  (`deletion_queue_file_path`)
-)""",  """
-CREATE TABLE `group_membership` (
-  `group_membership_group_id` mediumint(9) NOT NULL,
-  `group_membership_user_id` varchar(30) NOT NULL,
-  PRIMARY KEY  (`group_membership_group_id`,`group_membership_user_id`),
-  KEY `group_membership` (`group_membership_user_id`)
-) """,  """
-CREATE TABLE `group_permission` (
-  `group_permission_permission_id` varchar(25) NOT NULL,
-  `group_permission_group_id` mediumint(9) NOT NULL,
-  PRIMARY KEY  (`group_permission_permission_id`,`group_permission_group_id`),
-  KEY `group_permission` (`group_permission_group_id`)
-)""", """
-CREATE TABLE `groups` (
-  `group_id` mediumint(9) NOT NULL auto_increment,
-  `group_name` varchar(255) NOT NULL,
-  `group_owner_id` varchar(30) NOT NULL,
-  `group_scope` enum('public','private','reserved') default 'private',
-  PRIMARY KEY  (`group_id`)
-)""",  """
-CREATE TABLE `permission` (
-  `permission_id` varchar(25) NOT NULL,
-  `permission_name` text NOT NULL,
-  PRIMARY KEY  (`permission_id`)
-)""",   """
-CREATE TABLE `file` (
-  `file_id` mediumint(9) NOT NULL auto_increment,
-  `file_name` varchar(255) default NULL,
-  `file_type` text,
-  `file_size` bigint unsigned default NULL,
-  `file_notes` varchar(255) default NULL,
-  `file_uploaded_datetime` datetime default NULL,
-  `file_owner_id` varchar(30) default NULL,
-  `file_expiration_datetime` datetime default NULL,
-  `file_passed_avscan` tinyint(1) default 0,
-  `file_encryption_key` varchar(64) default NULL,
-  `file_status` text,
-  `file_location` enum("local", "remote") default "remote",
-  `file_notify_on_download` tinyint(1) default 0,
-  `file_upload_ticket_id` varchar(64) default NULL,
-  PRIMARY KEY  (`file_id`)
-)""", """
-CREATE TABLE `hidden_share` (
-  `hidden_share_target_id` varchar(30) NOT NULL,
-  `hidden_share_file_id` mediumint(9) NOT NULL,
-  PRIMARY KEY  (`hidden_share_target_id`,`hidden_share_file_id`)
-)""", """
-CREATE TABLE `private_group_share` (
-  `private_group_share_file_id` mediumint(9) NOT NULL,
-  `private_group_share_target_id` varchar(30) NOT NULL,
-  PRIMARY KEY  (`private_group_share_file_id`,`private_group_share_target_id`)
-)""",  """
-CREATE TABLE `private_share` (
-  `private_share_file_id` mediumint(9) NOT NULL,
-  `private_share_target_id` varchar(30) NOT NULL,
-  PRIMARY KEY  (`private_share_file_id`,`private_share_target_id`)
-)""",  """
-CREATE TABLE `private_attribute_share` (
-  `private_attribute_share_file_id` mediumint(9) NOT NULL,
-  `private_attribute_share_attribute_id` varchar(50) NOT NULL,
-  PRIMARY KEY  (`private_attribute_share_file_id`,`private_attribute_share_attribute_id`)
-)""","""
-CREATE TABLE `attribute` (
-  `attribute_id` varchar(50) NOT NULL,
-  `attribute_name` text NOT NULL,
-  PRIMARY KEY  (`attribute_id`)
-)""",  """
-CREATE TABLE `public_share` (
-  `public_share_id` varchar(64) NOT NULL,
-  `public_share_file_id` mediumint(9) NOT NULL,
-  `public_share_expiration` datetime NOT NULL,
-  `public_share_password_hash` varchar(64) default NULL,
-  `public_share_type` enum('single', 'multi') default 'single',
-  PRIMARY KEY  (`public_share_id`),
-  KEY `public_share_file_id` (`public_share_file_id`)
-)""",  """
-CREATE TABLE `upload_ticket` (
-  `upload_ticket_id` varchar(64) NOT NULL,
-  `upload_ticket_owner_id` varchar(30) NOT NULL,
-  `upload_ticket_max_size` int(255) default NULL,
-  `upload_ticket_expiration` datetime NOT NULL,
-  `upload_ticket_password_hash` varchar(64) default NULL,
-  `upload_ticket_type` enum('single', 'multi') default 'single',
-  `upload_ticket_scan_file` tinyint(1) default 1,
-  PRIMARY KEY  (`upload_ticket_id`)
-)""",  """
-CREATE TABLE `user_permission` (
-  `user_permission_permission_id` varchar(25) NOT NULL,
-  `user_permission_user_id` varchar(30) NOT NULL,
-  PRIMARY KEY  (`user_permission_permission_id`,`user_permission_user_id`),
-  KEY `user_permission` (`user_permission_user_id`)
-) """,  """
-CREATE TABLE `audit_log` (
-  `audit_log_id` mediumint(9) NOT NULL auto_increment,
-  `audit_log_initiator_user_id` varchar(30) NOT NULL,
-  `audit_log_action` varchar(255) NOT NULL,
-  `audit_log_action_affected_user_id` varchar(30) default NULL,
-  `audit_log_message` text NOT NULL,
-  `audit_log_datetime` datetime NOT NULL,
-  PRIMARY KEY  (`audit_log_id`) ) """,  """
-CREATE TABLE `cli_key` (
-  `cli_key_user_id` varchar(30) NOT NULL,
-  `cli_key_host_ipv4` varchar(15) NOT NULL,
-  `cli_key_host_ipv6` varchar(39) NOT NULL,
-  `cli_key_value` varchar(32) NOT NULL,
-  PRIMARY KEY  (`cli_key_user_id`,`cli_key_host_ipv4`,`cli_key_host_ipv6`) )""", """
-CREATE TABLE `message` (
-  `message_id` mediumint(9) NOT NULL auto_increment,
-  `message_subject` text default null,
-  `message_create_datetime` datetime NOT NULL,
-  `message_owner_id` varchar(30) NOT NULL,
-  `message_expiration_datetime` datetime default NULL,
-  `message_encryption_key` varchar(64) default NULL,
-  PRIMARY KEY (`message_id`) )""", """
-CREATE TABLE `message_recipient` (
-  `message_recipient_message_id` mediumint(9) NOT NULL,
-  `message_recipient_user_id` varchar(30) NOT NULL,
-  `message_recipient_viewed_datetime` datetime default NULL,
-  PRIMARY KEY (`message_recipient_message_id`, `message_recipient_user_id`) )
-""", """
-CREATE TABLE `session` (
-  `id` varchar(40) NOT NULL,
-  `data` text DEFAULT NULL,
-  `expiration_time` DATETIME DEFAULT NULL,
-  PRIMARY KEY (`id`) ) ENGINE=InnoDB
-"""]
 
 

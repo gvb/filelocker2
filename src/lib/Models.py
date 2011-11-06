@@ -276,7 +276,7 @@ class UploadRequest(Base):
     type = Column(Enum("single", "multi"))
     expired = False
 
-    def generate_share_id(self):
+    def generate_id(self):
         import random
         shareId = md5(str(random.random())).hexdigest()
         tryCount = 0
@@ -317,12 +317,11 @@ class AuditLog(Base):
     date = Column(DateTime)
     display_class = None
 
-    def __init__(self, initiatorId, action, message, affectedId=None):
+    def __init__(self, initiatorId, action, message, affectedId=None, date=datetime.datetime.now(), id=None):
         self.initiator_user_id = initiatorId
         self.action = action
         self.message = message
         self.affected_user_id = affectedId
-        self.date = datetime.datetime.now()
 
     def __str__(self):
         return "[%s] [%s] [%s] [%s] [%s]" % (self.message, self.date.strftime("%m/%d/%Y"), self.initiator_user_id, self.action, self.affected_user_id)

@@ -1,0 +1,100 @@
+<data>
+    <permissions>
+    <permission id="admin" name="Administrators"/>
+    <permission id="expiration_exempt" name="No file expiration"/>
+    </permissions>
+
+    <attributes>
+    </attributes>
+
+    <roles>
+    </roles>
+
+    <users>
+        <user id="wbdavis" first_name="Brett" last_name="Davis" quota="1024" email="wbdavis@purdue.edu" date_last_login="2011-08-18 00:12:20" date_tos_accept="2011-08-15 01:20:23">
+            <permissions>
+                <permission id="{'inherited_from': None, 'id': 'admin', 'name': 'Administrators'}"/>
+                <permission id="{'inherited_from': None, 'id': 'expiration_exempt', 'name': 'No file expiration'}"/>
+            </permissions>
+            <roles>
+            </roles>
+        </user>
+    </users>
+
+    <groups>
+    </groups>
+
+
+    <files>
+        <file id="88" name="valums-file-uploader-b3b20b1.zip" type="Zip archive data, at least v1.0 to extract" date_uploaded="2011-08-17 00:24:33" owner_id="wbdavis" date_expires="2011-08-24 00:00:00" passed_avscan="1" encryption_key="oXKXQQmiZpMMacwIF4r4se87BC0tIC36" status="Checked In" notify_on_download="0" md5="" upload_request_id="886b7eaae3f524b4c13da131386813ca" />
+        <file id="89" name="1312238471827.jpg" type="JPEG image data, JFIF standard 1.01" date_uploaded="2011-08-17 01:00:54" owner_id="wbdavis" date_expires="2011-08-24 00:00:00" passed_avscan="1" encryption_key="MiK63pJqD50rp8v99LwO0N4W1k57goB6" status="Checked In" notify_on_download="0" md5="" upload_request_id="" />
+        <file id="90" name="1313030688650.jpg" type="JPEG image data, JFIF standard 1.01" date_uploaded="2011-08-17 01:01:04" owner_id="wbdavis" date_expires="2011-08-24 00:00:00" passed_avscan="1" encryption_key="Wdgi6xMTtddTMCHElbhGapyM9kY45kdj" status="Checked In" notify_on_download="0" md5="" upload_request_id="" />
+        <file id="92" name="ubuntu-11.04-desktop-i386.iso" type="# ISO 9660 CD-ROM filesystem data 'Ubuntu 11.04 i386              ' (bootable)" date_uploaded="2011-08-18 00:13:26" owner_id="wbdavis" date_expires="2011-08-25 00:00:00" passed_avscan="1" encryption_key="R8mN5rcZkvrFdE1esqj8S9P95fQJnDaw" status="Checked In" notify_on_download="0" md5="" upload_request_id="" />
+    </files>
+
+    <deleted_files>
+    </deleted_files>
+
+    <messages>
+    </messages>
+
+    <message_shares>
+    </message_shares>
+
+    <user_shares>
+    </user_shares>
+
+    <group_shares>
+    </group_shares>
+
+    <public_shares>
+    </public_shares>
+
+    <attribute_shares>
+    </attribute_shares>
+
+    <hidden_shares>
+    </hidden_shares>
+
+    <upload_requests>
+    </upload_requests>
+
+    <config_parameters>
+        <config_parameter name="org_name" description="Name of your organization." type="text" value="Purdue University"/>
+        <config_parameter name="org_url" description="Home page of your organization." type="text" value="http://www.purdue.edu"/>
+        <config_parameter name="admin_email" description="Public email address of the Filelocker Administrator." type="text" value="wbdavis@purdue.edu"/>
+        <config_parameter name="max_file_life_days" description="Max number of days a file can exist on the system. After this time, the file will be securely erased along with any shares it was associated with." type="number" value="7"/>
+        <config_parameter name="user_inactivity_expiration" description="Max number of days of inactivity permitted on a user account before the account is deleted from the system." type="number" value="90"/>
+        <config_parameter name="delete_command" description="Command used by the operating system that Filelocker is installed on to securely erase a file. This does not include arguments to the command (e.g. 'rm' not 'rm -p')" type="text" value="rm"/>
+        <config_parameter name="delete_arguments" description="Any parameters needed by the delete command (in an additive fashion, such as -P, -fP, -fPq, etc)" type="text" value="-f"/>
+        <config_parameter name="antivirus_command" description="Command to execute a virus scan of a file on the operating system on which Filelocker is installed." type="text" value="clamscan"/>
+        <config_parameter name="file_command" description="Command which returns information about a file's type. On most *nix systems, this will be the 'file -b' command" type="text" value="file -b"/>
+        <config_parameter name="max_file_size" description="Maximum size (in Megabytes) for a single file on the system. Individual user quotas will ultimately override this if a user has less space available than this value.(DVD: 4812, CD: 700)" type="number" value="4812"/>
+        <config_parameter name="default_quota" description="Default quota (in Megabytes) assigned to each user. This can be changed by an administrator" type="number" value="750"/>
+        <config_parameter name="smtp_sender" description="This is the email address that Filelocker will send email notifications as." type="text" value="noreply@wbdavis.purdue.edu"/>
+        <config_parameter name="smtp_server" description="The server that Filelocker will use to send mail" type="text" value="smtp.gmail.com"/>
+        <config_parameter name="smtp_start_tls" description="Should Filelocker use StartTLS when connection the SMTP server?" type="boolean" value="no"/>
+        <config_parameter name="smtp_port" description="SMTP Port" type="number" value="25"/>
+        <config_parameter name="smtp_auth_required" description="Does this SMTP server require authentication?" type="boolean" value="No"/>
+        <config_parameter name="smtp_user" description="If SMTP server requires authentication, what username should be used to connect (leave blank if no auth required)?" type="text" value=""/>
+        <config_parameter name="smtp_pass" description="If SMTP server requires authentication, what password should be used (leave blank if no auth required)?" type="text" value=""/>
+        <config_parameter name="smtp_obscure_links" description="Would you like for links in emails to obscured by adding spaces between periods and stripping off http:// and https://?" type="boolean" value="Yes"/>
+        <config_parameter name="auth_type" description="Authentication mechanism Filelocker should use (e.g. LDAP, CAS, Local)" type="text" value="local"/>
+        <config_parameter name="directory_type" description="Type of directory to use (e.g. local, ldap)" type="text" value="local"/>
+        <config_parameter name="cas_url" description="URL of CAS server" type="text" value=""/>
+        <config_parameter name="ldap_host" description="URI of LDAP directory" type="text" value=""/>
+        <config_parameter name="ldap_bind_dn" description="LDAP Bind DN (e.g. ou=ped,dc=purdue,dc=edu)" type="text" value=""/>
+        <config_parameter name="ldap_bind_user" description="Account to use when binding to LDAP for searching (anonymous if blank)?" type="text" value=""/>
+        <config_parameter name="ldap_bind_pass" description="Password to use when binding to LDAP for searching (anonymous if blank)?" type="text" value=""/>
+        <config_parameter name="ldap_is_active_directory" description="Is this LDAP server and Active Directory server?" type="boolean" value="No"/>
+        <config_parameter name="ldap_domain_name" description="Active Directory will not authenticate a bind unless you use the FQDN" type="text" value=""/>
+        <config_parameter name="ldap_user_name_attr" description="LDAP username attribute" type="text" value="uid"/>
+        <config_parameter name="ldap_last_name_attr" description="LDAP last name attribute" type="text" value="sn"/>
+        <config_parameter name="ldap_first_name_attr" description="LDAP first name attribute" type="text" value="givenName"/>
+        <config_parameter name="ldap_displayname_attr" description="LDAP display name attribute, if one is to be used" type="text" value="displayName"/>
+        <config_parameter name="ldap_email_attr" description="LDAP email address attribute" type="text" value="mail"/>
+        <config_parameter name="banner" description="Message displayed to all users upon login" type="text" value=""/>
+        <config_parameter name="geotagging" description="Should users be allowed to geotag Filelocker uploads?" type="boolean" value="No"/>
+        <config_parameter name="db_version" description="Running version of the Filelocker Database" type="text" value="2.6"/>
+    </config_parameters>
+</data>
