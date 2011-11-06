@@ -187,21 +187,19 @@ class AccountController:
         except Exception, e:
             fMessages.append("Could not get groups: %s" % str(e))
         return fl_response(sMessages, fMessages, format, data=groups)
-
+    
+    @cherrypy.expose
+    @cherrypy.tools.requires_login()
     def get_group_members(self, groupId, **kwargs):
         user, sMessages, fMessages = (cherrypy.session.get("user"),  [], [])
-        try:
-            searchWidget = get_search_widget("manage_groups")
-            groupId = strip_tags(groupId)
-            group = session.query(Group).filter(Group.id == groupId).one()
-            if group.owner_id == user.id or user_has_permission(user, "admin"):
-                tpl = Template(file=get_template_file('view_group.tmpl'), searchList=[locals(),globals()])
-                return str(tpl)
-            else:
-                raise cherrypy.HTTPError(413, "Not permitted")
-        except Exception, e:
-            raise Exception(str(e))
-        
+        searchWidget = get_search_widget("manage_groups")
+        groupId = strip_tags(groupId)
+        group = session.query(Group).filter(Group.id == groupId).one()
+        if group.owner_id == user.id or user_has_permission(user, "admin"):
+            tpl = Template(file=get_template_file('view_group.tmpl'), searchList=[locals(),globals()])
+            return str(tpl)
+        else:
+            raise cherrypy.HTTPError(413, "Not permitted")
     
     @cherrypy.expose
     @cherrypy.tools.requires_login(permission="admin")
