@@ -29,7 +29,7 @@ class ShareController:
                     if flFile.owner_id == user.id or AccountController.user_has_permission(user, "admin"):
                         existingShare = session.query(UserShare).filter(and_(UserShare.file_id==fileId, UserShare.user_id==userId)).scalar()
                         if existingShare is None:
-                            session.add(UserShare(user_id=userId, file_id=fileId))
+                            flFile.user_shares.append(UserShare(user_id=userId, file_id=fileId))
                             session.commit()
                             sharedFiles.append(flFile)
                             recipients.append(shareUser)
@@ -95,7 +95,7 @@ class ShareController:
                         if existingShare is not None:
                             fMessages.append("File %s is already shared with group %s" % (flFile.name, group.name))
                         elif flFile.owner_id == user.id or AccountController.user_has_permission(user, "admin"):
-                            session.add(GroupShare(group_id=groupId, file_id=fileId))
+                            flFile.group_shares.append(GroupShare(group_id=groupId, file_id=fileId))
                             sharedFiles.append(flFile)
                         else:
                             fMessages.append("You do not have permission to share file with ID: %s" % fileId)
