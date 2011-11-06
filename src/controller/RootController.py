@@ -315,12 +315,12 @@ class RootController:
                     del(cherrypy.session['uploadRequest'])
             if cherrypy.session.has_key("uploadRequest"): #Their requestId and the session uploadTicket's ID matched, let them keep the session
                 uploadRequestId = cherrypy.session.get("uploadRequest").id
-                uploadRequest = session.query(UploadRequest).filter(UploadRequest.id == uploadRequestId)
+                uploadRequest = session.query(UploadRequest).filter(UploadRequest.id == uploadRequestId).one()
             elif password is None or password =="": #If they come in with a ticket - fill it in a prompt for password
                 try:
                     uploadRequest = session.query(UploadRequest).filter(UploadRequest.id == requestId).one()
                     if uploadRequest.password == None and uploadRequest.type == "single":
-                        cherrypy.session['uploadRequest'] = uploadRequest
+                        cherrypy.session['uploadRequest'] = uploadRequest.get_copy()
                     else:
                         messages.append("This upload request requires a password before you can upload files")
                     requestOwner = session.query(User).filter(User.id == uploadRequest.owner_id).one()
@@ -331,7 +331,7 @@ class RootController:
                 try:
                     uploadRequest = session.query(UploadRequest).filter(UploadRequest.id == requestId).one()
                     if Encryption.compare_password_hash(password, uploadRequest.password):
-                        cherrypy.session['uploadRequest'] = uploadRequest
+                        cherrypy.session['uploadRequest'] = uploadRequest.get_copy()
                         requestOwner = session.query(User).filter(User.id == uploadRequest.owner_id).one()
                 except Exception, e:
                     logging.warning("Unable to load upload request: %s" % str(e))

@@ -55,9 +55,14 @@
                     <input type="hidden" name="requestId" value="$requestId" />
                     #end if
                 </div>
+
                 <div>
                     <label for="password">Password:</label>
+                    #if $uploadRequest.password is not None
                     <input type="password" name="password" id="password" />
+                    #else
+                    <input type="test" disabled="disabled" name="password" id="password" value="No password required" />
+                    #end if
                 </div>
                 <div>
                     <div class="button"><a href="#" onClick="document.forms['verifyTicketForm'].submit();" title="Verify password for upload request" class="uploadButton"><span>Verify Password</span></a></div>
