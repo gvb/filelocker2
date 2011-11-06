@@ -472,13 +472,13 @@ class FileController(object):
             uploadRequest = UploadRequest(date_expires=expiration, max_file_size=maxFileSize, scan_file=scanFile, type=requestType)
             if password is not None:
                 uploadRequest.set_password(password)
-            else:
+            if requestType == "multi" and password == None:
                 fMessages.append("You must specify a password for upload requests that allow more than 1 file to be uploaded")
-            if len(fMessages):
-                uploadRequest.generate_share_id()
+            else:
+                uploadRequest.generate_id()
                 session.add(uploadRequest)
                 session.commit()
-                uploadURL = config['root_url']+"/public_upload?ticketId=%s" % str(ticketId)
+                uploadURL = config['root_url']+"/public_upload?ticketId=%s" % str(uploadRequest.id)
                 sMessages.append("Successfully generated upload ticket")
         except Exception, e:
             fMessages.append(str(e))
