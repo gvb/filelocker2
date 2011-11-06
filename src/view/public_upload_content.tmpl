@@ -1,6 +1,6 @@
 <div class="section_title">
-    #if $uploadTicket is not None
-    <h1 class="files_title">Upload a file for $ticketOwner.userDisplayName</h1>
+    #if $uploadRequest is not None
+    <h1 class="files_title">Upload a file for $requestOwner.display_name</h1>
     #else
     <h1 class="files_title">Upload a file for a Filelocker user</h1>
     #end if
@@ -10,7 +10,7 @@
     #for $message in $messages
     <p style="color: red">$message</p>
     #end for
-    #if $uploadTicket is not None 
+    #if $uploadRequest is not None
     <div class="file_list">
         <table class="file_table" id="fileTableSorter">
             <thead>
@@ -63,11 +63,11 @@
     </div> <!-- End File List -->
     #end if
     <div id="formArea" style="margin-left: 25px;">
-    #if $uploadTicket is not None and $uploadTicket.expired == False
+    #if $uploadRequest is not None and $uploadRequest.expired == False
         <form action="$fl.rootURL/file_interface/public_upload" name="form" id="form">
-        #if $uploadTicket.maxFileSize is not None
+        #if $uploadRequest.max_file_size is not None
             #set $suffix = "bytes"
-            #set $maxSize = $uploadTicket.maxFileSize
+            #set $maxSize = $uploadRequest.max_file_size
             #if $maxSize > 1024
                 #set $maxSize = $maxSize / 1024
                 #set $suffix = "kB"
@@ -82,7 +82,7 @@
             #end if
             <div>This file cannot be larger than $maxSize $suffix</div>
         #end if
-        <input type="hidden" id="ticketId" value="$uploadTicket.ticketId"/>
+        <input type="hidden" id="ticketId" value="$uploadRequest.id"/>
         <div>
             <label for="puExpiration">Expiration date:</label>
             <input type="text" class="dateFuture" name="puExpiration" id="puExpiration" size="9" maxlength="10" value="$defaultExpiration.strftime('%m/%d/%Y')" />
@@ -94,7 +94,7 @@
         </div>
         <div>
             <label for="uploadScanFile">Other options:</label>
-            #if $uploadTicket.scanFile
+            #if $uploadRequest.scan_file
                 <input type="checkbox" disabled="disabled" checked="checked" name="scanFile" id="scanFile" />Scan for viruses (The user has requested that this file undergo a virus scan)
             #else
                 <input type="checkbox" name="scanFile" id="scanFile"/><span onclick="javascript:check('scanFile');">Scan for viruses?</span>
@@ -105,8 +105,8 @@
         </div>
         <div class="clear"></div>
     </form>
-    #elif $uploadTicket is None
-    <form action="$fl.rootURL/public_upload" name="form" method="POST" id="verifyTicketForm">
+    #elif $uploadRequest is None
+    <form action="$config['root_url']/public_upload" name="form" method="POST" id="verifyTicketForm">
         <div>
             #if $ticketId is None or $ticketId == ""
             <label for="ticketId">Ticket ID: </label>
