@@ -143,10 +143,10 @@ class File(Base):
     upload_request_id = Column(String(64), ForeignKey("upload_requests.id"))
     document_type = None
 
-    user_shares = relationship("UserShare", backref="files")
+    user_shares = relationship("UserShare", backref="files", cascade="all, delete-orphan")
     #public_shares = relationship("PublicShare", backref="files")
-    group_shares = relationship("GroupShare", backref="files")
-    attribute_shares = relationship("AttributeShare", backref="files")
+    group_shares = relationship("GroupShare", backref="files", cascade="all, delete-orphan")
+    attribute_shares = relationship("AttributeShare", backref="files", cascade="all, delete-orphan")
 
     def shared_with(self, user):
         for share in self.user_shares:
