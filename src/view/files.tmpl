@@ -476,15 +476,15 @@
                         <td>No</td>
                         #end if
                         
-                        #if $uploadRequest.max_size is None
+                        #if $uploadRequest.max_file_size is None
                             <!--<td>None</td>-->
                         #else
                             #set $suffix = "MB"
-                            #if $uploadRequest.max_size > 1024
+                            #if $uploadRequest.max_file_size > 1024
                                 #set $suffix = "GB"
-                                #set $uploadRequest.max_size = $uploadRequest.max_size/1024
+                                #set $uploadRequest.max_file_size = $uploadRequest.max_file_size/1024
                             #end if
-                            <!--<td>str($uploadRequest.max_size $suffix</td>-->
+                            <!--<td>str($uploadRequest.max_file_size $suffix</td>-->
                         #end if
                         
                         <td>$uploadRequest.expiration.strftime("%m/%d/%Y")</td>
