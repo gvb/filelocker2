@@ -229,7 +229,7 @@ Admin = function() {
             else
                 StatusResponse.create("deleting users", "Select user(s) for deletion.", false);
         }
-        function promptCreate(userId)
+        function promptCreate()
         {
             $("#createUserId").val("");
             $("#createUserFirstName").val("");
@@ -242,7 +242,7 @@ Admin = function() {
             $("#bulkCreateUserPassword").val("");
             $("#bulkCreateUserPasswordConfirm").val("");
             $("#bulkCreateUserPermissions").empty();
-            Filelocker.request("/admin/get_user_permissions", "retrieving user permissions", {userId: userId}, true, function(returnData)
+            Filelocker.request("/admin/get_user_permissions", "retrieving user permissions", {}, false, function(returnData)
             {
                 for (var i=0;i<returnData.data.length;i++)
                 {

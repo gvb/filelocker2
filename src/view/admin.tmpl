@@ -13,9 +13,9 @@
             </ul>
             
         <div id="filelocker_accounts"> <!--Filelocker accounts-->
-            <div class="button"><a href="javascript:promptCreateUser('$user.userId');" title="Create a new Filelocker user" class="userNewButton"><span>Create User</span></a></div>
-            <div class="button"><a href="javascript:deleteUsers();" title="Delete the selected Filelocker users" class="deleteButton"><span>Delete Selected</span></a></div>
-            <div class="button"><a href="javascript:loadEditAccount()" title="Edit your personal account settings" class="editAccountButton"><span>Your Account</span></a></div>
+            <div class="button"><a href="javascript:User.promptCreate();" title="Create a new Filelocker user" class="userNewButton"><span>Create User</span></a></div>
+            <div class="button"><a href="javascript:User.del();" title="Delete the selected Filelocker users" class="deleteButton"><span>Delete Selected</span></a></div>
+            <div class="button"><a href="javascript:Account.load()" title="Edit your personal account settings" class="editAccountButton"><span>Your Account</span></a></div>
             <div id="userSorterLoading" class="hidden">&nbsp;</div><br/><br/><br/><br/><!-- Fixes a Chrome display issue -->
             <div id="userTableSorterWrapper">
                 <table class="file_table" id="userTableSorter">
