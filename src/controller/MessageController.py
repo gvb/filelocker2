@@ -69,7 +69,7 @@ class MessageController:
     def get_new_message_count(self, format="json", **kwargs):
         user, sMessages, fMessages, newMessageCount = cherrypy.session.get("user"), [], [], []
         try:
-            newMessageCount = session.query(func.count(MessageShare.message_id), MessageShare.recipient_id,).filter(and_(MessageShare.recipient_id==user.id, MessageShare.date_viewed is not None)).scalar()
+            newMessageCount = session.query(func.count('*')).select_from(MessageShare).filter(and_(MessageShare.recipient_id==user.id, MessageShare.date_viewed==None)).scalar()
         except Exception,e :
             fMessages.append(str(e))
         return fl_response(sMessages, fMessages, format, data=newMessageCount)
