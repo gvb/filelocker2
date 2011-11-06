@@ -113,7 +113,7 @@ class Group(Base):
     __tablename__ = "groups"
     id = Column(Integer, primary_key=True)
     name = Column(String(255), nullable=False)
-    owner_id = Column(String(30), ForeignKey("users.id"))
+    owner_id = Column(String(30), ForeignKey("users.id"), nullable=False)
     scope = Column(Enum("public", "private", "reserved"), default="private")
     members = relationship("User", secondary=lambda: group_membership_table, backref="groups")
     permissions = relationship("Permission", secondary=lambda: group_permissions_table)
@@ -132,12 +132,12 @@ class File(Base):
     size = Column(BigInteger)
     notes = Column(Text)
     date_uploaded = Column(DateTime)
-    owner_id = Column(String(30), ForeignKey('users.id'))
+    owner_id = Column(String(30), ForeignKey('users.id'), nullable=False)
     date_expires = Column(DateTime)
     passed_avscan = Column(Boolean)
     encryption_key = Column(String(64))
     status = Column(String(255))
-    notify_on_download = Column(Boolean)
+    notify_on_download = Column(Boolean, nullable=False)
     md5 = Column(String(64), nullable=True)
     upload_request_id = Column(String(64), ForeignKey("upload_requests.id"))
     document_type = None
@@ -189,11 +189,10 @@ class Message(Base):
     id = Column(Integer, primary_key=True)
     subject = Column(String(255))
     body = None #This is decrypted from the file, not stored in db
-    date_sent = Column(DateTime)
-    owner_id = Column(String(30, ForeignKey("users.id")))
+    date_sent = Column(DateTime, nullable=False)
+    owner_id = Column(String(30), ForeignKey("users.id"), nullable=False)
     date_expires = Column(DateTime)
-    encryption_key = Column(String(64))
-    date_viewed = None #This is for readers of recieved messages
+    encryption_key = Column(String(64), nullable=False)
     message_shares = relationship("MessageShare", backref="message", single_parent=True, cascade="all, delete-orphan")
 
     def get_dict(self):
@@ -268,9 +267,9 @@ class AttributeShare(Base):
 class UploadRequest(Base):
     __tablename__ = "upload_requests"
     id = Column(String(32), primary_key=True)
-    owner_id = Column(String(30), ForeignKey("users.id"))
+    owner_id = Column(String(30), ForeignKey("users.id"), nullable=False)
     max_file_size = Column(Float)
-    scan_file = Column(Boolean)
+    scan_file = Column(Boolean, nullable=False)
     date_expires = Column(DateTime)
     password = Column(String(80))
     type = Column(Enum("single", "multi"))
@@ -295,14 +294,14 @@ class UploadRequest(Base):
 class ConfigParameter(Base):
     __tablename__ = "config"
     name = Column(String(30), primary_key=True)
-    description = Column(Text)
+    description = Column(Text, nullable=False)
     type = Column(Enum("boolean", "number", "text", "datetime"))
     value = Column(String(255))
 
 class Attribute(Base):
     __tablename__ = "attributes"
     id = Column(String(50), primary_key=True)
-    name = Column(String(255))
+    name = Column(String(255), nullable=False)
 
     def __str__(self):
         return "%s (%s)" % (self.name, self.id)
@@ -310,11 +309,11 @@ class Attribute(Base):
 class AuditLog(Base):
     __tablename__ = "audit_logs"
     id = Column(Integer, primary_key=True)
-    initiator_user_id = Column(String(30), ForeignKey("users.id"))
-    action = Column(String(255))
+    initiator_user_id = Column(String(30), ForeignKey("users.id"), nullable=False)
+    action = Column(String(255), nullable=False)
     affected_user_id = Column(String(30), ForeignKey("users.id"))
-    message = Column(Text)
-    date = Column(DateTime)
+    message = Column(Text, nullable=False)
+    date = Column(DateTime, nullable=False)
     display_class = None
 
     def __init__(self, initiatorId, action, message, affectedId=None, date=datetime.datetime.now(), id=None):
