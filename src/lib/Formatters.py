@@ -111,13 +111,12 @@ def parse_date(stringDate, minDate=None, maxDate=None):
         return None
     try:
         parsedDate = datetime.datetime(*time.strptime(strip_tags(stringDate), "%m/%d/%Y")[0:5])
-        if parsedDate > minDate:
+        if parsedDate > maxDate:
                 raise Exception("Date cannot be after %s" % maxDate.strftime("%m/%d/%Y"))
         if parsedDate < minDate:
             raise Exception("Date date cannot be before %s" % minDate.strftime("%m/%d/%Y"))
         return parsedDate
-    except:
-
+    except Exception, e:
         raise Exception("Invalid expiration date format. Date must be in mm/dd/yyyy format.: %s" % str(e))
 
 def json_parse(obj):
