@@ -494,7 +494,7 @@ class FileController(object):
             if uploadRequest.owner_id == user.id or AccountController.user_has_permission(user, "admin"):
                 session.delete(uploadRequest)
                 session.commit()
-                sMessages.append("Upload ticket deleted")
+                sMessages.append("Upload request deleted")
             else:
                 fMessages.append("You do not have permission to delete this upload request")
         except Exception, e:
