@@ -195,7 +195,6 @@ class Message(Base):
     encryption_key = Column(String(64))
     date_viewed = None #This is for readers of recieved messages
     message_shares = relationship("MessageShare", backref="message", single_parent=True, cascade="all, delete-orphan")
-    #recipients = []
 
     def get_dict(self):
         messageViewedDatetime, messageCreateDatetime, messageExpirationDatetime = (None, None, None)
@@ -406,8 +405,33 @@ def create_database_tables(dburi):
     session.commit()
     
 def drop_database_tables(dburi):
+    from sqlalchemy.engine import reflection
+    from sqlalchemy.schema import (DropTable, Table, ForeignKeyConstraint, DropConstraint)
     engine = create_engine(dburi, echo=True)
-    Base.metadata.drop_all(engine)
+    conn = engine.connect()
+    trans = conn.begin()
+    inspector = reflection.Inspector.from_engine(engine)
+    metadata = Base.metadata
+    tbs = []
+    all_fks = []
+    for table_name in inspector.get_table_names():
+        fks = []
+        for fk in inspector.get_foreign_keys(table_name):
+            if not fk['name']:
+                continue
+            fks.append(
+                ForeignKeyConstraint((), (), name=fk['name'])
+                )
+        t = Table(table_name, metadata,*fks)
+        tbs.append(t)
+        all_fks.extend(fks)
+
+    for fkc in all_fks:
+        conn.execute(DropConstraint(fkc))
+
+    for table in tbs:
+        conn.execute(DropTable(table))
+    trans.commit()
     print "Dropped all"
 
 #Non database backended models
