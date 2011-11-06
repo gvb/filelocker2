@@ -89,7 +89,7 @@
         </div>
         <div>
             <label for="fileNotes">Add notes to file:</label>
-            <textarea name="fileNotes" id="fileNotes" cols="38" rows="3" onKeyUp="javascript:limitCharacters('public_upload');"></textarea>
+            <textarea name="fileNotes" id="fileNotes" cols="38" rows="3" onKeyUp="javascript:Utility.limitCharacters('public_upload');"></textarea>
             <div id="publicUploadNotesInfo"></div>
         </div>
         <div>
@@ -97,7 +97,7 @@
             #if $uploadRequest.scan_file
                 <input type="checkbox" disabled="disabled" checked="checked" name="scanFile" id="scanFile" />Scan for viruses (The user has requested that this file undergo a virus scan)
             #else
-                <input type="checkbox" name="scanFile" id="scanFile"/><span onclick="javascript:check('scanFile');">Scan for viruses?</span>
+                <input type="checkbox" name="scanFile" id="scanFile"/><span onclick="javascript:Utility.check('scanFile');">Scan for viruses?</span>
             #end if
         </div>
         <div>
@@ -106,7 +106,7 @@
         <div class="clear"></div>
     </form>
     #elif $uploadRequest is None
-    <form action="$config['root_url']/public_upload" name="form" method="POST" id="verifyTicketForm">
+    <form action="$config['root_url']/public_upload" name="form" method="POST" id="verifyRequestForm">
         <div>
             #if $requestId is None or $requestId == ""
             <label for="requestId">Ticket ID: </label>
@@ -121,11 +121,11 @@
             <input type="password" name="password" id="password" />
         </div>
         <div>
-            <div class="button"><a href="javascript:verifyUploadTicket();" title="Verify password for upload request" class="uploadButton"><span>Login</span></a></div>
+            <div class="button"><a href="javascript:UploadRequest.verify();" title="Verify password for upload request" class="uploadButton"><span>Login</span></a></div>
         </div>
     </form>
     #else
     <p><b>This upload request is now expired. Once your session ends you will no longer be able to view this request</b></p>
     #end if
 </div> <!--End Form Area-->
-</div> <!-- End conten col 1 div -->
+</div> <!-- End content col 1 div -->
