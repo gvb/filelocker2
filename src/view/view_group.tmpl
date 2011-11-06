@@ -12,8 +12,8 @@
                             <li><i>This group contains no members.</i></li>
                         #else
                             #for $member in $group.members
-                                <li><span class="itemTitleMedium"><span class="ownerItem memberTitle">$member.userDisplayName</span></span>
-                                <a href="javascript:removeUsersFromGroup('$member.userId', '$group.id', 'viewGroupBox');" title='Remove $member.userId from $group.name' class='deleteLink'>Remove</a></li>
+                                <li><span class="itemTitleMedium"><span class="ownerItem memberTitle">$member.display_name</span></span>
+                                <a href="javascript:removeUsersFromGroup('$member.id', '$group.id', 'viewGroupBox');" title='Remove $member.id from $group.name' class='deleteLink'>Remove</a></li>
                             #end for
                         #end if
                         </ul>
