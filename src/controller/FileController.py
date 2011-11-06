@@ -457,7 +457,7 @@ class FileController(object):
     def create_upload_request(self, password, expiration, scanFile, requestType, maxFileSize=None, emailAddresses=None, personalMessage=None, format="json", **kwargs):
         config, uploadURL, sMessages, fMessages = cherrypy.request.app.config['filelocker'],"", [], []
         try:
-            expiration = parse_date(expiration, datetime.date.today())
+            expiration = parse_date(expiration, datetime.datetime.now())
         except Exception, e:
             fMessages.append(str(e))
         try:
