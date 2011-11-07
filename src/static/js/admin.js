@@ -252,9 +252,8 @@ Admin = function() {
                 $("#userCreateBox").dialog("open");
             });
         }
-        function promptUpdate(userId, firstName, lastName, email, quota, isRole)
+        function promptUpdate(userId, firstName, lastName, email, quota)
         {
-            $("#updateUserRole").prop("checked", isRole);
             $("#updateUserFirstName").val(firstName);
             $("#updateUserLastName").val(lastName);
             $("#updateUserEmail").val(email);
