@@ -12,50 +12,7 @@ __author__="wbdavis"
 __date__ ="$Sep 25, 2011 9:36:30 PM$"
 
 class AdminController:
-    @cherrypy.expose
-    @cherrypy.tools.requires_login(permission="admin")
-    def get_all_users(self, start=0, length=50, format="json", **kwargs):
-        user, sMessages, fMessages = cherrypy.session.get("user"), [], []
-        try:
-            start, length = int(strip_tags(start)), int(strip_tags(length))
-            flUserQuery = session.query(User)
-            if (length is not None):
-                flUserQuery = flUserQuery.limit(length)
-            if (start is not None and start > 0):
-                flUserQuery = flUserQuery.offset(start)
-            flUsers = flUserQuery.all()
-        except Exception, e:
-            fMessages.append("Problem getting users: %s" % str(e))
-        return fl_response(sMessages, fMessages, format, data=flUsers)
-
-    @cherrypy.expose
-    @cherrypy.tools.requires_login(permission="admin")
-    def get_user_permissions(self, userId, format="json", **kwargs):
-        sMessages, fMessages, permissionData = ([], [], [])
-        try:
-            userId = strip_tags(userId)
-            flUser = session.query(User).filter(User.id == userId).one()
-            permissions = session.query(Permission).all()
-            for permission in permissions:
-                permissionFound = False
-                if permission in flUser.permissions:
-                    permissionFound = True
-                    permissionData.append({'permissionId': permission.id, 'permissionName': permission.name, 'inheritedFrom': "user"})
-                else:
-                    for group in flUser.groups:
-                        if permission in group.permissions:
-                            permissionFound = True
-                            permissionData.append({'permissionId': permission.id, 'permissionName': permission.name, 'inheritedFrom': "(group) %s" % group.name})
-                            break
-                    if permissionFound == False:
-                        permissionData.append({'permissionId': permission.id, 'permissionName': permission.name, 'inheritedFrom': ""})
-        except sqlalchemy.orm.exc.NoResultFound:
-            fMessages.append("The user ID: %s does not exist" % str(userId))
-        except Exception, e:
-            logging.error("Couldn't get permissions for user %s: %s" % (userId, str(e)))
-            fMessages.append("Could not get permissions: %s" % str(e))
-        return fl_response(sMessages, fMessages, format, data=permissionData)
-
+    
     @cherrypy.expose
     @cherrypy.tools.requires_login(permission="admin")
     def get_permissions(self, format="json", **kwargs):
@@ -122,72 +79,6 @@ class AdminController:
         except Exception, e:
             logging.error("[%s] [download_user_data] [Unable to serve user data CSV: %s]" % (user.id, str(e)))
             raise HTTPError(500, "Unable to serve user data CSV: %s" % str(e))
-        
-    @cherrypy.expose
-    @cherrypy.tools.requires_login(permission="admin")
-    def grant_user_permission(self, userId, permissionId, format="json", **kwargs):
-        user, sMessages, fMessages = (cherrypy.session.get("user"), [], [])
-        try:
-            permission = session.query(Permission).filter(Permission.id == permissionId).one()
-            try:
-                flUser = session.query(User).filter(User.id == userId).one()
-                flUser.permissions.append(permission)
-                session.commit()
-                sMessages.append("User %s granted permission %s" % (userId, permissionId))
-            except sqlalchemy.orm.exc.NoResultFound:
-                fMessages.append("User with ID: %s does not exist" % str(userId))
-        except sqlalchemy.orm.exc.NoResultFound:
-            fMessages.append("Permission with ID: %s does not exist" % str(permissionId))
-        except Exception, e:
-            session.rollback()
-            logging.error("[%s] [grant_user_permission] [Problem granting user a permission: %s]" % (user.id, str(e)))
-            fMessages.append("Problem granting a user permission: %s" % str(e))
-        return fl_response(sMessages, fMessages, format)
-
-    @cherrypy.expose
-    @cherrypy.tools.requires_login()
-    def revoke_user_permission(self, userId, permissionId, format="json", **kwargs):
-        user, sMessages, fMessages = (cherrypy.session.get("user"), [], [])
-        try:
-            permission = session.query(Permission).filter(Permission.id == permissionId).one()
-            try:
-                flUser = session.query(User).filter(User.id == userId).one()
-                flUser.permissions.remove(permission)
-                session.commit()
-                sMessages.append("User %s no longer has permission %s" % (userId, permissionId))
-            except sqlalchemy.orm.exc.NoResultFound:
-                fMessages.append("User with ID: %s does not exist" % str(userId))
-        except sqlalchemy.orm.exc.NoResultFound:
-            fMessages.append("Permission with ID: %s does not exist" % str(permissionId))
-        except Exception, e:
-            session.rollback()
-            logging.error("[%s] [revoke_user_permission] [Problem revoking a user permission: %s]" % (user.id, str(e)))
-            fMessages.append("Problem revoking a user permission: %s" % str(e))
-        return fl_response(sMessages, fMessages, format)
-    
-    @cherrypy.expose
-    @cherrypy.tools.requires_login(permission="admin")
-    def update_user(self, userId, quota, email, firstName, lastName, password, confirmPassword, format="json", **kwargs):
-        user, sMessages, fMessages = (cherrypy.session.get("user"), [], [])
-        try:
-            userId = strip_tags(userId)
-            updateUser = get_user(userId) #This kind of implicitly enforces permissions
-            updateUser.email = strip_tags(email)
-            updateUser.quota = int(quota)
-            updateUser.first_name = strip_tags(firstName)
-            updateUser.last_name = strip_tags(lastName)
-            if password != "" and password != None and confirmPassword != "" and confirmPassword != None:
-                if password == confirmPassword:
-                    updateUser.set_password(password)
-                else:
-                    fMessages.append("Passwords do not match, password has not be reset")
-            sMessages.append("Successfully updated user settings")
-            session.commit()
-        except Exception, e:
-            session.rollback()
-            logging.error("[%s] [(admin)update_user] [Problem revoking a user permission: %s]" % (user.id, str(e)))
-            fMessages.append("Problem while updating user object: %s" % str(e))
-        return fl_response(sMessages, fMessages, format)
 
     @cherrypy.expose
     @cherrypy.tools.requires_login(permission="admin")
@@ -201,27 +92,6 @@ class AdminController:
             fMessages.append("Could not get vault usage: %s" % str(e))
         return fl_response(sMessages, fMessages, format, data={'vaultCapacityMB': vaultCapacityMB , 'vaultUsedMB': vaultUsedMB})
 
-    @cherrypy.expose
-    @cherrypy.tools.requires_login(permission="admin")
-    def delete_users(self, userIds, format="json", **kwargs):
-        user, sMessages, fMessages = (cherrypy.session.get("user"),  [], [])
-        userIds = split_list_sanitized(userIds)
-        try:
-            for userId in userIds:
-                try:
-                    delUser = session.query(User).filter(User.id == userId).one()
-                    session.delete(delUser)
-                    sMessages.append("Successfully deleted user %s" % userId)
-                except sqlalchemy.orm.exc.NoResultFound:
-                    fMessages.append("User with ID:%s does not exist" % userId)
-                except Exception, e:
-                    fMessages.append("Could not delete user: %s" % str(e))
-                session.commit()
-        except Exception, e:
-            session.rollback()
-            logging.error("[%s] [(admin)delete_users] [Could not delete users: %s]" % (user.id, str(e)))
-            fMessages.append("Could not delete users: %s" % str(e))
-        return fl_response(sMessages, fMessages, format)
 
     @cherrypy.expose
     @cherrypy.tools.requires_login(permission="admin")
@@ -248,45 +118,6 @@ class AdminController:
             fMessages.append("Unable to update config: %s" % str(e))
         return fl_response(sMessages, fMessages, format)
 
-    @cherrypy.expose
-    @cherrypy.tools.requires_login(permission="admin")
-    def create_attribute(self, attributeName, attributeId, format="json", **kwargs):
-        user, sMessages, fMessages = (cherrypy.session.get("user"), [], [])
-        try:
-            attributeName, attributeId = strip_tags(attributeName), strip_tags(attributeId)
-            if attributeId is None:
-                fMessages.append("You must specify an ID for an attribute")
-            elif attributeName is None:
-                fMessages.append("You must give this attribute a name")
-            else:
-                attribute = Attribute(name=attributeName, id=attributeId)
-                session.add(attribute)
-                session.commit()
-                sMessages.append("Successfully created a new attribute")
-        except Exception, e:
-            session.rollback()
-            logging.error("[%s] [create_attribute] [Could not create attribute: %s]" % (user.id, str(e)))
-            fMessages.append("Unable to create attribute: %s" % str(e))
-        return fl_response(sMessages, fMessages, format)
-
-    @cherrypy.expose
-    @cherrypy.tools.requires_login(permission="admin")
-    def delete_attributes(self, attributeIds, format="json", **kwargs):
-        user, sMessages, fMessages = (cherrypy.session.get("user"), [], [])
-        try:
-            attributeIdList = split_list_sanitized(attributeIds)
-            for attributeId in attributeIdList:
-                try:
-                    delAttribute = session.query(Attribute).filter(Attribute.id==attributeId).one()
-                    session.delete(delAttribute)
-                    sMessages.append("Successfully deleted attribute: %s" % attributeId)
-                except sqlalchemy.orm.exc.NoResultFound:
-                    fMessages.append("Attribute with ID: %s does not exist" % str(attributeId))
-            session.commit()
-        except Exception, e:
-            logging.error("[%s] [delete_attributes] [Could not delete attributes: %s]" % (user.id, str(e)))
-            fMessages.append("Unable to delete attribute: %s" % str(e))
-        return fl_response(sMessages, fMessages, format)
 
     @cherrypy.expose
     @cherrypy.tools.requires_login(permission="admin")
