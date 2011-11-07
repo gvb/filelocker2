@@ -36,9 +36,8 @@ class AdminController:
             for permission in flUser.permissions:
                 permissionData.append({'permissionId': permission.id, 'permissionName': permission.name, 'inheritedFrom': "user"})
             for group in flUser.groups:
-                permissionData.append({'permissionId': permission.id, 'permissionName': permission.name, 'inheritedFrom': "(group) %s" % group.name})
-            else:
-                fMessages.append("You do not have permission to view permissions for this user")
+                for permission in group.permissions:
+                    permissionData.append({'permissionId': permission.id, 'permissionName': permission.name, 'inheritedFrom': "(group) %s" % group.name})
         except sqlalchemy.orm.exc.NoResultFound:
             fMessages.append("The user ID: %s does not exist" % str(userId))
         except Exception, e:
