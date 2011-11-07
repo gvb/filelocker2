@@ -66,7 +66,7 @@ class AdminController:
                 permissionData.append({'permissionId': permission.id, 'permissionName': permission.name, 'inheritedFrom': ""})
             sMessagesa.append("Got permissions")
         except Exception, e:
-            logging.error("Couldn't get permissions %s: %s" % (userId, str(e)))
+            logging.error("%s] [] [Couldn't get permissions: %s]" % (user.id, str(e)))
             fMessages.append("Could not get permissions: %s" % str(e))
         return fl_response(sMessages, fMessages, format, data=permissionData)
 
