@@ -13,9 +13,9 @@
             </ul>
             
         <div id="filelocker_accounts"> <!--Filelocker accounts-->
-            <div class="button"><a href="javascript:User.promptCreate();" title="Create a new Filelocker user" class="userNewButton"><span>Create User</span></a></div>
-            <div class="button"><a href="javascript:User.del();" title="Delete the selected Filelocker users" class="deleteButton"><span>Delete Selected</span></a></div>
-            <div class="button"><a href="javascript:Account.load()" title="Edit your personal account settings" class="editAccountButton"><span>Your Account</span></a></div>
+            <div class="button"><a href="javascript:Admin.User.promptCreate();" title="Create a new Filelocker user" class="userNewButton"><span>Create User</span></a></div>
+            <div class="button"><a href="javascript:Admin.User.del();" title="Delete the selected Filelocker users" class="deleteButton"><span>Delete Selected</span></a></div>
+            <div class="button"><a href="javascript:Account.prompt()" title="Edit your personal account settings" class="editAccountButton"><span>Your Account</span></a></div>
             <div id="userSorterLoading" class="hidden">&nbsp;</div><br/><br/><br/><br/><!-- Fixes a Chrome display issue -->
             <div id="userTableSorterWrapper">
                 <table class="file_table" id="userTableSorter">
@@ -84,7 +84,7 @@
             </ul>
         </div> <!-- End Filelocker Accounts -->
         <div id="templates"> <!-- Start Templates Section -->
-            <select name="template_selector" id="template_selector" onchange="loadTemplateForEditing()">
+            <select name="template_selector" id="template_selector" onchange="Admin.Template.load()">
             <optgroup label = "Email Templates">
                 <option value="share_notification.tmpl" selected>Share Notification</option>
                 <option value="upload_request_notification.tmpl">Upload Request</option>
@@ -119,10 +119,10 @@
                 </thead>
                 <tbody id="attributeTable">
                 #for $attribute in $attributes
-                    <tr id="attr_$attribute.attributeId" class="userRow" >
-                        <td><input type="checkbox" name="select_attr" value="$attribute.attributeId" class="attrSelectBox"></td>
-                        <td>$attribute.attributeId</td>
-                        <td>$attribute.attributeName</td>
+                    <tr id="attr_$attribute.id" class="userRow" >
+                        <td><input type="checkbox" name="select_attr" value="$attribute.id" class="attrSelectBox"></td>
+                        <td>$attribute.id</td>
+                        <td>$attribute.name</td>
                     </tr>
                 #end for
                 </tbody>

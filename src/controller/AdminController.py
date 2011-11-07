@@ -3,6 +3,7 @@ import os
 import cherrypy
 import logging
 from lib.SQLAlchemyTool import session
+from lib.Models import *
 import FileController
 from lib.Formatters import *
 from Cheetah.Template import Template

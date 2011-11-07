@@ -368,7 +368,8 @@ Admin = function() {
     Permission = function() {
         function load(userId)
         {
-            Filelocker.request("/admin/get_user_permissions", "loading permissions", {userId: userId}, false, function(returnData) {
+            var action = "loading permissions";
+            Filelocker.request("/admin/get_user_permissions", action, {userId: userId}, false, function(returnData) {
                 $("#permissionsTable").empty();
                 for (var i=0;i<returnData.data.length;i++)
                 {
@@ -384,16 +385,21 @@ Admin = function() {
                     var permRow = returnData.data[i];
                     $("#permissionsTable").append("<tr id='permission_"+permRow.permissionId+"' class='fileRow'><td><input type='checkbox' value='"+permRow.permissionId+"' id='checkbox_"+i+"' name='select_permission' class='permissionSelectBox' onChange=\"permissionChecked('"+userId+"','"+permRow.permissionId+"', "+i+")\""+checkedStatus+" "+disabled+"/>"+permRow.permissionId+"</td><td>"+permRow.permissionName+"</td><td>"+permRow.inheritedFrom+"</td></tr>");
                 }
-                $("#userPermissionTableSorter").tablesorter({
-                    headers: {
-                        0: {sorter: 'text'},
-                        1: {sorter: 'text'},
-                        2: {sorter: 'text'}
-                    }
-                });
-                $("#userPermissionTableSorter").trigger("update");
-                $("#userPermissionTableSorter").trigger("sorton",[[[0,0]]]);
-                $("#userUpdatePermissionsBox").dialog("open");
+                if ($("#permissionsTable tr").length !== 0)
+                {
+                    $("#userPermissionTableSorter").tablesorter({
+                        headers: {
+                            0: {sorter: 'text'},
+                            1: {sorter: 'text'},
+                            2: {sorter: 'text'}
+                        }
+                    });
+                    $("#userPermissionTableSorter").trigger("update");
+                    $("#userPermissionTableSorter").trigger("sorton",[[[0,0]]]);
+                    $("#userUpdatePermissionsBox").dialog("open");
+                }
+                else
+                    StatusResponse.create(action, "No permissions were found.", false);
             });
         }
         function grant(data)
@@ -431,7 +437,7 @@ Admin = function() {
         {
             if ($('#template_selector').val() !== "")
             {
-                Filelocker.request("/admin/get_template_text", "loading template", {templateName:$('#template_selector').val()}, true, function(returnData) {
+                Filelocker.request("/admin/get_template_text", "loading template", {templateName:$('#template_selector').val()}, false, function(returnData) {
                     $("#templateEditArea").val(returnData.data);
                 });
             }
