@@ -3,6 +3,7 @@ import os
 import cherrypy
 import logging
 from lib.SQLAlchemyTool import session
+import sqlalchemy
 from lib.Models import *
 import FileController
 from lib.Formatters import *
@@ -34,11 +35,20 @@ class AdminController:
         try:
             userId = strip_tags(userId)
             flUser = session.query(User).filter(User.id == userId).one()
-            for permission in flUser.permissions:
-                permissionData.append({'permissionId': permission.id, 'permissionName': permission.name, 'inheritedFrom': "user"})
-            for group in flUser.groups:
-                for permission in group.permissions:
-                    permissionData.append({'permissionId': permission.id, 'permissionName': permission.name, 'inheritedFrom': "(group) %s" % group.name})
+            permissions = session.query(Permission).all()
+            permissionFound = False
+            for permission in permissions:
+                if permission in flUser.permissions:
+                    permissionFound = True
+                    permissionData.append({'permissionId': permission.id, 'permissionName': permission.name, 'inheritedFrom': "user"})
+                else:
+                    for group in flUser.groups:
+                        if permission in group.permissions:
+                            permissionFound = True
+                            permissionData.append({'permissionId': permission.id, 'permissionName': permission.name, 'inheritedFrom': "(group) %s" % group.name})
+                            break
+                    if permissionFound == False:
+                        permissionData.append({'permissionId': permission.id, 'permissionName': permission.name, 'inheritedFrom': ""})
         except sqlalchemy.orm.exc.NoResultFound:
             fMessages.append("The user ID: %s does not exist" % str(userId))
         except Exception, e:

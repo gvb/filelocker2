@@ -36,7 +36,7 @@ class User(Base):
     last_name = Column(String(100))
     password = Column(String(80), nullable=True)
     _display_name = Column("display_name", Text, nullable=True)
-    permissions = relationship("Permission", secondary=lambda: user_permissions_table)
+    permissions = relationship("Permission", secondary=lambda: user_permissions_table, backref="users")
     groups = relationship("Group", secondary=lambda: group_membership_table, backref="members")
     quota_used = 0
     salt = None
