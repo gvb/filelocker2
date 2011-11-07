@@ -399,6 +399,7 @@ class FileController(object):
                     cherrypy.session['uploadRequest'].expired = True
                 else:
                     session.add(AuditLog(cherrypy.request.remote.ip, "Upload Requested File", "File %s has been uploaded by an external user to your Filelocker account." % (newFile.name), uploadRequest.owner_id))
+            session.add(AuditLog(user.id, "Check In File", "File %s (%s) checked in to Filelocker: MD5 %s " % (newFile.name, newFile.id, newFile.md5)))
             sMessages.append("File %s uploaded successfully." % str(fileName))
             session.commit()
         except sqlalchemy.orm.exc.NoResultFound, nrf:

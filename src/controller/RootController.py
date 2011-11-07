@@ -230,16 +230,16 @@ class RootController:
                 endDateFormatted = datetime.datetime(*time.strptime(strip_tags(endDate), "%m/%d/%Y")[0:5])
             else:
                 endDateFormatted = today + datetime.timedelta(days=1)
-            actionLogList = session.query(AuditLog).filter(and_(AuditLog.date > startDateFormatted, AuditLog.date < endDateFormatted)).all()
-            print "ActionLog Count: %s" % str(len(actionLogList))
+            actionLogListAtt = session.query(AuditLog).filter(and_(AuditLog.date > startDateFormatted, AuditLog.date < endDateFormatted))
 
             if logAction is None or logAction == "":
                 logAction = "all_minus_login"
-                actionLogList = actionLogList.filter(AuditLog.action != "Login")
+                actionLogListAtt = actionLogListAtt.filter(AuditLog.action != "Login")
 
-            for log in actionLogList:
+            for log in actionLogListAtt:
                 log.display_class = "%s_%s" % ("audit", log.action.replace(" ", "_").lower())
                 log.display_class = re.sub('_\(.*?\)', '', log.display_class) # Removes (You) and (Recipient) from Read Message actions
+                actionLogList.append(log)
             actionNames = session.query(AuditLog.action).filter(or_(AuditLog.initiator_user_id==userId, AuditLog.affected_user_id==userId)).distinct()
             for actionLog in actionNames:
                 if actionLog not in actionList:
