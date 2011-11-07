@@ -194,7 +194,7 @@ Admin = function() {
                     confirmPassword: $("#createUserPasswordConfirm").val()
                 };
                 Filelocker.request("/account/create_user", "creating user", data, true, function() {
-                    load(0);
+                    Admin.load(0);
                 });
             }
         }
@@ -211,7 +211,7 @@ Admin = function() {
             };
             Filelocker.request("/account/update_user", "updating user", data, true, function() {
                 $("#userUpdateBox").dialog("close");
-                load(0);
+                Admin.load(0);
             });
         }
         function del() 
@@ -222,7 +222,7 @@ Admin = function() {
             if(userIds !== "")
             {
                 Filelocker.request("/account/delete_users", action, {userIds:userIds}, true, function() {
-                    load(0);
+                    Admin.load(0);
                 });
             }
             else

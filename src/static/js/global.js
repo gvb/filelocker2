@@ -49,6 +49,7 @@ StatusResponse = function() {
             $("#statusMessage").addClass("ui-state-error");
             $("#statusMessage").html("<span class='ui-icon ui-icon-alert' style='float: left; margin-right: .3em'></span>Errors while "+shortActionMessage+" <span id='toggleDetails'><span id='showDetailsLink' class='statusMessageDetailsLink'>(show details) </span><span id='hideDetailsLink' class='statusMessageDetailsLink hidden'>(hide details) </span></span><span id='dismissStatusMessage' style='float: right;'><span class='dismiss'></span></span>"+detailSection);
             $("#statusMessage").show("drop", { direction: "up" }, 200);
+            $("#showDetailsLink").click();
         }
         else // No errors, so just display success, and fade away after 5 seconds.
         {
