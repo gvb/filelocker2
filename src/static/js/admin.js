@@ -131,7 +131,7 @@ Admin = function() {
                 start: $("#userTable tr").length,
                 length: length || 50 //TODO to defaults.
             };
-            Filelocker.request("/admin/get_all_users", "loading users", data, false, function(returnData) {
+            Filelocker.request("/account/get_all_users", "loading users", data, false, function(returnData) {
                 var html = "";
                 $.each(returnData.data, function() {
                     html += "<tr id='user_"+this.userId+"' class='userRow'>";
@@ -191,8 +191,7 @@ Admin = function() {
                     lastName: $("#createUserLastName").val(),
                     email: $("#createUserEmail").val(),
                     password: $("#createUserPassword").val(),
-                    //confirmPassword: $("#createUserPasswordConfirm").val(),
-                    isRole: $("#createUserRole").prop("checked")
+                    confirmPassword: $("#createUserPasswordConfirm").val()
                 };
                 Filelocker.request("/account/create_user", "creating user", data, true, function() {
                     load(0);
@@ -204,14 +203,13 @@ Admin = function() {
             var data = {
                 userId: $("#updateUserId").val(),
                 quota: $("#updateUserQuota").val(),
-                email: $("#updateUserEmail").val(),
                 firstName: $("#updateUserFirstName").val(),
                 lastName: $("#updateUserLastName").val(),
+                email: $("#updateUserEmail").val(),
                 password: $("#updateUserPassword").val(),
-                confirmPassword: $("#updateUserConfirmPassword").val(),
-                isRole: $("#updateUserRole").prop("checked")
+                confirmPassword: $("#updateUserConfirmPassword").val()
             };
-            Filelocker.request("/admin/update_user", "updating user", data, true, function() {
+            Filelocker.request("/account/update_user", "updating user", data, true, function() {
                 $("#userUpdateBox").dialog("close");
                 load(0);
             });
@@ -243,7 +241,7 @@ Admin = function() {
             $("#bulkCreateUserPassword").val("");
             $("#bulkCreateUserPasswordConfirm").val("");
             $("#bulkCreateUserPermissions").empty();
-            Filelocker.request("/admin/get_permissions", "retrieving user permissions", {}, false, function(returnData)
+            Filelocker.request("/account/get_permissions", "retrieving user permissions", {}, false, function(returnData)
             {
                 $.each(returnData.data, function(index, value) {
                     $("#bulkCreateUserPermissions").append("<input type='checkbox' value='"+value.permissionId+"' id='bulkCreateCheckbox_"+index+"' name='select_permission' class='permissionSelectBox' /><span onClick='javascript:check(\"bulkCreateCheckbox_"+index+"\")'>" + value.permissionName + "</span><br />");
@@ -333,7 +331,7 @@ Admin = function() {
                 attributeId: $("#createAttributeId").val(),
                 attributeName: $("#createAttributeName").val()
             };
-            Filelocker.request("/admin/create_attribute", "creating attribute", data, true, function() {
+            Filelocker.request("/account/create_attribute", "creating attribute", data, true, function() {
                 $("#attributeCreateBox").dialog("close");
                 load(2);
             });
@@ -345,7 +343,7 @@ Admin = function() {
             $("#attributeTable :checked").each(function() { attributeIds += $(this).val()+","; });
             if(attributeIds !== "")
             {
-                Filelocker.request("/admin/delete_attributes", action, {attributeIds: attributeIds}, true, function() {
+                Filelocker.request("/account/delete_attributes", action, {attributeIds: attributeIds}, true, function() {
                     load(2);
                 });
             }
@@ -368,7 +366,7 @@ Admin = function() {
         function load(userId)
         {
             var action = "loading permissions";
-            Filelocker.request("/admin/get_user_permissions", action, {userId: userId}, false, function(returnData) {
+            Filelocker.request("/account/get_user_permissions", action, {userId: userId}, false, function(returnData) {
                 $("#permissionsTable").empty();
                 for (var i=0;i<returnData.data.length;i++)
                 {
@@ -403,13 +401,13 @@ Admin = function() {
         }
         function grant(data)
         {
-            Filelocker.request("/admin/grant_user_permission", "granting permission", data, true, function() {
+            Filelocker.request("/account/grant_user_permission", "granting permission", data, true, function() {
                 load(data.userId);
             });
         }
         function revoke(data)
         {
-            Filelocker.request("/admin/revoke_user_permission", "revoking permission", data, true, function() {
+            Filelocker.request("/account/revoke_user_permission", "revoking permission", data, true, function() {
                 load(data.userId);
             });
         }
