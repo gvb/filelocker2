@@ -2,6 +2,7 @@ import Filelocker
 import os
 import cherrypy
 import logging
+from lib.SQLAlchemyTool import session
 import FileController
 from lib.Formatters import *
 from Cheetah.Template import Template
@@ -199,7 +200,7 @@ class AdminController:
         return fl_response(sMessages, fMessages, format)
 
     @cherrypy.expose
-    @cherrypy.tools.requires_login()
+    @cherrypy.tools.requires_login(permission="admin")
     def update_server_config(self, format="json", **kwargs):
         user, sMessages, fMessages = (cherrypy.session.get("user"), [], [])
         try:

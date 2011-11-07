@@ -27,10 +27,10 @@ def requires_login(permissionId=None, **kwargs):
     if cherrypy.request.params.has_key("format"):
         format = cherrypy.request.params['format']
     if cherrypy.session.has_key("user") and cherrypy.session.get('user') is not None:
-        if cherrypy.session.get('user').date_tos_accept == None:
+        user = cherrypy.session.get('user')
+        if user.date_tos_accept == None:
             raise cherrypy.HTTPRedirect(rootURL+"/sign_tos")
         elif permissionId is not None:
-            user = cherrypy.session.get('user')
             if AccountController.user_has_permission(user, permissionId)==False:
                 raise HTTPError(403)
         else:
