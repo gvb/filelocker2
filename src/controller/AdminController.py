@@ -64,7 +64,7 @@ class AdminController:
             permissions = session.query(Permission).all()
             for permission in permissions:
                 permissionData.append({'permissionId': permission.id, 'permissionName': permission.name, 'inheritedFrom': ""})
-            sMessagesa.append("Got permissions")
+            sMessages.append("Got permissions")
         except Exception, e:
             logging.error("%s] [] [Couldn't get permissions: %s]" % (user.id, str(e)))
             fMessages.append("Could not get permissions: %s" % str(e))

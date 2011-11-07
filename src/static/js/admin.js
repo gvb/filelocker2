@@ -194,7 +194,7 @@ Admin = function() {
                     //confirmPassword: $("#createUserPasswordConfirm").val(),
                     isRole: $("#createUserRole").prop("checked")
                 };
-                Filelocker.request("/admin/create_user", "creating user", data, true, function() {
+                Filelocker.request("/account/create_user", "creating user", data, true, function() {
                     load(0);
                 });
             }
@@ -223,12 +223,12 @@ Admin = function() {
             $("#userTable :checked").each(function() { userIds += $(this).val()+","; });
             if(userIds !== "")
             {
-                Filelocker.request("/admin/delete_users", action, {userIds:userIds}, true, function() {
+                Filelocker.request("/account/delete_users", action, {userIds:userIds}, true, function() {
                     load(0);
                 });
             }
             else
-                StatusResponse.create("deleting users", "Select user(s) for deletion.", false);
+                StatusResponse.create(action, "Select user(s) for deletion.", false);
         }
         function promptCreate()
         {
@@ -243,12 +243,11 @@ Admin = function() {
             $("#bulkCreateUserPassword").val("");
             $("#bulkCreateUserPasswordConfirm").val("");
             $("#bulkCreateUserPermissions").empty();
-            Filelocker.request("/admin/get_user_permissions", "retrieving user permissions", {}, false, function(returnData)
+            Filelocker.request("/admin/get_permissions", "retrieving user permissions", {}, false, function(returnData)
             {
-                for (var i=0;i<returnData.data.length;i++)
-                {
-                    $("#bulkCreateUserPermissions").append("<input type='checkbox' value='"+returnData.data[i].permissionId+"' id='bulkCreateCheckbox_"+i+"' name='select_permission' class='permissionSelectBox' /><span onClick='javascript:check(\"bulkCreateCheckbox_"+i+"\")'>" + returnData.data[i].permissionName + "</span><br />");
-                }
+                $.each(returnData.data, function(index, value) {
+                    $("#bulkCreateUserPermissions").append("<input type='checkbox' value='"+value.permissionId+"' id='bulkCreateCheckbox_"+index+"' name='select_permission' class='permissionSelectBox' /><span onClick='javascript:check(\"bulkCreateCheckbox_"+index+"\")'>" + value.permissionName + "</span><br />");
+                });
                 $("#userCreateTabs").tabs();
                 $("#userCreateBox").dialog("open");
             });
@@ -318,7 +317,7 @@ Admin = function() {
             create:create,
             update:update,
             del:del,
-            propmtCreate:promptCreate,
+            promptCreate:promptCreate,
             promptUpdate:promptUpdate,
             promptViewHistory:promptViewHistory,
             rowClick:rowClick,
@@ -383,7 +382,7 @@ Admin = function() {
                             disabled = "disabled";
                     }
                     var permRow = returnData.data[i];
-                    $("#permissionsTable").append("<tr id='permission_"+permRow.permissionId+"' class='fileRow'><td><input type='checkbox' value='"+permRow.permissionId+"' id='checkbox_"+i+"' name='select_permission' class='permissionSelectBox' onChange=\"permissionChecked('"+userId+"','"+permRow.permissionId+"', "+i+")\""+checkedStatus+" "+disabled+"/>"+permRow.permissionId+"</td><td>"+permRow.permissionName+"</td><td>"+permRow.inheritedFrom+"</td></tr>");
+                    $("#permissionsTable").append("<tr id='permission_"+permRow.permissionId+"' class='fileRow'><td><input type='checkbox' value='"+permRow.permissionId+"' id='checkbox_"+i+"' name='select_permission' class='permissionSelectBox' onChange=\"Admin.Permission.changed('"+userId+"','"+permRow.permissionId+"', "+i+")\""+checkedStatus+" "+disabled+"/>"+permRow.permissionId+"</td><td>"+permRow.permissionName+"</td><td>"+permRow.inheritedFrom+"</td></tr>");
                 }
                 if ($("#permissionsTable tr").length !== 0)
                 {
