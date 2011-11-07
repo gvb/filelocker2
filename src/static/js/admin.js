@@ -75,7 +75,7 @@ Admin = function() {
         if (tabIndex !== null)
             $("#admin_sections").tabs("select", tabIndex);
         $("#adminBackLink").html("<div class='back'><a href='javascript:StatusResponse.hide();javascript:FLFile.load();' title='Take me back to \"My Files\"'>Back</a></div>");
-        loadTemplateForEditing();
+        Template.load();
         getVaultUsage();
     }
     function load(tabIndex)
@@ -103,7 +103,7 @@ Admin = function() {
     function getVaultUsage()
     {
         Filelocker.request("/admin/get_vault_usage", "retrieving vault usage", {}, true, function(returnData) {
-            if (returnData.data !== undefined)
+            if (returnData.data != null)
             {
                 var percentFull = parseInt(parseFloat(returnData.data.vaultUsedMB) / parseFloat(returnData.data.vaultCapacityMB) * 100, 10);
                 $("#fileVaultUsageBar").progressbar("value", percentFull);
@@ -128,7 +128,7 @@ Admin = function() {
             $("#userSorterLoading").show();
             var data = {
                 start: $("#userTable tr").length,
-                length: length || 50
+                length: length || 50 //TODO to defaults.
             };
             Filelocker.request("/admin/get_all_users", "loading users", data, false, function(returnData) {
                 var html = "";

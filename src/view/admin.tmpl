@@ -21,7 +21,7 @@
                 <table class="file_table" id="userTableSorter">
                     <thead>
                         <tr>
-                            <th class="selectAllCol"><input type="checkbox" id="allUsersCheckbox" onClick="allUsersBoxChecked();"/></th>
+                            <th class="selectAllCol"><input type="checkbox" id="allUsersCheckbox" onClick="javascript:Admin.User.selectAll();"/></th>
                             <th class="idCol pseudoLink">User ID</th>
                             <th class="userLastNameCol pseudoLink">Last Name</th>
                             <th class="userFirstNameCol pseudoLink">First Name</th>
@@ -52,9 +52,9 @@
                             #else
                             <td><a href="javascript:User.promptViewHistory('$flUser.id');" class="admin" title="View Filelocker interactions for '$flUser.id' (admin)">$flUser.id</a></td>
                             #end if
-                            <td onClick="userRowClick('$flUser.id')">$flUser.last_name</td>
-                            <td onClick="userRowClick('$flUser.id')">$flUser.first_name</td>
-                            <td onClick="userRowClick('$flUser.id')">$flUser.email</td>
+                            <td onClick="Admin.User.rowClick('$flUser.id')">$flUser.last_name</td>
+                            <td onClick="Admin.User.rowClick('$flUser.id')">$flUser.first_name</td>
+                            <td onClick="Admin.User.rowClick('$flUser.id')">$flUser.email</td>
                         #if float($flUser.quota) > 0:
                             #set $percentUsed = int(round(float($FileController.get_user_quota_usage_bytes(flUser))/float($flUser.quota)*100,0))
                         #else
@@ -63,11 +63,11 @@
                         #set $quotaUsedMB = int(round($flUser.quota_used,0))
                         #if $flUser.quota >= 1024
                             #set $quotaInGB = round(float($flUser.quota)/1024,2)
-                            <td onClick="userRowClick('$flUser.id')"><span class="userQuotaUsage pseudoLink" title="${percentUsed}% ($quotaUsedMB MB) used">$quotaInGB GB</span></td>
+                            <td onClick="Admin.User.rowClick('$flUser.id')"><span class="userQuotaUsage pseudoLink" title="${percentUsed}% ($quotaUsedMB MB) used">$quotaInGB GB</span></td>
                         #else
-                            <td onClick="userRowClick('$flUser.id')"><span class="userQuotaUsage pseudoLink" title="${percentUsed}% ($quotaUsedMB MB) used">$flUser.quota MB</span></td>
+                            <td onClick="Admin.User.rowClick('$flUser.id')"><span class="userQuotaUsage pseudoLink" title="${percentUsed}% ($quotaUsedMB MB) used">$flUser.quota MB</span></td>
                         #end if
-                            <td onClick="userRowClick('$flUser.id')" class="dropdownArrowNarrow rightborder"></td>
+                            <td onClick="Admin.User.rowClick('$flUser.id')" class="dropdownArrowNarrow rightborder"></td>
                         </tr>
                     #end for
                     </tbody>
@@ -211,7 +211,7 @@
                 #end if
             #end for
             </table>
-            <input type="button" value="Update Config" onClick="updateConfig();"/>
+            <input type="button" value="Update Config" onClick="javascript:Admin.updateConfig();"/>
             </form>
         </div> <!-- End Config Section -->
         <div id="error_logs">
