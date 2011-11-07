@@ -181,8 +181,8 @@ class RootController:
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def admin(self, **kwargs):
-        user = cherrypy.session.get("user")
-        templateFiles = os.listdir(os.path.join(cherrypy.request.app.config['filelocker']['root_path'], "view"))
+        user, config = cherrypy.session.get("user"), cherrypy.request.app.config['filelocker']
+        templateFiles = os.listdir(os.path.join(config['root_path'], "view"))
         configParameters = session.query(ConfigParameter).all()
         flUsers = session.query(User).slice(0,50)
         totalFileCount = session.query(func.count(File.id))

@@ -56,7 +56,7 @@
                             <td onClick="userRowClick('$flUser.id')">$flUser.first_name</td>
                             <td onClick="userRowClick('$flUser.id')">$flUser.email</td>
                         #if float($flUser.quota) > 0:
-                            #set $percentUsed = int(round(float($FileController.get_user_quota_usage_bytes())/float($flUser.quota)*100,0))
+                            #set $percentUsed = int(round(float($FileController.get_user_quota_usage_bytes(flUser))/float($flUser.quota)*100,0))
                         #else
                             #set $percentUsed = 0
                         #end if
@@ -132,12 +132,12 @@
             <form action="$config['root_url']/admin_interface/update_server_config" method="POST" id="configForm">
             <table>
             #for $param in $configParameters
-                #if $param.parameterType == "boolean"
+                #if $param.type == "boolean"
                 <tr>    
-                    <td>$param.parameterName</td>
-                    <td>$param.parameterDescription<input type="text" name="config_desc_$param.parameterName" style="display: none"/></td>
+                    <td>$param.name</td>
+                    <td>$param.description<input type="text" name="config_desc_$param.name" style="display: none"/></td>
                     <td>$param.value
-                        <select name="config_name_$param.parameterName">
+                        <select name="config_name_$param.name">
                         #if $param.value == "Yes"
                             <option value="Yes" selected>Yes</option>
                             <option value="No">No</option>
@@ -148,12 +148,12 @@
                         </select>
                     </td>
                 </tr>
-                #elif $param.parameterName == "auth_type"
+                #elif $param.name == "auth_type"
                 <tr>    
-                    <td>$param.parameterName</td>
-                    <td>$param.parameterDescription<input type="text" name="config_desc_$param.parameterName" style="display: none"/></td>
+                    <td>$param.name</td>
+                    <td>$param.description<input type="text" name="config_desc_$param.name" style="display: none"/></td>
                     <td>$param.value
-                        <select name="config_name_$param.parameterName">
+                        <select name="config_name_$param.name">
                         <option value="ldap" 
                         #if $param.value=='ldap'#slurp
                         selected
@@ -172,12 +172,12 @@
                         </select>
                     </td>
                 </tr>
-                #elif $param.parameterName == "directory_type"
+                #elif $param.name == "directory_type"
                 <tr>    
-                    <td>$param.parameterName</td>
-                    <td>$param.parameterDescription<input type="text" name="config_desc_$param.parameterName" style="display: none"/></td>
+                    <td>$param.name</td>
+                    <td>$param.description<input type="text" name="config_desc_$param.name" style="display: none"/></td>
                     <td>$param.value
-                        <select name="config_name_$param.parameterName">
+                        <select name="config_name_$param.name">
                         <option value="ldap" 
                         #if $param.value=='ldap'#slurp
                         selected
@@ -196,17 +196,17 @@
                         </select>
                     </td>
                 </tr>
-                #elif $param.parameterName == "db_version"
+                #elif $param.name == "db_version"
                 <tr>    
-                    <td>$param.parameterName</td>
-                    <td>$param.parameterDescription</td>
+                    <td>$param.name</td>
+                    <td>$param.description</td>
                     <td>$param.value</td>
                 </tr>
                 #else
                 <tr>    
-                    <td>$param.parameterName</td>
-                    <td>$param.parameterDescription<input type="text" name="config_desc_$param.parameterName" style="display: none"/></td>
-                    <td><input type="text" name="config_name_$param.parameterName" value="$param.value" /></td>
+                    <td>$param.name</td>
+                    <td>$param.description<input type="text" name="config_desc_$param.name" style="display: none"/></td>
+                    <td><input type="text" name="config_name_$param.name" value="$param.value" /></td>
                 </tr>
                 #end if
             #end for
@@ -265,7 +265,7 @@
                 <tr>
                     <td></td>
                     <td>$currentUser.id</td>
-                    <td>$currentUser.userDisplayName</td>
+                    <td>$currentUser.display_name</td>
                 </tr>
             #end for
             </tbody>
