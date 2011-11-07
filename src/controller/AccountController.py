@@ -33,7 +33,7 @@ class AccountController:
 
     @cherrypy.expose
     @cherrypy.tools.requires_login(permission="admin")
-    def create_user(self, userId, firstName, lastName, email, quota, isRole, format="json", **kwargs):
+    def create_user(self, userId, firstName, lastName, email, quota, format="json", **kwargs):
         sMessages, fMessages = ([], [])
         try:
             newUser = User(userId=strip_tags(userId), firstName=strip_tags(firstName), lastName=strip_tags(lastName), email=strip_tags(email), quota=int(quota))
