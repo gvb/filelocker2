@@ -59,7 +59,7 @@ class AdminController:
     @cherrypy.expose
     @cherrypy.tools.requires_login(permission="admin")
     def get_permissions(self, format="json", **kwargs):
-        sMessages, fMessages, permissionData = ([], [], [])
+        user, sMessages, fMessages, permissionData = (cherrypy.session.get("user"),[], [], [])
         try:
             permissions = session.query(Permission).all()
             for permission in permissions:
