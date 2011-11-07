@@ -13,6 +13,12 @@ Defaults = function() {
     var largeDialog = $.extend({ width: 780 }, dialog);
     
     return {
+        adminUsersTabIndex:0,
+        adminRolesTabIndex:1,
+        adminTemplatesTabIndex:2,
+        adminAttributesTabIndex:3,
+        adminConfigTabIndex:4,
+        adminLogsTabIndex:5,
         filelockerWidth: 870,
         smallDialog:smallDialog,
         largeDialog:largeDialog

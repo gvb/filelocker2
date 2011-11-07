@@ -2,17 +2,17 @@
     <div class="section_title">
         <h1 class="admin_title">Administration</h1>
     </div>
-
-        <div id="admin_sections" style="margin-left: 5px; width: 100%; border:none;">
-            <ul>
-                <li><a href="#filelocker_accounts">Filelocker Accounts</a></li>
-                <li><a href="#templates">Templates</a></li>
-                <li><a href="#filelocker_attributes">Dynamic Attributes</a></li>
-                <li><a href="#server_config">Server Config</a></li>
-                <li><a href="#error_logs">Error Logs</a></li>
-            </ul>
+    <div id="admin_sections" style="margin-left: 5px; width: 100%; border:none;">
+        <ul>
+            <li><a href="#users">Users</a></li>
+            <li><a href="#roles">Roles</a></li>
+            <li><a href="#templates">Templates</a></li>
+            <li><a href="#attributes">Attributes</a></li>
+            <li><a href="#config">Config</a></li>
+            <li><a href="#logs">Logs</a></li>
+        </ul>
             
-        <div id="filelocker_accounts"> <!--Filelocker accounts-->
+        <div id="users">
             <div class="button"><a href="javascript:Admin.User.promptCreate();" title="Create a new Filelocker user" class="userNewButton"><span>Create User</span></a></div>
             <div class="button"><a href="javascript:Admin.User.del();" title="Delete the selected Filelocker users" class="deleteButton"><span>Delete Selected</span></a></div>
             <div class="button"><a href="javascript:Account.prompt()" title="Edit your personal account settings" class="editAccountButton"><span>Your Account</span></a></div>
@@ -22,7 +22,7 @@
                     <thead>
                         <tr>
                             <th class="selectAllCol"><input type="checkbox" id="allUsersCheckbox" onClick="javascript:Admin.User.selectAll();"/></th>
-                            <th class="idCol pseudoLink">User ID</th>
+                            <th class="userIdCol pseudoLink">User ID</th>
                             <th class="userLastNameCol pseudoLink">Last Name</th>
                             <th class="userFirstNameCol pseudoLink">First Name</th>
                             <th class="userEmailCol pseudoLink">Email</th>
@@ -82,8 +82,69 @@
                 #end if
                 <li><div class="itemTitleWide"><span class="excel"><a href="${config['root_url']}/admin/download_user_data" title="Download a CSV file with all Filelocker user data.">Download all Filelocker user data</a></span></div></li>
             </ul>
-        </div> <!-- End Filelocker Accounts -->
-        <div id="templates"> <!-- Start Templates Section -->
+        </div>
+
+        <div id="roles">
+            <div class="button"><a href="javascript:Admin.Role.promptCreate();" title="Create a new Filelocker role" class="roleNewButton"><span>Create Role</span></a></div>
+            <div class="button"><a href="javascript:Admin.Role.del();" title="Delete the selected Filelocker roles" class="deleteButton"><span>Delete Selected</span></a></div>
+            <div id="roleSorterLoading" class="hidden">&nbsp;</div><br/><br/><br/><br/><!-- Fixes a Chrome display issue -->
+            <div id="roleTableSorterWrapper">
+                <table class="file_table" id="roleTableSorter">
+                    <thead>
+                        <tr>
+                            <th class="selectAllCol"><input type="checkbox" id="allRolesCheckbox" onClick="javascript:Admin.Role.selectAll();"/></th>
+                            <th class="roleIdCol pseudoLink">Role ID</th>
+                            <th class="roleNameCol pseudoLink">Role Name</th>
+                            <th class="roleEmailCol pseudoLink">Email</th>
+                            <th class="roleQuotaCol pseudoLink">Quota</th>
+                            <th class="menuCol"></th>
+                        </tr>
+                        <tr>
+                            <td></td>
+                            <td colspan="5" class="dotted"></td>
+                        </tr>
+                    </thead>
+                    <tbody id="roleTable">
+                    #for $flRole in $flRoles
+                        <tr id="role_$flRole.id" class="roleRow">
+                            <td id="roleNameElement_$flRole.id" class="roleNameElement"><input type="checkbox" name="select_role" value="$flRole.id" class="roleSelectBox" id="checkbox_$flRole.id">
+                                <div class="posrel">
+                                    <div id="menu_row_$flRole.id" class="menuRoles hidden">
+                                    <ul class="menu">
+                                        <li><div class="button" style="width: 185px;"><a href="javascript:Admin.Role.promptUpdate('$flRole.id', '$flRole.first_name', '$flRole.last_name', '$flRole.email', $flRole.quota);" title="Edit role account for '$flRole.id'" class="editButton"><span><center>Edit Account</center></span></a></div></li>
+                                        <li><div class="button" style="width: 185px;"><a href="javascript:Admin.Permission.load('$flRole.id');" title="Grant and revoke role permissions for '$flRole.id'" class="wandButton"><span><center>Edit Permissions</center></span></a></div></li>
+                                    </ul>
+                                </div>
+                            </td>
+
+                            #if $AccountController.role_has_permission($flRole, "admin") is False:
+                            <td><a href="javascript:Role.promptViewHistory('$flRole.id');" class="clock" title="View Filelocker interactions for '$flRole.id'">$flRole.id</a></td>
+                            #else
+                            <td><a href="javascript:Role.promptViewHistory('$flRole.id');" class="admin" title="View Filelocker interactions for '$flRole.id' (admin)">$flRole.id</a></td>
+                            #end if
+                            <td onClick="Admin.Role.rowClick('$flRole.id')">$flRole.name</td>
+                            <td onClick="Admin.Role.rowClick('$flRole.id')">$flRole.email</td>
+                        #if float($flRole.quota) > 0:
+                            #set $percentUsed = int(round(float($FileController.get_role_quota_usage_bytes(flRole))/float($flRole.quota)*100,0))
+                        #else
+                            #set $percentUsed = 0
+                        #end if
+                        #set $quotaUsedMB = int(round($flRole.quota_used,0))
+                        #if $flRole.quota >= 1024
+                            #set $quotaInGB = round(float($flRole.quota)/1024,2)
+                            <td onClick="Admin.Role.rowClick('$flRole.id')"><span class="roleQuotaUsage pseudoLink" title="${percentUsed}% ($quotaUsedMB MB) used">$quotaInGB GB</span></td>
+                        #else
+                            <td onClick="Admin.Role.rowClick('$flRole.id')"><span class="roleQuotaUsage pseudoLink" title="${percentUsed}% ($quotaUsedMB MB) used">$flRole.quota MB</span></td>
+                        #end if
+                            <td onClick="Admin.Role.rowClick('$flRole.id')" class="dropdownArrowNarrow rightborder"></td>
+                        </tr>
+                    #end for
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="templates">
             <select name="template_selector" id="template_selector" onchange="Admin.Template.load()">
             <optgroup label = "Email Templates">
                 <option value="share_notification.tmpl" selected>Share Notification</option>
@@ -101,10 +162,11 @@
             <br/>
             <div class="button"><a href="javascript:Template.save();" title="Save this template" class="saveButton"><span>Save Template</span></a></div>
             <div class="button"><a href="javascript:Template.revert();" title="Reload this template from the default" class="revertButton"><span>Revert to Default</span></a></div>
-        </div> <!-- End Templates Section -->
-        <div id="filelocker_attributes"> <!--Filelocker attributes list-->
-        <div class="button"><a href="javascript:Attribute.promptCreate();" title="Create a new Filelocker user attribute" class="attributeNewButton"><span>Create Attribute</span></a></div>
-        <div class="button"><a href="javascript:Attribute.del();" title="Delete the selected Filelocker user attributes" class="deleteButton"><span>Delete Selected</span></a></div><br/><br/><br/><br/>
+        </div>
+
+        <div id="attributes">
+            <div class="button"><a href="javascript:Attribute.promptCreate();" title="Create a new Filelocker role attribute" class="attributeNewButton"><span>Create Attribute</span></a></div>
+            <div class="button"><a href="javascript:Attribute.del();" title="Delete the selected Filelocker role attributes" class="deleteButton"><span>Delete Selected</span></a></div><br/><br/><br/><br/>
             <table class="file_table" id="attributeTableSorter">
                 <thead>
                     <tr>
@@ -119,16 +181,17 @@
                 </thead>
                 <tbody id="attributeTable">
                 #for $attribute in $attributes
-                    <tr id="attr_$attribute.id" class="userRow" >
+                    <tr id="attr_$attribute.id" class="roleRow" >
                         <td><input type="checkbox" name="select_attr" value="$attribute.id" class="attrSelectBox"></td>
                         <td>$attribute.id</td>
                         <td>$attribute.name</td>
                     </tr>
                 #end for
                 </tbody>
-            </table> <!-- End Attribute listing -->
+            </table>
         </div>
-        <div id="server_config">
+
+        <div id="config">
             <form action="$config['root_url']/admin_interface/update_server_config" method="POST" id="configForm">
             <table>
             #for $param in $configParameters
@@ -213,14 +276,16 @@
             </table>
             <input type="button" value="Update Config" onClick="javascript:Admin.updateConfig();"/>
             </form>
-        </div> <!-- End Config Section -->
-        <div id="error_logs">
-        <p>
-            #for $logLine in $logs
-            $logLine.replace('<','&lt;').replace('>','&gt;') <br/>
-            #end for
-        </p>
-        </div> <!-- End Log Section -->
+        </div>
+
+        <div id="logs">
+            <p>
+                #for $logLine in $logs
+                $logLine.replace('<','&lt;').replace('>','&gt;') <br/>
+                #end for
+            </p>
+        </div>
+
     </div> <!-- End Admin Sections -->
     <!--end content area-->
 </div> <!--End wrapper Col 1-->
@@ -228,13 +293,13 @@
     <div class="text_col2">
         <a href="$config['org_url']" target="_blank" title="Take me to the $config['org_name'] home page"><img src="$config['root_url']/static/images/logos/logo.gif" alt="$config['org_name']" class="orgLogo" /></a>
         <img src="$config['root_url']/static/images/page_elements/horizontal_rule.gif" alt="" class="horizontal_rule" />
-        <p><span class="strong">Admin</span> <br/> This area allows you to edit the installed user directory, edit custom templates, edit dynamic attributes, configure the server, and view logs.</p>
+        <p><span class="strong">Admin</span> <br/> This area allows you to edit the installed role directory, edit custom templates, edit dynamic attributes, configure the server, and view logs.</p>
         <img src="$config['root_url']/static/images/page_elements/horizontal_rule.gif" alt="" class="horizontal_rule" />
         <p><strong>File Vault Usage</strong></p>
         <div id="fileVaultUsageBar" class="vaultUsage"></div>
         <p><strong>System State</strong></p>
         #set $currentUsers = len($currentUsersList)
-        <div><span class="systemStateItem"><a href="javascript:User.showCurrent();" title="Show a list of every current Filelocker user">Current Users:</a></span><span class="systemStateValue">$currentUsers</span></div>
+        <div><span class="systemStateItem"><a href="javascript:User.showCurrent();" title="Show a list of every current Filelocker role">Current Users:</a></span><span class="systemStateValue">$currentUsers</span></div>
         <div><span class="systemStateItem">Installed Users:</span><span class="systemStateValue">$totalUserCount</span></div>
         <div><span class="systemStateItem">Current Uploads:</span><span class="systemStateValue">$currentUploads</span></div>
         <div><span class="systemStateItem">Locked Files:</span><span class="systemStateValue">$totalFileCount</span></div>
@@ -253,7 +318,7 @@
                 <tr>
                     <th class="spacerCol"></th>
                     <th class="idCol pseudoLink">User ID</th>
-                    <th class="userFullNameCol pseudoLink">User Name</th>
+                    <th class="roleFullNameCol pseudoLink">User Name</th>
                 </tr>
                 <tr>
                     <td></td>

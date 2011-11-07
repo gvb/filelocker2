@@ -325,7 +325,7 @@ ul {
     background:url($staticDir/images/page_elements/tab_right2.jpg) no-repeat top right transparent;
     padding:4px 15px 1px 0px;
 }
-.acceptButton, .attributeNewButton, .createCLIKeyButton, .editAccountButton, .editButton, .groupNewButton, .manageGroupsButton, .messageNewButtonNarrow, .plusButton, .revertButton, .saveButton, .shareButton, .unhideButton, .uploadButton, .uploadRequestButton, .userNewButton, .wandButton {
+.acceptButton, .attributeNewButton, .createCLIKeyButton, .editAccountButton, .editButton, .groupNewButton, .manageGroupsButton, .messageNewButtonNarrow, .plusButton, .revertButton, .roleNewButton, .saveButton, .shareButton, .unhideButton, .uploadButton, .uploadRequestButton, .userNewButton, .wandButton {
     color:#4775d5 !important;
 }
 .deleteButton, .deleteMessagesButtonNarrow {
@@ -341,6 +341,7 @@ ul {
 .messageNewButtonNarrow     { background:url($staticDir/images/icons/email_add.png) no-repeat left 8px; }
 .plusButton                 { background:url($staticDir/images/icons/plus.gif) no-repeat left 9px; }
 .revertButton               { background:url($staticDir/images/icons/refresh.png) no-repeat left 9px; }
+.roleNewButton              { background:url($staticDir/images/icons/role_add.gif) no-repeat left 9px; }
 .saveButton                 { background:url($staticDir/images/icons/disk.gif) no-repeat left 9px; }
 .shareButton                { background:url($staticDir/images/icons/user_arrow.gif) no-repeat left 9px; }
 .unhideButton               { background:url($staticDir/images/icons/lightbulb.png) no-repeat left 9px; }
@@ -404,13 +405,13 @@ ul {
 }
 .roleLoggedIn {
     position:relative;
-    background:url($staticDir/images/icons/user_role.gif) left no-repeat;
+    background:url($staticDir/images/icons/role.gif) left no-repeat;
     text-indent:18px;
     float:left;
 }
 .roleLoggedInMultiple {
     position:relative;
-    background-image:url($staticDir/images/icons/user_role.gif), url($staticDir/images/icons/arrow_down_blue.gif);
+    background-image:url($staticDir/images/icons/role.gif), url($staticDir/images/icons/arrow_down_blue.gif);
     background-repeat:no-repeat;
     background-position: left, right;
     text-indent:18px;

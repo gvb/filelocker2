@@ -72,8 +72,7 @@ Admin = function() {
             },
             sortList: [[1,0]]
         });
-        if (tabIndex !== null)
-            $("#admin_sections").tabs("select", tabIndex);
+        $("#admin_sections").tabs("select", tabIndex || Defaults.adminUsersTabIndex);
         $("#adminBackLink").html("<div class='back'><a href='javascript:StatusResponse.hide();javascript:FLFile.load();' title='Take me back to \"My Files\"'>Back</a></div>");
         Template.load();
         getVaultUsage();
@@ -119,7 +118,7 @@ Admin = function() {
             values[this.name] = $(this).val();
         });
         Filelocker.request("/admin/update_server_config", "updating config", values, true, function() {
-            load(3);
+            load(Defaults.adminConfigTabIndex);
         });
     }
     
@@ -139,28 +138,28 @@ Admin = function() {
                     html += "<div class='posrel'>";
                     html += "<div id='menu_row_"+this.userId+"' class='menuUsers hidden'>";
                     html += "<ul class='menu'>";
-                    html += "<li><div class='button' style='width: 185px;'><a href='javascript:promptUpdateUser(\""+this.userId+"\", \""+this.userFirstName+"\", \""+this.userLastName+"\", \""+this.userEmail+"\", "+this.userQuota+", "+this.isRole.toString()+");' title='Edit user account for \""+this.userId+"\"' class='editButton'><span><center>Edit Account</center></span></a></div></li>";
-                    html += "<li><div class='button' style='width: 185px;'><a href='javascript:promptUpdatePermissions(\""+this.userId+"\");' title='Grant and revoke user permissions for \""+this.userId+"\"' class='wandButton'><span><center>Edit Permissions</center></span></a></div></li>";
+                    html += "<li><div class='button' style='width: 185px;'><a href='javascript:Admin.User.promptUpdate(\""+this.userId+"\", \""+this.userFirstName+"\", \""+this.userLastName+"\", \""+this.userEmail+"\", "+this.userQuota+");' title='Edit user account for \""+this.userId+"\"' class='editButton'><span><center>Edit Account</center></span></a></div></li>";
+                    html += "<li><div class='button' style='width: 185px;'><a href='javascript:Admin.Permission.load(\""+this.userId+"\");' title='Grant and revoke user permissions for \""+this.userId+"\"' class='wandButton'><span><center>Edit Permissions</center></span></a></div></li>";
                     html += "</ul>";
                     html += "</div>";
                     html += "</td>";
                     if(this.isAdmin)
-                        html += "<td><a href='javascript:promptViewUserHistory(\""+this.userId+"\");' class='admin' title='View Filelocker interactions for \""+this.userId+"\" (admin)'>"+this.userId+"</a></td>";
+                        html += "<td><a href='javascript:Admin.User.promptViewHistory(\""+this.userId+"\");' class='admin' title='View Filelocker interactions for \""+this.userId+"\" (admin)'>"+this.userId+"</a></td>";
                     else
-                        html += "<td><a href='javascript:promptViewUserHistory(\""+this.userId+"\");' class='clock' title='View Filelocker interactions for \""+this.userId+"\"'>"+this.userId+"</a></td>";
-                    html += "<td onClick='userRowClick(\""+this.userId+"\")'>"+this.userLastName+"</td>";
-                    html += "<td onClick='userRowClick(\""+this.userId+"\")'>"+this.userFirstName+"</td>";
-                    html += "<td onClick='userRowClick(\""+this.userId+"\")'>"+this.userEmail+"</td>";
+                        html += "<td><a href='javascript:Admin.User.promptViewHistory(\""+this.userId+"\");' class='clock' title='View Filelocker interactions for \""+this.userId+"\"'>"+this.userId+"</a></td>";
+                    html += "<td onClick='javascript:Admin.User.rowClick(\""+this.userId+"\")'>"+this.userLastName+"</td>";
+                    html += "<td onClick='javascript:Admin.User.rowClick(\""+this.userId+"\")'>"+this.userFirstName+"</td>";
+                    html += "<td onClick='javascript:Admin.User.rowClick(\""+this.userId+"\")'>"+this.userEmail+"</td>";
 
                     var percentUsed = 0;
                     var quotaUsedMB = Math.round(parseFloat(this.userQuotaUsed));
                     if(parseInt(this.userQuota) > 0)
                         percentUsed = Math.round(parseFloat(this.userQuotaUsed)/parseFloat(this.userQuota)*100)
                     if(parseInt(this.userQuota) >= 1024)
-                        html += "<td onClick='userRowClick(\""+this.userId+"\")'><span class='userQuotaUsage pseudoLink' title='"+percentUsed+"% ("+quotaUsedMB+" MB) used'>"+Math.round(parseFloat(this.userQuota)/1024).toFixed(1)+" GB</span></td>";
+                        html += "<td onClick='javascript:Admin.User.rowClick(\""+this.userId+"\")'><span class='userQuotaUsage pseudoLink' title='"+percentUsed+"% ("+quotaUsedMB+" MB) used'>"+Math.round(parseFloat(this.userQuota)/1024).toFixed(1)+" GB</span></td>";
                     else
-                        html += "<td onClick='userRowClick(\""+this.userId+"\")'><span class='userQuotaUsage pseudoLink' title='"+percentUsed+"% ("+quotaUsedMB+" MB) used'>"+this.userQuota+" MB</span></td>";
-                    html += "<td onClick='userRowClick(\""+this.userId+"\")' class='dropdownArrowNarrow rightborder'></td>";
+                        html += "<td onClick='javascript:Admin.User.rowClick(\""+this.userId+"\")'><span class='userQuotaUsage pseudoLink' title='"+percentUsed+"% ("+quotaUsedMB+" MB) used'>"+this.userQuota+" MB</span></td>";
+                    html += "<td onClick='javascript:Admin.User.rowClick(\""+this.userId+"\")' class='dropdownArrowNarrow rightborder'></td>";
                     html += "</tr>";
                 });
                 $("#userTable").append(html);
@@ -194,7 +193,7 @@ Admin = function() {
                     confirmPassword: $("#createUserPasswordConfirm").val()
                 };
                 Filelocker.request("/account/create_user", "creating user", data, true, function() {
-                    Admin.load(0);
+                    Admin.load(Defaults.adminUsersTabIndex);
                 });
             }
         }
@@ -211,7 +210,7 @@ Admin = function() {
             };
             Filelocker.request("/account/update_user", "updating user", data, true, function() {
                 $("#userUpdateBox").dialog("close");
-                Admin.load(0);
+                Admin.load(Defaults.adminUsersTabIndex);
             });
         }
         function del() 
@@ -222,7 +221,7 @@ Admin = function() {
             if(userIds !== "")
             {
                 Filelocker.request("/account/delete_users", action, {userIds:userIds}, true, function() {
-                    Admin.load(0);
+                    Admin.load(Defaults.adminUsersTabIndex);
                 });
             }
             else
@@ -323,6 +322,205 @@ Admin = function() {
             showCurrent:showCurrent
         };
     }();
+
+    Role = function() {
+        function load(length)
+        {
+            $("#roleSorterLoading").show();
+            var data = {
+                start: $("#roleTable tr").length,
+                length: length || 50 //TODO to defaults.
+            };
+            Filelocker.request("/account/get_all_roles", "loading roles", data, false, function(returnData) {
+                var html = "";
+                $.each(returnData.data, function() {
+                    html += "<tr id='role_"+this.roleId+"' class='roleRow'>";
+                    html += "<td id='roleNameElement_"+this.roleId+"' class='roleNameElement'><input type='checkbox' name='select_role' value='"+this.roleId+"' class='roleSelectBox' id='checkbox_"+this.roleId+"'>";
+                    html += "<div class='posrel'>";
+                    html += "<div id='menu_row_"+this.roleId+"' class='menuRoles hidden'>";
+                    html += "<ul class='menu'>";
+                    html += "<li><div class='button' style='width: 185px;'><a href='javascript:Admin.Role.promptUpdate(\""+this.roleId+"\", \""+this.roleFirstName+"\", \""+this.roleLastName+"\", \""+this.roleEmail+"\", "+this.roleQuota+", "+this.isRole.toString()+");' title='Edit role account for \""+this.roleId+"\"' class='editButton'><span><center>Edit Account</center></span></a></div></li>";
+                    html += "<li><div class='button' style='width: 185px;'><a href='javascript:Admin.Permission.load(\""+this.roleId+"\");' title='Grant and revoke role permissions for \""+this.roleId+"\"' class='wandButton'><span><center>Edit Permissions</center></span></a></div></li>";
+                    html += "</ul>";
+                    html += "</div>";
+                    html += "</td>";
+                    if(this.isAdmin)
+                        html += "<td><a href='javascript:Admin.Role.promptViewHistory(\""+this.roleId+"\");' class='admin' title='View Filelocker interactions for \""+this.roleId+"\" (admin)'>"+this.roleId+"</a></td>";
+                    else
+                        html += "<td><a href='javascript:Admin.Role.promptViewHistory(\""+this.roleId+"\");' class='clock' title='View Filelocker interactions for \""+this.roleId+"\"'>"+this.roleId+"</a></td>";
+                    html += "<td onClick='javascript:Admin.Role.rowClick(\""+this.roleId+"\")'>"+this.roleLastName+"</td>";
+                    html += "<td onClick='javascript:Admin.Role.rowClick(\""+this.roleId+"\")'>"+this.roleFirstName+"</td>";
+                    html += "<td onClick='javascript:Admin.Role.rowClick(\""+this.roleId+"\")'>"+this.roleEmail+"</td>";
+
+                    var percentUsed = 0;
+                    var quotaUsedMB = Math.round(parseFloat(this.roleQuotaUsed));
+                    if(parseInt(this.roleQuota) > 0)
+                        percentUsed = Math.round(parseFloat(this.roleQuotaUsed)/parseFloat(this.roleQuota)*100)
+                    if(parseInt(this.roleQuota) >= 1024)
+                        html += "<td onClick='javascript:Admin.Role.rowClick(\""+this.roleId+"\")'><span class='roleQuotaUsage pseudoLink' title='"+percentUsed+"% ("+quotaUsedMB+" MB) used'>"+Math.round(parseFloat(this.roleQuota)/1024).toFixed(1)+" GB</span></td>";
+                    else
+                        html += "<td onClick='javascript:Admin.Role.rowClick(\""+this.roleId+"\")'><span class='roleQuotaUsage pseudoLink' title='"+percentUsed+"% ("+quotaUsedMB+" MB) used'>"+this.roleQuota+" MB</span></td>";
+                    html += "<td onClick='javascript:Admin.Role.rowClick(\""+this.roleId+"\")' class='dropdownArrowNarrow rightborder'></td>";
+                    html += "</tr>";
+                });
+                $("#roleTable").append(html);
+                $("#roleTableSorter").trigger("update");
+                $("#roleTableSorter").trigger("applyWidgets");
+                Utility.tipsyfy();
+                $("#rolesLoadedNow").html($("#roleTable tr").length);
+                $("#roleSorterLoading").hide();
+            });
+        }
+        function create()
+        {
+            if($("#createRoleId").val() === "")
+                StatusResponse.create("creating role", "New role must have a role ID.", false);
+            else if($("#createRoleFirstName").val() === "" && $("#createRoleLastName").val() === "")
+                StatusResponse.create("creating role", "New role must have a name.", false);
+            else if($("#createRoleQuota").val() === "")
+                StatusResponse.create("creating role", "New role must have a quota.", false);
+            else if($("#createRolePassword").val() !== $("#createRolePasswordConfirm").val())
+                StatusResponse.create("creating role", "Passwords do not match.", false);
+            else
+            {
+                $("#roleCreateBox").dialog("close");
+                var data = {
+                    roleId: $("#createRoleId").val(),
+                    quota: $("#createRoleQuota").val(),
+                    firstName: $("#createRoleFirstName").val(),
+                    lastName: $("#createRoleLastName").val(),
+                    email: $("#createRoleEmail").val(),
+                    password: $("#createRolePassword").val(),
+                    confirmPassword: $("#createRolePasswordConfirm").val()
+                };
+                Filelocker.request("/account/create_role", "creating role", data, true, function() {
+                    Admin.load(Defaults.adminRolesTabIndex);
+                });
+            }
+        }
+        function update()
+        {
+            var data = {
+                roleId: $("#updateRoleId").val(),
+                quota: $("#updateRoleQuota").val(),
+                firstName: $("#updateRoleFirstName").val(),
+                lastName: $("#updateRoleLastName").val(),
+                email: $("#updateRoleEmail").val(),
+                password: $("#updateRolePassword").val(),
+                confirmPassword: $("#updateRoleConfirmPassword").val()
+            };
+            Filelocker.request("/account/update_role", "updating role", data, true, function() {
+                $("#roleUpdateBox").dialog("close");
+                Admin.load(Defaults.adminRolesTabIndex);
+            });
+        }
+        function del()
+        {
+            var action = "deleting roles";
+            var roleIds = "";
+            $("#roleTable :checked").each(function() { roleIds += $(this).val()+","; });
+            if(roleIds !== "")
+            {
+                Filelocker.request("/account/delete_roles", action, {roleIds:roleIds}, true, function() {
+                    Admin.load(Defaults.adminRolesTabIndex);
+                });
+            }
+            else
+                StatusResponse.create(action, "Select role(s) for deletion.", false);
+        }
+        function promptCreate()
+        {
+            $("#createRoleId").val("");
+            $("#createRoleFirstName").val("");
+            $("#createRoleLastName").val("");
+            $("#createRoleQuota").val("");
+            $("#createRoleEmail").val("");
+            $("#createRolePassword").val("");
+            $("#createRolePasswordConfirm").val("");
+            $("#bulkCreateRoleQuota").val("");
+            $("#bulkCreateRolePassword").val("");
+            $("#bulkCreateRolePasswordConfirm").val("");
+            $("#bulkCreateRolePermissions").empty();
+            Filelocker.request("/account/get_permissions", "retrieving role permissions", {}, false, function(returnData)
+            {
+                $.each(returnData.data, function(index, value) {
+                    $("#bulkCreateRolePermissions").append("<input type='checkbox' value='"+value.permissionId+"' id='bulkCreateCheckbox_"+index+"' name='select_permission' class='permissionSelectBox' /><span onClick='javascript:check(\"bulkCreateCheckbox_"+index+"\")'>" + value.permissionName + "</span><br />");
+                });
+                $("#roleCreateTabs").tabs();
+                $("#roleCreateBox").dialog("open");
+            });
+        }
+        function promptUpdate(roleId, firstName, lastName, email, quota)
+        {
+            $("#updateRoleFirstName").val(firstName);
+            $("#updateRoleLastName").val(lastName);
+            $("#updateRoleEmail").val(email);
+            $("#updateRoleQuota").val(quota);
+            $("#updateRoleId").val(roleId);
+            $("#roleUpdateBox").dialog("open");
+        }
+        function promptViewHistory(roleId)
+        {
+            $("#roleHistory").empty();
+            $("#roleHistoryCurrentRole").val(roleId);
+            var data = {
+                roleId:roleId,
+                startDate:$("#roleHistoryStartDate").val(),
+                endDate:$("#roleHistoryEndDate").val()
+            }
+            Filelocker.request("/history", "loading role history", data, false, function(returnData) {
+                $.each(returnData.data, function() {
+                    $("#roleHistory").append("<tr><td>"+this.actionDatetime+"</td><td class='"+this.displayClass+"'>"+this.action+"</td><td>"+this.message+"</td></tr>");
+                });
+                if($("#roleHistory").html() === "")
+                    $("#roleHistory").append("<tr><td colspan='3'><i>This role has no history of interactions with Filelocker.</i></td></tr>");
+                $("#roleHistoryTableSorter").tablesorter({
+                    headers: {
+                        0: {sorter: 'shortDate'},
+                        1: {sorter: 'text'},
+                        2: {sorter: 'text'}
+                    }
+                });
+                $("#roleHistoryBox").dialog("open");
+                $("#roleHistoryTableSorter").trigger("update");
+                $("#roleHistoryTableSorter").trigger("sorton",[[[0,0]]]);
+            });
+        }
+        function rowClick(roleId)
+        {
+            $(".menuRoles").each(function(index) { $(this).addClass("hidden");}); // Hide other menus
+            if($("#role_"+roleId).hasClass("rowSelected"))
+            {
+                $(".roleRow").each(function(index) { $(this).removeClass("rowSelected");}); // Deselects other rows
+                $("#role_"+roleId).removeClass("rowSelected"); // Select the row of the file
+                $("#roleNameElement_"+roleId).removeClass("leftborder");
+                $("#menu_row_"+roleId).addClass("hidden"); // Show the menu on the selected file
+            }
+            else
+            {
+                $(".roleRow").each(function(index) { $(this).removeClass("rowSelected");}); // Deselects other rows
+                $("#role_"+roleId).addClass("rowSelected"); // Select the row of the file
+                $("#roleNameElement_"+roleId).addClass("leftborder");
+                $("#menu_row_"+roleId).removeClass("hidden"); // Show the menu on the selected file
+            }
+        }
+        function selectAll()
+        {
+            $(".roleSelectBox").prop("checked", $("#allRolesCheckbox").prop("checked"));
+        }
+
+        return {
+            load:load,
+            create:create,
+            update:update,
+            del:del,
+            promptCreate:promptCreate,
+            promptUpdate:promptUpdate,
+            promptViewHistory:promptViewHistory,
+            rowClick:rowClick,
+            selectAll:selectAll
+        };
+    }();
     
     Attribute = function() {
         function create()
@@ -333,7 +531,7 @@ Admin = function() {
             };
             Filelocker.request("/account/create_attribute", "creating attribute", data, true, function() {
                 $("#attributeCreateBox").dialog("close");
-                load(2);
+                load(Defaults.adminAttributesTabIndex);
             });
         }
         function del()
@@ -344,7 +542,7 @@ Admin = function() {
             if(attributeIds !== "")
             {
                 Filelocker.request("/account/delete_attributes", action, {attributeIds: attributeIds}, true, function() {
-                    load(2);
+                    load(Defaults.adminAttributesTabIndex);
                 });
             }
             else
@@ -697,7 +895,7 @@ jQuery(document).ready(function(){
         },
         onComplete: function(id, fileName, response){
             StatusResponse.show(response, "creating users");
-            Admin.load(0);
+            Admin.load(Defaults.adminUsersTabIndex);
         }
     });
 });

@@ -185,6 +185,7 @@ class RootController:
         templateFiles = os.listdir(os.path.join(config['root_path'], "view"))
         configParameters = session.query(ConfigParameter).all()
         flUsers = session.query(User).slice(0,50)
+        flRoles = session.query(Role)
         totalFileCount = session.query(func.count(File.id))
         totalUserCount = session.query(func.count(User.id))
         totalMessageCount = session.query(func.count(Message.id))
