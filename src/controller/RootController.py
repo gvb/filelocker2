@@ -21,7 +21,7 @@ class RootController:
     share = ShareController.ShareController()
     file = FileController.FileController()
     account = AccountController.AccountController()
-    admin = AdminController
+    admin = AdminController.AdminController()
     message = MessageController.MessageController()
     #DropPrivileges(cherrypy.engine, umask=077, uid='nobody', gid='nogroup').subscribe()
 
@@ -180,7 +180,7 @@ class RootController:
 
     @cherrypy.expose
     @cherrypy.tools.requires_login()
-    def admin(self, **kwargs):
+    def admin_console(self, **kwargs):
         user, config = cherrypy.session.get("user"), cherrypy.request.app.config['filelocker']
         templateFiles = os.listdir(os.path.join(config['root_path'], "view"))
         configParameters = session.query(ConfigParameter).all()

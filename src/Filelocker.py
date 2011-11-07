@@ -30,15 +30,8 @@ def requires_login(permissionId=None, **kwargs):
         if cherrypy.session.get('user').date_tos_accept == None:
             raise cherrypy.HTTPRedirect(rootURL+"/sign_tos")
         elif permissionId is not None:
-            user, hasPermission = cherrypy.session.get('user'), False
-            if permissiondId in user.user_permissions:
-                hasPermission = True
-            if hasPermission == False:
-                for group in user.groups:
-                    if permissionId in group.group_permissions:
-                        hasPermission = True
-                        break
-            if hasPermission == False:
+            user = cherrypy.session.get('user')
+            if AccountController.user_has_permission(user, permissionId)==False:
                 raise HTTPError(403)
         else:
             pass

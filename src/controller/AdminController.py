@@ -2,10 +2,11 @@ import Filelocker
 import os
 import cherrypy
 import logging
-from lib.Formatters import strip_tags
+from lib.Formatters import *
 from Cheetah.Template import Template
 __author__="wbdavis"
 __date__ ="$Sep 25, 2011 9:36:30 PM$"
+
 class AdminController:
     @cherrypy.expose
     @cherrypy.tools.requires_login(permission="admin")
@@ -137,7 +138,7 @@ class AdminController:
             logging.error("[%s] [revoke_user_permission] [Problem revoking a user permission: %s]" % (user.id, str(e)))
             fMessages.append("Problem revoking a user permission: %s" % str(e))
         return fl_response(sMessages, fMessages, format)
-
+    
     @cherrypy.expose
     @cherrypy.tools.requires_login(permission="admin")
     def update_user(self, userId, quota, email, firstName, lastName, password, confirmPassword, format="json", **kwargs):
@@ -170,7 +171,7 @@ class AdminController:
             vaultSpaceFreeMB, vaultCapacityMB = FileController.get_vault_usage()
             vaultUsedMB = vaultCapacityMB - vaultSpaceFreeMB
         except Exception, e:
-            logging.error("[%s] [get_vault_usage] [Error while getting quota: %s]" % (user.userId,str(e)))
+            logging.error("[%s] [get_vault_usage] [Error while getting quota: %s]" % (user.id,str(e)))
             fMessages.append("Could not get vault usage: %s" % str(e))
         return fl_response(sMessages, fMessages, format, data={'vaultCapacityMB': vaultCapacityMB , 'vaultUsedMB': vaultUsedMB})
 
