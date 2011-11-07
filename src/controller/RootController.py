@@ -186,9 +186,9 @@ class RootController:
         configParameters = session.query(ConfigParameter).all()
         flUsers = session.query(User).slice(0,50)
         flRoles = session.query(Role)
-        totalFileCount = session.query(func.count(File.id))
-        totalUserCount = session.query(func.count(User.id))
-        totalMessageCount = session.query(func.count(Message.id))
+        totalFileCount = session.query(func.count(File.id)).scalar()
+        totalUserCount = session.query(func.count(User.id)).scalar()
+        totalMessageCount = session.query(func.count(Message.id)).scalar()
         currentUsersList = []
         currentUploads = len(cherrypy.file_uploads)
         logsFile = open(cherrypy.config["log.error_file"])

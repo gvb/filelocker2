@@ -66,10 +66,10 @@ class AdminController:
             userList = session.query(User).all()
             mycsv = ""
             for flUser in userList:
-                mycsv = mycsv + flUser.id + ", " + flUser.first_name + ", " + flUser.last_name + ", " + flUser.email + "\n"
+                mycsv = mycsv + str(flUser.id) + ", " + str(flUser.first_name) + ", " + str(flUser.last_name) + ", " + str(flUser.email) + "\n"
             response = cherrypy.response
             response.headers['Cache-Control'] = "no-cache"
-            response.headers['Content-Disposition'] = '%s; filename="%s"' % ("attachment", "fileLockerUsers.csv")
+            response.headers['Content-Disposition'] = '%s; filename="%s"' % ("attachment", "FileockerUsers.csv")
             response.headers['Content-Type'] = "application/x-download"
             response.headers['Pragma']="no-cache"
             response.body = mycsv
@@ -78,7 +78,7 @@ class AdminController:
             return response.body
         except Exception, e:
             logging.error("[%s] [download_user_data] [Unable to serve user data CSV: %s]" % (user.id, str(e)))
-            raise HTTPError(500, "Unable to serve user data CSV: %s" % str(e))
+            raise cherrypy.HTTPError(500, "Unable to serve user data CSV: %s" % str(e))
 
     @cherrypy.expose
     @cherrypy.tools.requires_login(permission="admin")
