@@ -36,8 +36,8 @@ class AdminController:
             userId = strip_tags(userId)
             flUser = session.query(User).filter(User.id == userId).one()
             permissions = session.query(Permission).all()
-            permissionFound = False
             for permission in permissions:
+                permissionFound = False
                 if permission in flUser.permissions:
                     permissionFound = True
                     permissionData.append({'permissionId': permission.id, 'permissionName': permission.name, 'inheritedFrom': "user"})
