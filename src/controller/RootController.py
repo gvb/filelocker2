@@ -212,6 +212,7 @@ class RootController:
     def history(self, userId=None, startDate=None, endDate=None, logAction=None, format="html", **kwargs):
         sMessages, fMessages, user= ([],[],cherrypy.session.get("user"))
         config = cherrypy.request.app.config['filelocker']
+        userId = strip_tags(userId) if strip_tags(userId) != None else user.id
         if (userId != user.id and AccountController.user_has_permission(user, "admin")==False):
             raise cherrypy.HTTPError(403)
         actionList, actionLogList = ([], [])
@@ -228,22 +229,21 @@ class RootController:
             if endDate is not None:
                 endDateFormatted = datetime.datetime(*time.strptime(strip_tags(endDate), "%m/%d/%Y")[0:5])
             else:
-                endDateFormatted = today
-            actionLogList = session.query(AuditLog).filter(and_(AuditLog.date > startDateFormatted, AuditLog.date < endDateFormatted))
+                endDateFormatted = today + datetime.timedelta(days=1)
+            actionLogList = session.query(AuditLog).filter(and_(AuditLog.date > startDateFormatted, AuditLog.date < endDateFormatted)).all()
+            print "ActionLog Count: %s" % str(len(actionLogList))
 
             if logAction is None or logAction == "":
                 logAction = "all_minus_login"
                 actionLogList = actionLogList.filter(AuditLog.action != "Login")
-            if userId is None:
-                userId = user.id
 
             for log in actionLogList:
-                log.displayClass = "%s_%s" % ("audit", log.action.replace(" ", "_").lower())
-                log.displayClass = re.sub('_\(.*?\)', '', log.displayClass) # Removes (You) and (Recipient) from Read Message actions
+                log.display_class = "%s_%s" % ("audit", log.action.replace(" ", "_").lower())
+                log.display_class = re.sub('_\(.*?\)', '', log.display_class) # Removes (You) and (Recipient) from Read Message actions
             actionNames = session.query(AuditLog.action).filter(or_(AuditLog.initiator_user_id==userId, AuditLog.affected_user_id==userId)).distinct()
             for actionLog in actionNames:
                 if actionLog not in actionList:
-                    actionList.append(actionLog)
+                    actionList.append(actionLog.action)
         except Exception, e:
             fMessages.append(str(e))
         if format == "html":

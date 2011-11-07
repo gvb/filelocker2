@@ -27,8 +27,8 @@
         <tbody>
         #for $actionLog in $actionLogList
         <tr>
-            <td>$actionLog.actionDatetime.strftime("%m/%d/%Y %H:%M")</td>
-            <td class="$actionLog.displayClass">$actionLog.action</td>
+            <td>$actionLog.date.strftime("%m/%d/%Y %H:%M")</td>
+            <td class="$actionLog.display_class">$actionLog.action</td>
             <td>$actionLog.message</td>
         </tr>
         #end for
@@ -61,7 +61,7 @@
             
                 #for $action in $actionList
                     #if $logAction is not None and $logAction == $action
-                        <option value="$action" selected>$action</option>
+                        <option value="$action" selected>$str($action)</option>
                     #else
                         <option value="$action">$action</option>
                     #end if
