@@ -18,7 +18,7 @@ class AccountController:
     def create_user(self, userId, firstName, lastName, email, quota, format="json", **kwargs):
         sMessages, fMessages = ([], [])
         try:
-            newUser = User(userId=strip_tags(userId), firstName=strip_tags(firstName), lastName=strip_tags(lastName), email=strip_tags(email), quota=int(quota))
+            newUser = User(id=strip_tags(userId), first_name=strip_tags(firstName), last_name=strip_tags(lastName), email=strip_tags(email), quota=int(quota))
             if kwargs.has_key("password") and kwargs.has_key("confirmPassword"):
                 if kwargs['password'] == kwargs['confirmPassword']:
                     newUser.set_password(kwargs['password'])
@@ -30,8 +30,8 @@ class AccountController:
         except ValueError:
                 fMessages.append("Invalid number entered for quota. Quota set to 0.")
         except Exception, e:
-            logging.error("Could not create user acount with ID:%s - %s" % (userId, str(e)))
-            fMessages.append("Could not create user acount: %s" % str(e))
+            logging.error("Could not create user account with ID:%s - %s" % (userId, str(e)))
+            fMessages.append("Could not create user account: %s" % str(e))
         return fl_response(sMessages, fMessages, format)
     
     @cherrypy.expose
@@ -491,20 +491,6 @@ class AccountController:
             return fl_response(sMessages, fMessages, "json", data=shareLinkList) #This is kind of a hack since autocomplete requires a unique data structure, eventually we may be able to move this to the formatter
         else:
             return fl_response(sMessages, fMessages, format, data=foundUsers)
-        
-
-#    Ideally this won't be needed anymore
-#    @cherrypy.expose
-#    @cherrypy.tools.requires_login()
-#    def get_group_members(self, groupId, format="searchbox_html", **kwargs):
-#        user, fl = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'])
-#        group = fl.get_group(user, groupId)
-#        searchWidget = HTTP_User.get_search_widget(HTTP_User(), "manage_groups")
-#        templateFile = fl.get_template_file('view_group.tmpl')
-#        tpl = Template(file=templateFile, searchList=[locals(),globals()])
-#        return str(tpl)
-
-
 
 class ExternalDirectory(object):
     directory = None
