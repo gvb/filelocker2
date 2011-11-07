@@ -233,9 +233,9 @@ class RootController:
 
             if logAction is None or logAction == "":
                 logAction = "all_minus_login"
-                actionLogList.filter(AuditLog.action != "Login")
+                actionLogList = actionLogList.filter(AuditLog.action != "Login")
             if userId is None:
-                userId = user.userId
+                userId = user.id
 
             for log in actionLogList:
                 log.displayClass = "%s_%s" % ("audit", log.action.replace(" ", "_").lower())

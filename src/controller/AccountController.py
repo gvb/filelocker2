@@ -31,7 +31,7 @@ class AccountController:
                 fMessages.append("Invalid number entered for quota. Quota set to 0.")
         except Exception, e:
             logging.error("Could not create user account with ID:%s - %s" % (userId, str(e)))
-            fMessages.append("Could not create user account: %s" % str(e))
+            fMessages.append("[%s] [create_user] [Could not create user account: %s]" % (user.id, str(e)))
         return fl_response(sMessages, fMessages, format)
     
     @cherrypy.expose
