@@ -82,7 +82,8 @@ Admin = function() {
     {
         $("#adminLink").removeClass("settings");
         $("#adminLink").addClass("loading");
-        $("#wrapper_2col").load(FILELOCKER_ROOT+"/admin?format=text&ms=" + new Date().getTime(), {}, function (responseText, textStatus, xhr) {
+        //todo no load
+        $("#wrapper_2col").load(FILELOCKER_ROOT+"/admin_console?format=text&ms=" + new Date().getTime(), {}, function (responseText, textStatus, xhr) {
             if (textStatus == "error")
                 StatusResponse.create("loading admin interface", "Error "+xhr.status+": "+xhr.textStatus, false);
             else 
@@ -102,7 +103,7 @@ Admin = function() {
     }
     function getVaultUsage()
     {
-        Filelocker.request("/admin/get_vault_usage", "retrieving vault usage", {}, true, function(returnData) {
+        Filelocker.request("/admin/get_vault_usage", "retrieving vault usage", {}, false, function(returnData) {
             if (returnData.data != null)
             {
                 var percentFull = parseInt(parseFloat(returnData.data.vaultUsedMB) / parseFloat(returnData.data.vaultCapacityMB) * 100, 10);
@@ -430,7 +431,7 @@ Admin = function() {
         {
             if ($('#template_selector').val() !== "")
             {
-                Filelocker.request("/admin/get_template", "loading template", {templateName:$('#template_selector').val()}, true, function(returnData) {
+                Filelocker.request("/admin/get_template_text", "loading template", {templateName:$('#template_selector').val()}, true, function(returnData) {
                     $("#templateEditArea").val(returnData.data);
                 });
             }

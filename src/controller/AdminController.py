@@ -2,6 +2,7 @@ import Filelocker
 import os
 import cherrypy
 import logging
+import FileController
 from lib.Formatters import *
 from Cheetah.Template import Template
 __author__="wbdavis"
@@ -268,7 +269,7 @@ class AdminController:
         user, sMessages, fMessages, templateText = (cherrypy.session.get("user"), [], [], "")
         try:
             templateName = strip_tags(templateName)
-            templateFilePath = fl.get_template_file(templateName)
+            templateFilePath = get_template_file(templateName)
             templateFile = open(templateFilePath)
             templateText = templateFile.read()
         except Exception, e:
@@ -305,7 +306,7 @@ class AdminController:
             filePath = os.path.join(config['vault'], "custom", templateName)
             if os.path.exists(filePath): #This causes no problems if the tempate doesn't already exist
                 os.remove(filePath)
-            templateFile = open(fl.get_template_file(templateName))
+            templateFile = open(get_template_file(templateName))
             templateText = templateFile.read()
             sMessages.append("Successfully reverted template file %s to original." % templateName)
         except Exception, e:
