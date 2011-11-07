@@ -613,9 +613,9 @@ class FileController(object):
                     if key.split(":")[0] == cherrypy.session.get('user').id: # This will actually get uploads by the user and uploads using a ticket they generated
                         for fileStat in cherrypy.file_uploads[key]:
                             uploadStats.append(fileStat.stat_dict())
-            elif cherrypy.session.has_key("uploadTicket"):
-                uploadTicket = cherrypy.session.get("uploadTicket")
-                uploadKey = uploadTicket.owner_id + ":" + uploadTicket.id
+            elif cherrypy.session.has_key("uploadRequest"):
+                uploadRequest = cherrypy.session.get("uploadRequest")
+                uploadKey = uploadRequest.owner_id + ":" + uploadRequest.id
                 if cherrypy.file_uploads.has_key(uploadKey):
                     for fileStat in cherrypy.file_uploads[uploadKey]:
                         uploadStats.append(fileStat.stat_dict())

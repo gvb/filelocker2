@@ -290,8 +290,8 @@ class RootController:
     @cherrypy.expose
     def upload_request(self, requestId=None, msg=None, **kwargs):
         messages, uploadRequest, requestId, config = [], None, strip_tags(requestId), cherrypy.request.app.config['filelocker']
-        if msg is not None and int(msg) == 1: message.append("You must supply a valid ID and password to upload files for this request")
-        if msg is not None and int(msg) == 2: message.append("Unable to load upload request")
+        if msg is not None and int(msg) == 1: messages.append("You must supply a valid ID and password to upload files for this request")
+        if msg is not None and int(msg) == 2: messages.append("Unable to load upload request")
         requestId = strip_tags(requestId)
         if requestId is not None:
             try:

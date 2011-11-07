@@ -55,10 +55,9 @@
                     <input type="hidden" name="requestId" value="$requestId" />
                     #end if
                 </div>
-
                 <div>
                     <label for="password">Password:</label>
-                    #if $uploadRequest.password is not None
+                    #if $uploadRequest is None or $uploadRequest.password is not None
                     <input type="password" name="password" id="password" />
                     #else
                     <input type="test" disabled="disabled" name="password" id="password" value="No password required" />
