@@ -58,6 +58,20 @@ class AdminController:
 
     @cherrypy.expose
     @cherrypy.tools.requires_login(permission="admin")
+    def get_permissions(self, format="json", **kwargs):
+        sMessages, fMessages, permissionData = ([], [], [])
+        try:
+            permissions = session.query(Permission).all()
+            for permission in permissions:
+                permissionData.append({'permissionId': permission.id, 'permissionName': permission.name, 'inheritedFrom': ""})
+            sMessagesa.append("Got permissions")
+        except Exception, e:
+            logging.error("Couldn't get permissions %s: %s" % (userId, str(e)))
+            fMessages.append("Could not get permissions: %s" % str(e))
+        return fl_response(sMessages, fMessages, format, data=permissionData)
+
+    @cherrypy.expose
+    @cherrypy.tools.requires_login(permission="admin")
     def bulk_create_user(self, quota, password, permissions, format="json", **kwargs):
         user, sMessages, fMessages = (cherrypy.session.get("user"),[], [])
         try:
