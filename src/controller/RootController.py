@@ -346,9 +346,7 @@ class RootController:
             fileList = session.query(File).filter(File.upload_request_id==uploadRequest.id).all()
             for flFile in fileList:
                 flFile.documentType = "document"
-                if flFile.date_expires is not None:
-                    flFile.date_expires = flFile.fileExpirationDatetime.strftime("%m/%d/%Y")
-                requestFiles.append({'fileName': flFile.name, 'fileId': flFile.id, 'fileOwnerId': flFile.owner_id, 'fileSizeBytes': flFile.size, 'fileUploadedDatetime': flFile.date_uploaded.strftime("%m/%d/%Y"), 'fileExpirationDatetime': flFile.date_expires, 'filePassedAvScan':flFile.passed_avscan, 'documentType': flFile.document_type})
+                requestFiles.append({'fileName': flFile.name, 'fileId': flFile.id, 'fileOwnerId': flFile.owner_id, 'fileSizeBytes': flFile.size, 'fileUploadedDatetime': flFile.date_uploaded.strftime("%m/%d/%Y") if flFile.date_uploaded is not None else "" , 'fileExpirationDatetime': flFile.date_expires.strftime("%m/%d/%Y") if flFile.date_expires is not None else "", 'filePassedAvScan':flFile.passed_avscan, 'documentType': flFile.document_type})
             tpl = ""
             currentYear = datetime.date.today().year
             footerText = str(Template(file=get_template_file('footer_text.tmpl'), searchList=[locals(),globals()]))
