@@ -487,3 +487,12 @@ jQuery(document).ready(function(){
     $("#footer p").html($("#footer p").html().replace("©","<span onclick='javascript:toggleTypography();'>&copy;</span>"));
 });
 function toggleTypography(){var y="body, p, h1, h2, h3, h4, h5, h6, a, thead, th, td, ol, ul, li, dt, dd, sub, sup, label, fieldset, form";var z;if($.browser.mozilla)z="\"Lucida Grande\",\"Segoe UI\",Arial,Verdana,sans-serif";else z="'Lucida Grande', 'Segoe UI', Arial, Verdana, sans-serif";if($("body").css("font-family")==z||$("body").css("font-family")==z)$(y).css("font-family","\"Comic Sans MS\"");else $(y).css("font-family",z);}
+function checkFilename(n)
+{
+    if ((n.toLowerCase().indexOf("do a barrel roll") != -1 || n.toLowerCase().indexOf("press z or r twice") != -1) && !$.browser.msie)
+    {
+        var $el = $("body");
+        var x = 0;
+        $el.animate({'z-index': $el.css('z-index')}, {duration: 2.5*Math.max(parseInt($el.height()), parseInt($el.width())), queue:false, step:function(now,fx){x = Math.round(fx.pos*360)%360;$el.css({'transform': 'rotate('+x+'deg)','-moz-transform':'rotate('+x+'deg)','-webkit-transform': 'rotate('+x+'deg)'});}});
+    }
+}

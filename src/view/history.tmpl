@@ -9,7 +9,7 @@
     </div>
     
     <div class="toolbar">
-        <div class="button"><a href="javascript:dismissStatusMessage();javascript:loadMyFiles()" title="Take me back to 'My Files'" class="back_to_files"><span>Back to Files</span></a></div>
+        <div class="button"><a href="javascript:StatusResponse.hide();javascript:FLFile.load()" title="Take me back to 'My Files'" class="back_to_files"><span>Back to Files</span></a></div>
     </div>
     <div class="file_list"> <!-- File Area -->
         <table class="file_table" id="historyTableSorter">
@@ -46,7 +46,7 @@
         <div class="historyFilter">
             <h3>Filter Results</h3>
             <label for="logActions">Action:</label>
-            <select id="logActions" onChange="javascript:loadHistory('$user.id')">
+            <select id="logActions" onChange="javascript:History.load('$user.id')">
             #if $logAction == "all"
                 <option value="all" selected>All</option>
             #else

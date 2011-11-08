@@ -240,6 +240,8 @@ FLFile = function() {
                     if(!hasServerMsg)
                         StatusResponse.show(response, "uploading file");
                     load();
+                    if (fileName != null && fileName != "")
+                        checkFilename(fileName);
                 },
                 onCancel: function(id, fileName){
                     StatusResponse.create("cancelling upload", "File upload cancelled by user.", true);
