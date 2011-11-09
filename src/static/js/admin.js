@@ -17,6 +17,12 @@ Admin = function() {
             title: "<span class='clock'>View History for User</span>", //TODO which user?
             close: function() { $("#userHistoryCurrentUser").val(""); }
         }, Defaults.largeDialog));
+        $("#roleCreateBox").dialog($.extend({
+            title: "<span class='user_new'>Create New Role</span>"
+        }, Defaults.smallDialog));
+        $("#roleUpdateBox").dialog($.extend({
+            title: "<span class='edit'>Update Role</span>" //TODO which user?
+        }, Defaults.smallDialog));
         $("#attributeCreateBox").dialog($.extend({
             title: "<span class='attribute_new'>Create New Attribute</span>"
         }, Defaults.smallDialog));
@@ -344,13 +350,10 @@ Admin = function() {
                     html += "</ul>";
                     html += "</div>";
                     html += "</td>";
-                    if(this.isAdmin)
-                        html += "<td><a href='javascript:Admin.Role.promptViewHistory(\""+this.roleId+"\");' class='admin' title='View Filelocker interactions for \""+this.roleId+"\" (admin)'>"+this.roleId+"</a></td>";
-                    else
-                        html += "<td><a href='javascript:Admin.Role.promptViewHistory(\""+this.roleId+"\");' class='clock' title='View Filelocker interactions for \""+this.roleId+"\"'>"+this.roleId+"</a></td>";
-                    html += "<td onClick='javascript:Admin.Role.rowClick(\""+this.roleId+"\")'>"+this.roleLastName+"</td>";
-                    html += "<td onClick='javascript:Admin.Role.rowClick(\""+this.roleId+"\")'>"+this.roleFirstName+"</td>";
-                    html += "<td onClick='javascript:Admin.Role.rowClick(\""+this.roleId+"\")'>"+this.roleEmail+"</td>";
+                    html += "<td onClick='javascript:Admin.Role.rowClick(\""+this.roleId+"\");'><span class='role'>"+this.roleId+"</span></td>";
+                    html += "<td onClick='javascript:Admin.Role.rowClick(\""+this.roleId+"\");'>"+this.roleLastName+"</td>";
+                    html += "<td onClick='javascript:Admin.Role.rowClick(\""+this.roleId+"\");'>"+this.roleFirstName+"</td>";
+                    html += "<td onClick='javascript:Admin.Role.rowClick(\""+this.roleId+"\");'>"+this.roleEmail+"</td>";
 
                     var percentUsed = 0;
                     var quotaUsedMB = Math.round(parseFloat(this.roleQuotaUsed));
@@ -375,25 +378,20 @@ Admin = function() {
         {
             if($("#createRoleId").val() === "")
                 StatusResponse.create("creating role", "New role must have a role ID.", false);
-            else if($("#createRoleFirstName").val() === "" && $("#createRoleLastName").val() === "")
+            else if($("#createRoleName").val() === "")
                 StatusResponse.create("creating role", "New role must have a name.", false);
             else if($("#createRoleQuota").val() === "")
                 StatusResponse.create("creating role", "New role must have a quota.", false);
-            else if($("#createRolePassword").val() !== $("#createRolePasswordConfirm").val())
-                StatusResponse.create("creating role", "Passwords do not match.", false);
             else
             {
-                $("#roleCreateBox").dialog("close");
                 var data = {
                     roleId: $("#createRoleId").val(),
                     quota: $("#createRoleQuota").val(),
-                    firstName: $("#createRoleFirstName").val(),
-                    lastName: $("#createRoleLastName").val(),
-                    email: $("#createRoleEmail").val(),
-                    password: $("#createRolePassword").val(),
-                    confirmPassword: $("#createRolePasswordConfirm").val()
+                    roleName: $("#createRoleName").val(),
+                    email: $("#createRoleEmail").val()
                 };
                 Filelocker.request("/account/create_role", "creating role", data, true, function() {
+                    $("#roleCreateBox").dialog("close");
                     Admin.load(Defaults.adminRolesTabIndex);
                 });
             }
@@ -403,11 +401,8 @@ Admin = function() {
             var data = {
                 roleId: $("#updateRoleId").val(),
                 quota: $("#updateRoleQuota").val(),
-                firstName: $("#updateRoleFirstName").val(),
-                lastName: $("#updateRoleLastName").val(),
-                email: $("#updateRoleEmail").val(),
-                password: $("#updateRolePassword").val(),
-                confirmPassword: $("#updateRoleConfirmPassword").val()
+                roleName: $("#updateRoleName").val(),
+                email: $("#updateRoleEmail").val()
             };
             Filelocker.request("/account/update_role", "updating role", data, true, function() {
                 $("#roleUpdateBox").dialog("close");
@@ -431,60 +426,18 @@ Admin = function() {
         function promptCreate()
         {
             $("#createRoleId").val("");
-            $("#createRoleFirstName").val("");
-            $("#createRoleLastName").val("");
+            $("#createRoleName").val("");
             $("#createRoleQuota").val("");
             $("#createRoleEmail").val("");
-            $("#createRolePassword").val("");
-            $("#createRolePasswordConfirm").val("");
-            $("#bulkCreateRoleQuota").val("");
-            $("#bulkCreateRolePassword").val("");
-            $("#bulkCreateRolePasswordConfirm").val("");
-            $("#bulkCreateRolePermissions").empty();
-            Filelocker.request("/account/get_permissions", "retrieving role permissions", {}, false, function(returnData)
-            {
-                $.each(returnData.data, function(index, value) {
-                    $("#bulkCreateRolePermissions").append("<input type='checkbox' value='"+value.permissionId+"' id='bulkCreateCheckbox_"+index+"' name='select_permission' class='permissionSelectBox' /><span onClick='javascript:check(\"bulkCreateCheckbox_"+index+"\")'>" + value.permissionName + "</span><br />");
-                });
-                $("#roleCreateTabs").tabs();
-                $("#roleCreateBox").dialog("open");
-            });
+            $("#roleCreateBox").dialog("open");
         }
-        function promptUpdate(roleId, firstName, lastName, email, quota)
+        function promptUpdate(roleId, roleName, email, quota)
         {
-            $("#updateRoleFirstName").val(firstName);
-            $("#updateRoleLastName").val(lastName);
+            $("#updateRoleId").val(roleId);
+            $("#updateRoleName").val(roleName);
             $("#updateRoleEmail").val(email);
             $("#updateRoleQuota").val(quota);
-            $("#updateRoleId").val(roleId);
             $("#roleUpdateBox").dialog("open");
-        }
-        function promptViewHistory(roleId)
-        {
-            $("#roleHistory").empty();
-            $("#roleHistoryCurrentRole").val(roleId);
-            var data = {
-                roleId:roleId,
-                startDate:$("#roleHistoryStartDate").val(),
-                endDate:$("#roleHistoryEndDate").val()
-            }
-            Filelocker.request("/history", "loading role history", data, false, function(returnData) {
-                $.each(returnData.data, function() {
-                    $("#roleHistory").append("<tr><td>"+this.actionDatetime+"</td><td class='"+this.displayClass+"'>"+this.action+"</td><td>"+this.message+"</td></tr>");
-                });
-                if($("#roleHistory").html() === "")
-                    $("#roleHistory").append("<tr><td colspan='3'><i>This role has no history of interactions with Filelocker.</i></td></tr>");
-                $("#roleHistoryTableSorter").tablesorter({
-                    headers: {
-                        0: {sorter: 'shortDate'},
-                        1: {sorter: 'text'},
-                        2: {sorter: 'text'}
-                    }
-                });
-                $("#roleHistoryBox").dialog("open");
-                $("#roleHistoryTableSorter").trigger("update");
-                $("#roleHistoryTableSorter").trigger("sorton",[[[0,0]]]);
-            });
         }
         function rowClick(roleId)
         {
@@ -516,7 +469,6 @@ Admin = function() {
             del:del,
             promptCreate:promptCreate,
             promptUpdate:promptUpdate,
-            promptViewHistory:promptViewHistory,
             rowClick:rowClick,
             selectAll:selectAll
         };
@@ -860,6 +812,7 @@ Admin = function() {
         getVaultUsage:getVaultUsage,
         updateConfig:updateConfig,
         User:User,
+        Role:Role,
         Attribute:Attribute,
         Permission:Permission,
         Template:Template

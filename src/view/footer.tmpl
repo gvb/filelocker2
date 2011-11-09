@@ -27,11 +27,6 @@
                     <label for="uploadScanFile">Other options:</label>
                     <input type="checkbox" name="scanFile" id="uploadScanFile" checked="checked" /><span onclick="javascript:Utility.check('uploadScanFile');">Scan for viruses?</span>
                 </div>
-                #if $AccountController.user_has_permission($user, "admin")
-                <div>
-                    <input type="checkbox" name="systemUpload" id="systemUpload" /><span onclick="javascript:Utility.check('systemUpload');">System upload?</span>
-                </div>
-                #end if
                 #if $config['geotagging']
                 <div id="uploadGeolocationOption">
                     <input type="checkbox" name="uploadGeolocation" id="uploadGeolocation" onClick="javascript:setGeoData();" /><span onclick="javascript:Utility.check('uploadGeolocation');javascript:setGeoData();">Geotag this file upload?</span> <a href="javascript:Help.prompt('help_geotag');" class="helpLink">What's this?</a>
@@ -306,6 +301,63 @@
                 </tbody>
                 </table>
             </div>
+        </div>
+    </div>
+</div>
+
+<div id="roleCreateBox" class="hidden">
+    <div class="popup_wrapper">
+        <div class="popup_small">
+            <form action="" name="form" id="singleRoleCreateForm">
+                <div>
+                    <label for="createRoleId">Role ID:</label>
+                    <input type="text" name="createRoleId" id="createRoleId" size="10" value="" />
+                </div>
+                <div>
+                    <label for="createRoleName">Role name:</label>
+                    <input type="text" name="createRoleName" id="createRoleName" size="10" value="" />
+                </div>
+                <div>
+                    <label for="createRoleQuota">Quota (in MB):</label>
+                    <input type="text" name="createRoleQuota" id="createRoleQuota" size="10" value="" />
+                </div>
+                <div>
+                    <label for="createRoleEmail">Email:</label>
+                    <input type="text" name="createRoleEmail" id="createRoleEmail" size="10" value="" />
+                </div>
+                <br />
+                <div>
+                    <div class="button" id="createRoleButton"><a href="javascript:Admin.Role.create();" title="Create a new Filelocker role" class="saveButton"><span>Create Role</span></a></div>
+                </div>
+                <div class="clear"></div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div id="roleUpdateBox" class="hidden">
+    <div class="popup_wrapper">
+        <div class="popup_small">
+            <form action="" name="form" id="roleUpdateForm">
+                <div>
+                    <label for="updateRoleQuota">Quota (MB):</label>
+                    <input type="text" name="updateRoleQuota" id="updateRoleQuota" size="10" value="" />
+                </div>
+                <div>
+                    <label for="updateRoleName">Role Name:</label>
+                    <input type="text" name="updateRoleName" id="updateRoleName" size="10" value="" />
+                </div>
+                <div>
+                    <label for="updateRoleEmail">Email:</label>
+                    <input type="text" name="updateRoleEmail" id="updateRoleEmail" size="10" value="" />
+                </div>
+                <br />
+                <input type="hidden" id="updateRoleId" value=""/>
+                <div>
+                    <div class="button" id="updateRoleButton"><a href="javascript:Admin.Role.update();" title="Save changes to this Filelocker role" class="saveButton"><span>Update Role</span></a></div>
+                </div>
+                <div class="clear"></div>
+            </form>
         </div>
     </div>
 </div>

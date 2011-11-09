@@ -340,7 +340,7 @@ function poll()
                             totalToDisplay = total.toFixed(0);
                         else
                             totalToDisplay = total.toFixed(2);
-                        $("#progressBarSection").append("<tr class='progress_row'><td></td><td><div class='progressbarDoc'></div><div id='"+rowId+"'></div></td><td>"+totalToDisplay+" "+suffix+"</td><td id='"+rowId+"_eta'>"+eta+" "+timeSuffix+"</td><td id='"+rowId+"_cancel'><a href='javascript:uploader._handler.cancel("+uIndex+");' class='inlineLink' title='Cancel File Upload'><span class='cross'>&nbsp;</span></a></td></tr>"); 
+                        $("#progressBarSection").append("<tr class='progress_row'><td></td><td><div class='progressbarDoc'></div><div id='"+rowId+"'></div></td><td>"+totalToDisplay+" "+suffix+"</td><td id='"+rowId+"_eta'>"+eta+" "+timeSuffix+"</td><td id='"+rowId+"_cancel'><a href='javascript:Filelocker.uploader._handler.cancel("+uIndex+");' class='inlineLink' title='Cancel File Upload'><span class='cross'>&nbsp;</span></a></td></tr>");
                         $("#"+rowId).progressbar({value:percent});
                         $("#"+rowId+" >div").html("<span class='document progressBarText' title='"+fileName+": "+Math.round(uploaded)+" kB of "+Math.round(total)+" "+suffix+" transferred at "+Math.round(speed)+" kBps'>"+fileName+": "+fileStatus+"</span>");
                         if(fileStatus == "Scanning and Encrypting" || fileStatus == "Encrypting")
@@ -482,10 +482,17 @@ jQuery(document).ready(function(){
             return this.replace(/^\s+|\s+$/g, ''); 
         };
     }
+
+    // Override the default error handler to tell the user when a JS error occurs.
+    window.onerror = function myErrorHandler(errorMsg, url, lineNumber) {
+        StatusResponse.create("performing action", "JavaScript error on line " + lineNumber + " of " + url.substring(url.lastIndexOf('/')+1) + ": " + errorMsg, false);
+        return true;
+    }
     
     Utility.tipsyfy();
     $("#footer p").html($("#footer p").html().replace("©","<span onclick='javascript:toggleTypography();'>&copy;</span>"));
 });
+
 function toggleTypography(){var y="body, p, h1, h2, h3, h4, h5, h6, a, thead, th, td, ol, ul, li, dt, dd, sub, sup, label, fieldset, form";var z;if($.browser.mozilla)z="\"Lucida Grande\",\"Segoe UI\",Arial,Verdana,sans-serif";else z="'Lucida Grande', 'Segoe UI', Arial, Verdana, sans-serif";if($("body").css("font-family")==z||$("body").css("font-family")==z)$(y).css("font-family","\"Comic Sans MS\"");else $(y).css("font-family",z);}
 function checkFilename(n)
 {

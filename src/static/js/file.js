@@ -206,25 +206,18 @@ FLFile = function() {
         $("#uploadBox").dialog("open");
         if($("#uploadButton")[0])
         {
-            uploader = new qq.FileUploader({
+            Filelocker.uploader = new qq.FileUploader({
                 element: $("#uploadButton")[0],
                 listElement: $("#progressBarSection")[0],
-                action: FILELOCKER_ROOT+'/file/upload?format=json',
+                action: FILELOCKER_ROOT+'/file/upload',
                 params: {},
-                sizeLimit: 2147483647,
+                //sizeLimit: 2147483647,
                 onSubmit: function(id, fileName){
-                    var systemUpload = "no";
-                    if ($("#systemUpload").length >0)
-                    {
-                        if ($("#systemUpload").is(":checked"))
-                            systemUpload = "yes";
-                    }
-                    uploader.setParams({
-                        scanFile: $("#uploadScanFile").is(":checked"),
+                    Filelocker.uploader.setParams({
+                        scanFile: $("#uploadScanFile").prop("checked"),
                         fileNotes: $("#uploadFileNotes").val(),
                         expiration: $("#uploadExpiration").val(),
                         uploadIndex: id,
-                        systemUpload: systemUpload,
                         fileName: fileName
                     });
                     $("#uploadBox").dialog("close");
@@ -233,18 +226,16 @@ FLFile = function() {
                         pollerId = setInterval(function() { poll(); }, 1000);
                 },
                 onProgress: function(id, fileName, loaded, total){
-                    //checkServerMessages("uploading file");
+                    Filelocker.checkMessages("uploading file");
                 },
                 onComplete: function(id, fileName, response){
-                    var hasServerMsg = Filelocker.checkMessages("uploading file");
-                    if(!hasServerMsg)
-                        StatusResponse.show(response, "uploading file");
+                    Filelocker.checkMessages("uploading file");
                     load();
-                    if (fileName != null && fileName != "")
+                    if (fileName != null && fileName !== "")
                         checkFilename(fileName);
                 },
                 onCancel: function(id, fileName){
-                    StatusResponse.create("cancelling upload", "File upload cancelled by user.", true);
+                    StatusResponse.create("cancelling upload", "File upload of " + fileName + " cancelled by user.", true);
                 },
                 messages: {
                     sizeError: "sizeError"
@@ -640,7 +631,6 @@ jQuery(document).ready(function() {
         });
     }
 
-    // Uploader
     $("#statusMessage").ajaxError(function(e, xhr, settings, exception) {
         console.error(exception);
         var message = (xhr.status >= 400) ? "Server returned code "+xhr.status : "No details.";

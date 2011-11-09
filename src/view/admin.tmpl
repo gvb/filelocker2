@@ -111,21 +111,16 @@
                                 <div class="posrel">
                                     <div id="menu_row_$flRole.id" class="menuRoles hidden">
                                     <ul class="menu">
-                                        <li><div class="button" style="width: 185px;"><a href="javascript:Admin.Role.promptUpdate('$flRole.id', '$flRole.first_name', '$flRole.last_name', '$flRole.email', $flRole.quota);" title="Edit role account for '$flRole.id'" class="editButton"><span><center>Edit Account</center></span></a></div></li>
+                                        <li><div class="button" style="width: 185px;"><a href="javascript:Admin.Role.promptUpdate('$flRole.id', '$flRole.name', '$flRole.email', $flRole.quota);" title="Edit role account for '$flRole.id'" class="editButton"><span><center>Edit Account</center></span></a></div></li>
                                         <li><div class="button" style="width: 185px;"><a href="javascript:Admin.Permission.load('$flRole.id');" title="Grant and revoke role permissions for '$flRole.id'" class="wandButton"><span><center>Edit Permissions</center></span></a></div></li>
                                     </ul>
                                 </div>
                             </td>
-
-                            #if $AccountController.role_has_permission($flRole, "admin") is False:
-                            <td><a href="javascript:Role.promptViewHistory('$flRole.id');" class="clock" title="View Filelocker interactions for '$flRole.id'">$flRole.id</a></td>
-                            #else
-                            <td><a href="javascript:Role.promptViewHistory('$flRole.id');" class="admin" title="View Filelocker interactions for '$flRole.id' (admin)">$flRole.id</a></td>
-                            #end if
+                            <td onClick="Admin.Role.rowClick('$flRole.id')"><span class="role">$flRole.id</span></td>
                             <td onClick="Admin.Role.rowClick('$flRole.id')">$flRole.name</td>
                             <td onClick="Admin.Role.rowClick('$flRole.id')">$flRole.email</td>
                         #if float($flRole.quota) > 0:
-                            #set $percentUsed = int(round(float($FileController.get_role_quota_usage_bytes(flRole))/float($flRole.quota)*100,0))
+                            #set $percentUsed = int(round(float($FileController.get_user_quota_usage_bytes(flRole))/float($flRole.quota)*100,0))
                         #else
                             #set $percentUsed = 0
                         #end if
