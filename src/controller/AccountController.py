@@ -268,39 +268,56 @@ class AccountController:
 
     @cherrypy.expose
     @cherrypy.tools.requires_login(permission="admin")
-    def update_role(self, roleId, roleName, email, quota, format="json", **kwargs):
+    def create_role(self, roleId, roleName, email, quota, format="json", **kwargs):
         user, sMessages, fMessages = (cherrypy.session.get("user"), [], [])
         try:
-            roleId, roleName, email, quota = strip_tags(roleId), strip_tags(roleName), strip_tags(email), int(quota)
-            updateRole = session.query(Role).filter(Role.id==roleId).one()
-            updateRole.email = email
-            updateRole.name = roleName
-            updateRole.quota = quota
-            session.commit()
-            sMessages.append("Successfully updated role %s" % str(roleName))
-        except sqlalchemy.orm.exc.NoResultFound:
-            fMessages.append("The role ID: %s does not exist" % str(roleId))
+            roleId = strip_tags(roleId)
+            existingRole = session.query(Role).filter(Role.id == roleId).scalar()
+            if existingRole is None:
+                newRole = Role(name=strip_tags(roleName), email=strip_tags(email), quota=int(quota))
+                session.add(newRole)
+                session.commit()
+                sMessages.append("Successfully created a role named %s. Other users who are added to this role may act on behalf of this role now." % str(roleName))
+            else:
+                fMessages.append("A role with role ID: %s already exists" % str(roleId))
         except ValueError:
             fMessages.append("Quota must be a positive integer")
         except Exception, e:
             session.rollback()
-            logging.error("[%s] [update_role] [Problem updating role: %s]" % (user.id, str(e)))
-            fMessages.append("Problem updating role: %s" % str(e))
+            logging.error("[%s] [create_role] [Problem creating role: %s]" % (user.id, str(e)))
+            fMessages.append("Problem creating role: %s" % str(e))
         return fl_response(sMessages, fMessages, format)
 
     @cherrypy.expose
     @cherrypy.tools.requires_login(permission="admin")
-    def delete_role(self, roleId, format="json", **kwargs):
+    def get_all_roles(self, roleId, roleName, email, quota, format="json", **kwargs):
         user, sMessages, fMessages = (cherrypy.session.get("user"), [], [])
         try:
-            role = session.query(Role).filter(Role.id == roleId).one()
-            sMessages.append("Successfully deleted the role aspect for user %s." % str(roleUserId))
-        except sqlalchemy.orm.exc.NoResultFound:
-            fMessages.append("The role ID: %s does not exist" % str(roleId))
+            roles = session.query(Role).all()
+            sMessages.append("Successfully fetched roles %s")
+        except Exception, e:
+            logging.error("[%s] [get_all_roles] [Problem getting roles: %s]" % (user.id, str(e)))
+            fMessages.append("Problem getting roles: %s" % str(e))
+        return fl_response(sMessages, fMessages, format, data=roles)
+
+    @cherrypy.expose
+    @cherrypy.tools.requires_login(permission="admin")
+    def delete_roles(self, roleIds, format="json", **kwargs):
+        user, sMessages, fMessages = (cherrypy.session.get("user"), [], [])
+        try:
+            roleIds = split_list_sanitized(roleIds)
+            for roleId in roleIds:
+                try:
+                    role = session.query(Role).filter(Role.id == roleId).one()
+                    session.delete(role)
+                except sqlalchemy.orm.exc.NoResultFound:
+                    fMessages.append("The role ID: %s does not exist" % str(roleId))
+            session.commit()
+            sMessages.append("Successfully deleted roles%s." % str(roleUserId))
         except Exception, e:
             session.rollback()
-            logging.error("[%s] [delete_role] [Problem deleting role: %s]" % (user.id, str(e)))
-            fMessages.append("Problem deleting role: %s" % str(e))
+            logging.error("[%s] [delete_roles] [Problem deleting roles: %s]" % (user.id, str(e)))
+            fMessages.append("Problem deleting roles: %s" % str(e))
         return fl_response(sMessages, fMessages, format)
 
     @cherrypy.expose

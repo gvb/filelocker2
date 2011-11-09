@@ -84,6 +84,14 @@ class Role(Base):
     members = relationship("User", secondary=lambda: role_membership_table, backref="roles")
     permissions = relationship("Permission", secondary=lambda: role_permissions_table)
 
+    def get_dict(self):
+        membersList, permissionsList = [], []
+        for member in self.members:
+            membersList.append(member.get_dict())
+        for permission in self.permissions:
+            permissionsList.append(permission.get_dict())
+        return {'id': self.id, 'name':self.name, 'email': self.email, 'quota':self.quota, 'members':membersList, 'permissions':permissionsList}
+
 role_permissions_table = Table("role_permissions", Base.metadata,
     Column("role_id", String(30), ForeignKey("roles.id"), primary_key=True, nullable=False),
     Column("permission_id", String(50), ForeignKey("permissions.id"), primary_key=True, nullable=False))

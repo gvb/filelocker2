@@ -1,6 +1,7 @@
 import os
 import stat
 import shutil
+from stat import ST_SIZE
 import random
 import cherrypy
 from cherrypy.lib import cptools, http, file_generator_limited
@@ -237,6 +238,8 @@ class FileController(object):
     @cherrypy.expose
     @cherrypy.tools.before_upload()
     def upload(self, format="json", **kwargs):
+        logging.error("Uploading")
+        print "Uploading"
         cherrypy.response.timeout = 86400
         user, uploadRequest, uploadKey, config, sMessages, fMessages = None, None, None, cherrypy.request.app.config['filelocker'], [], []
 
