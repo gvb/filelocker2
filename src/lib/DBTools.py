@@ -6,12 +6,114 @@ import logging
 import sys
 from xml.dom.minidom import parse, parseString
 from Models import *
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import relationship, backref, sessionmaker, mapper
+from sqlalchemy import *
+from lib.SQLAlchemyTool import configure_session_for_app, session, _engines
+
+def create_admin_user(dburi, password):
+    adminUser = User(id="admin", first_name="Administrator", quota=1024, date_tos_accept=datetime.datetime.now())
+    adminUser.set_password(password)
+    testUser1 = User(id="wbdavis", first_name="Brett", last_name="Davis", quota=1024, date_tos_accept=datetime.datetime.now())
+    testUser1.set_password("test")
+    testUser2 = User(id="cmiller", first_name="Chris", last_name="Miller", quota=1024, date_tos_accept=datetime.datetime.now())
+    testUser2.set_password("test")
+    engine = create_engine(dburi, echo=True)
+    #Base.metadata.create_all(engine)
+    Session = sessionmaker(bind=engine)
+    session = Session()
+    adminPermission = session.query(Permission).filter(Permission.id == "admin").one()
+    adminUser.permissions.append(adminPermission)
+    oldAdmin = session.query(User).filter(User.id=="admin").scalar()
+    if oldAdmin is not None:
+        session.delete(oldAdmin)
+    session.add(adminUser)
+    session.add(testUser1)
+    session.add(testUser2)
+    session.commit()
+    print "Password after set: %s" % str(adminUser.password)
 
 def export_db(exportFile):
     pass
     
 def import_db(importFile):
-    f = open(importFile, "r")
+    dom = parse(importFile)
+
+    #Permissions
+    for node in dom.getElementsByTagName("Permissions"):
+        for permnode in node:
+            session.add(Permission(id=permnode.getAttribute("id"), name=permnode.getAttribute("name")))
+
+
+    #Users
+    for node in dom.getElementsByTagName("users"):
+        for usernode in node.getElementsByTagName("user"):
+            u = User(id=usernode.getAttribute("id"),first_name=usernode.getAttribute(("first_name"),
+            last_name=usernode.getAttribute("last_name"), quota=int(usernode.getAttribute("quota")),
+            email=usernode.getAttribute("email"), date_last_login=usernode.getAttribute("date_last_login"),
+            date_tos_accept=usernode.getAttribute("date_tos_accept")))
+            session.add(u)
+            session.commit()
+            for permnode in usernode.getElementsByTagName("permission")
+                perm = session.query(Permission).filter(Permission.id==permnode.getAttribute("id")).one()
+                u.permissions.append(perm)
+            session.commit()
+
+    #Groups
+    #TODO: Add members
+    for node in dom.getElementsByTagName("groups"):
+        for groupnode in node.getElementsByTagName("group"):
+            g = Group(id=groupnode.getAttribute("id"), name=groupnode.getAttribute("name"))
+            session.add(g)
+            for permnode in groupnode.getElementsByTagName("permissions"):
+                perm = session.query(Permission).filter(Permission.id==permnode.getAttribute("id")).one()
+                g.permissions.append(perm)
+            session.commit()
+
+
+    #Roles
+    #TODO: Add members
+    for node in dom.getElementsByTagName("roles"):
+        for rolenode in node.getElementsByTagName("role"):
+            r = Role(id=rolenode.getAttribute("id"), name=rolenode.getAttribute("name"),
+            email=rolenode.getAttribute("email"), quota=int(rolenode.getAttribute("quota")))
+            session.add(r)
+            for permnode in rolenode.getElementsByTagName("permissions"):
+                perm = session.query(Permission).filter(Permission.id==permnode.getAttribute("id")).one()
+                r.permissions.append(perm)
+            session.commit()
+            
+    type = Column(Text)
+    size = Column(BigInteger)
+    notes = Column(Text)
+    date_uploaded = Column(DateTime)
+    owner_id = Column(String(30), ForeignKey('users.id'), nullable=True)
+    role_owner_id = Column(String(30), ForeignKey('roles.id'), nullable=True)
+    date_expires = Column(DateTime)
+    passed_avscan = Column(Boolean)
+    encryption_key = Column(String(64))
+    status = Column(String(255))
+    notify_on_download = Column(Boolean, nullable=False)
+    md5 = Column(String(64), nullable=True)
+    upload_request_id = Column(String(64), ForeignKey("upload_requests.id"))
+    for node in dom.getElementsByTagName("files"):
+        for filenode in node.getElementsByTagName("file"):
+            f = File(id=filenode.getAttribute("id"), name=filenode.getAttribute("name"),
+                    type=filenode.getAttribute("type"), size=long(filenode.getAttribute("size")),
+                    notes=filenode.getAttribute("notes"), date_uploaded=filenode.getAttribute("date_uploaded"),
+                    owner_id=filenode.getAttribute("owner_id"), role_owner_id=filenode.getAttribute("role_owner_id"),
+                    date_expires=filenode.getAttribute("date_expires"), passed_avscan=filenode.getAttribute("passed_avscan"),,
+                    encryption_key=filenode.getAttribute("encryption_key"), status=filenode.getAttribute("status"),
+                    notify_on_download=False if filenode.getAttribute("notify_on_download")=="0" else True,
+                    md5=filenode.getAttribute("md5"), upload_request_id=filenode.getAttribute("upload_request_id"))
+            session.add(f)
+        session.commit()
+
+
+
+
+
+
 
 
 class LegacyDBConverter():
