@@ -77,7 +77,7 @@ role_membership_table = Table("role_membership", Base.metadata,
 
 class Role(Base):
     __tablename__ = "roles"
-    id = Column(String(30), primary_key=True)
+    id = Column(String(30), primary_key=True, nullable=False)
     name = Column(String(50), nullable=False)
     email = Column(String(320), nullable=True)
     quota = Column(Integer, nullable=False)

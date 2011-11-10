@@ -254,29 +254,10 @@ class AccountController:
             roleId = strip_tags(roleId)
             existingRole = session.query(Role).filter(Role.id == roleId).scalar()
             if existingRole is None:
-                newRole = Role(id=strip_tags(roleId),name=strip_tags(roleName), email=strip_tags(email), quota=int(quota))
-                session.add(newRole)
-                session.commit()
-                sMessages.append("Successfully created a role named %s. Other users who are added to this role may act on behalf of this role now." % str(roleName))
-            else:
-                fMessages.append("A role with role ID: %s already exists" % str(roleId))
-        except ValueError:
-            fMessages.append("Quota must be a positive integer")
-        except Exception, e:
-            session.rollback()
-            logging.error("[%s] [create_role] [Problem creating role: %s]" % (user.id, str(e)))
-            fMessages.append("Problem creating role: %s" % str(e))
-        return fl_response(sMessages, fMessages, format)
-
-    @cherrypy.expose
-    @cherrypy.tools.requires_login(permission="admin")
-    def create_role(self, roleId, roleName, email, quota, format="json", **kwargs):
-        user, sMessages, fMessages = (cherrypy.session.get("user"), [], [])
-        try:
-            roleId = strip_tags(roleId)
-            existingRole = session.query(Role).filter(Role.id == roleId).scalar()
-            if existingRole is None:
-                newRole = Role(name=strip_tags(roleName), email=strip_tags(email), quota=int(quota))
+                roleName = strip_tags(roleName)
+                email = strip_tags(email)
+                quota = int(quota)
+                newRole = Role(id=roleId, name=roleName, email=email, quota=quota)
                 session.add(newRole)
                 session.commit()
                 sMessages.append("Successfully created a role named %s. Other users who are added to this role may act on behalf of this role now." % str(roleName))
