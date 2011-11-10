@@ -326,7 +326,7 @@ class FileController(object):
                             cherrypy.file_uploads[uploadKey].remove(fileTransfer)
                     if len(cherrypy.file_uploads[uploadKey]) == 0:
                         del cherrypy.file_uploads[uploadKey]
-                raise cherrypy.HTTPError("412 Precondition Failed", "The file transfer completed, but the file appears to be missing data. Try re-uploading the file")
+                raise cherrypy.HTTPError("412 Precondition Failed", "The file transfer completed, but the file appears to be missing data. If you did not intentionally cancel the file, please try re-uploading.")
         else:
             cherrypy.request.headers['uploadindex'] = uploadIndex
             formFields = myFieldStorage(fp=cherrypy.request.rfile,

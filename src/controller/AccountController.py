@@ -252,7 +252,7 @@ class AccountController:
             roleId = strip_tags(roleId)
             existingRole = session.query(Role).filter(Role.id == roleId).scalar()
             if existingRole is None:
-                newRole = Role(name=strip_tags(roleName), email=strip_tags(email), quota=int(quota))
+                newRole = Role(id=strip_tags(roleId),name=strip_tags(roleName), email=strip_tags(email), quota=int(quota))
                 session.add(newRole)
                 session.commit()
                 sMessages.append("Successfully created a role named %s. Other users who are added to this role may act on behalf of this role now." % str(roleName))
