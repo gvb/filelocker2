@@ -4,13 +4,14 @@ import datetime
 import MySQLdb
 import logging
 import sys
+from xml.dom.minidom import parse, parseString
 from Models import *
 
 def export_db(exportFile):
     pass
     
-def import_db(importFile=None):
-    pass
+def import_db(importFile):
+    f = open(importFile, "r")
 
 
 class LegacyDBConverter():

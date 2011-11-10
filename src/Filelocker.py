@@ -20,7 +20,8 @@ __date__ ="$Sep 25, 2011 9:09:40 PM$"
 __version__ = "2.6"
 
 def before_upload(**kwargs):
-    cherrypy.request.process_request_body = False
+    pass
+#    cherrypy.request.process_request_body = False
     
 def requires_login(permissionId=None, **kwargs):
     format, rootURL = None, cherrypy.request.app.config['filelocker']['root_url']
@@ -146,6 +147,9 @@ def daily_maintenance(config):
         except Exception, e:
             logging.error("[system] [daily_maintenance] [There was a problem while trying to delete an orphaned file %s: %s]" % (str(fileName), str(e)))
             session.rollback()
+
+def import_db(config, dbFile):
+    pass
 
 def update_config(config):
     config['filelocker']['version'] = __version__

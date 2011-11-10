@@ -25,17 +25,24 @@ __author__="wbdavis"
 __date__ ="$Sep 25, 2011 9:28:54 PM$"
 
 class FileController(object):
+
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def get_quota_usage(self, format="json", **kwargs):
         user, sMessages, fMessages, quotaMB, quotaUsedMB = (cherrypy.session.get("user"),[], [], 0, 0)
         try:
-            quotaMB = user.quota
-            quotaUsage = get_user_quota_usage_bytes(user.id)
+            quotaMB, quotaUsage = 0,0
+            if cherrypy.session.get("current_role") is not None:
+                quotaMB = role.quota
+                quotaUsage = get_role_quota_usage_bytes(cherrypy.session.get("current_role").id)
+            else:
+                quotaMB = user.quota
+                quotaUsage = get_user_quota_usage_bytes(user.id)
             quotaUsedMB = int(quotaUsage) / 1024 / 1024
         except Exception, e:
             fMessages.append(str(e))
         return fl_response(sMessages, fMessages, format, data={'quotaMB': quotaMB , 'quotaUsedMB': quotaUsedMB})
+
 
     @cherrypy.expose
     @cherrypy.tools.requires_login()
@@ -238,200 +245,199 @@ class FileController(object):
     @cherrypy.expose
     @cherrypy.tools.before_upload()
     def upload(self, format="json", **kwargs):
-        logging.error("Uploading")
-        print "Uploading"
-        cherrypy.response.timeout = 86400
-        user, uploadRequest, uploadKey, config, sMessages, fMessages = None, None, None, cherrypy.request.app.config['filelocker'], [], []
-
-        #Check Permission to upload since we can't wrap in requires login for public uploads
-        if cherrypy.session.has_key("uploadRequest") and cherrypy.session.get("uploadRequest") is not None and cherrypy.session.get("uploadRequest").expired == False:
-            uploadRequest = cherrypy.session.get("uploadRequest")
-            user = AccountController.get_user(uploadRequest.owner_id)
-            uploadKey = "%s:%s" % (user.id, uploadRequest.id)
-        else:
-            cherrypy.tools.requires_login()
-            user, sMessages, fMessages = cherrypy.session.get("user"), cherrypy.session.get("sMessages"), cherrypy.session.get("fMessages")
-            uploadKey = user.id
-            
-        #Check upload size
-        lcHDRS = {}
-        for key, val in cherrypy.request.headers.iteritems():
-            lcHDRS[key.lower()] = val
-        try:
-            fileSizeBytes = int(lcHDRS['content-length'])
-        except KeyError, ke:
-            fMessages.append("Request must have a valid content length")
-            raise HTTPError(411, "Request must have a valid content length")
-        fileSizeMB = ((fileSizeBytes/1024)/1024)
-        vaultSpaceFreeMB, vaultCapacityMB = get_vault_usage()
-        quotaSpaceRemainingBytes = (user.quota*1024*1024) - get_user_quota_usage_bytes(user.id)
-        if (fileSizeMB*2) >= vaultSpaceFreeMB:
-            logging.critical("[system] [upload] [File vault is running out of space and cannot fit this file. Remaining Space is %s MB, fileSizeBytes is %s]" % (vaultSpaceFreeMB, fileSizeBytes))
-            fMessages.append("The server doesn't have enough space left on its drive to fit this file. The administrator has been notified.")
-            raise HTTPError(413, "The server doesn't have enough space left on its drive to fit this file. The administrator has been notified.")
-        if fileSizeBytes > quotaSpaceRemainingBytes:
-            fMessages.append("File size is larger than your quota will accomodate")
-            raise HTTPError(413, "File size is larger than your quota will accomodate")
-  
-        #The server won't respond to additional user requests (polling) until we release the lock
-        cherrypy.session.release_lock()
-
-        newFile = File()
-        newFile.size = fileSizeBytes
-        #Get the file name
-        fileName, tempFileName = None,None
-        if fileName is None and lcHDRS.has_key('x-file-name'):
-            fileName = lcHDRS['x-file-name']
-        if kwargs.has_key("fileName"):
-            fileName = kwargs['fileName']
-        if fileName is not None and fileName.split("\\")[-1] is not None:
-            fileName = fileName.split("\\")[-1]
-
-        #Set upload index if it's found in the arguments
-        if kwargs.has_key('uploadIndex'):
-            uploadIndex = kwargs['uploadIndex']
-
-        #Read file from client
-        if lcHDRS['content-type'] == "application/octet-stream":
-            file_object = get_temp_file()
-            tempFileName = file_object.name.split(os.path.sep)[-1]
-            #Create the progress file object and drop it into the transfer dictionary
-            upFile = ProgressFile(8192, fileName, file_object, uploadIndex)
-            if cherrypy.file_uploads.has_key(uploadKey): #Drop the transfer into the global transfer list
-                cherrypy.file_uploads[uploadKey].append(upFile)
-            else:
-                cherrypy.file_uploads[uploadKey] = [upFile,]
-            bytesRemaining = fileSizeBytes
-            print "Bytes remaining: %s" % fileSizeBytes
-            while True:
-                print "reading block"
-                if bytesRemaining >= 8192:
-                    print "BigBytes"
-                    block = cherrypy.request.rfile.read(8192)
-                else:
-                    print "LittleBytes"
-                    block = cherrypy.request.rfile.read(bytesRemaining)
-                print "Writing bytes"
-                upFile.write(block)
-                print "decrementing bytes"
-                bytesRemaining -= 8192
-                if bytesRemaining <= 0: break
-            upFile.seek(0)
-            #If the file didn't get all the way there
-            if long(os.path.getsize(upFile.file_object.name)) != long(fileSizeBytes): #The file transfer stopped prematurely, take out of transfers and queue partial file for deletion
-                logging.debug("[system] [upload] [File upload was prematurely stopped, rejected]")
-                queue_for_deletion(tempFileName)
-                fMessages.append("The file %s did not upload completely before the transfer ended" % fileName)
-                if cherrypy.file_uploads.has_key(uploadKey):
-                    for fileTransfer in cherrypy.file_uploads[uploadKey]:
-                        if fileTransfer.file_object.name == upFile.file_object.name:
-                            cherrypy.file_uploads[uploadKey].remove(fileTransfer)
-                    if len(cherrypy.file_uploads[uploadKey]) == 0:
-                        del cherrypy.file_uploads[uploadKey]
-                raise cherrypy.HTTPError("412 Precondition Failed", "The file transfer completed, but the file appears to be missing data. Try re-uploading the file")
-        else:
-            cherrypy.request.headers['uploadindex'] = uploadIndex
-            formFields = myFieldStorage(fp=cherrypy.request.rfile,
-                                        headers=lcHDRS,
-                                        environ={'REQUEST_METHOD':'POST'},
-                                        keep_blank_values=True)
-            upFile = formFields['fileName']
-            if fileName is None:
-                fileName = upFile.filename
-            if str(type(upFile.file)) == '<type \'cStringIO.StringO\'>' or isinstance(upFile.file, StringIO.StringIO):
-                newTempFile = get_temp_file()
-                newTempFile.write(str(upFile.file.getvalue()))
-                newTempFile.seek(0)
-                upFile = ProgressFile(8192, fileName, newTempFile)
-                if cherrypy.file_uploads.has_key(uploadKey): #Drop the transfer into the global transfer list
-                    cherrypy.file_uploads[uploadKey].append(upFile)
-                else:
-                    cherrypy.file_uploads[uploadKey] = [upFile,]
-            else:
-                upFile = upFile.file
-            tempFileName = upFile.file_object.name.split(os.path.sep)[-1]
-        
-        #The file has been successfully uploaded by this point, process the rest of the variables regarding the file
-        newFile.name = fileName
-        fileNotes = strip_tags(kwargs['fileNotes']) if kwargs.has_key("fileNotes") else ""
-        if fileNotes is not None and len(fileNotes) > 256:
-            fileNotes = fileNotes[0:256]
-        newFile.notes = fileNotes
-
-        #Owner ID is a separate variable since uploads can be owned by the system
-        newFile.owner_id = "system" if (AccountController.user_has_permission(user, "admin") and (kwargs.has_key('systemUpload') and kwargs['systemUpload'] == "yes")) else user.id
-
-        #Process date provided
-        maxExpiration = datetime.datetime.today() + datetime.timedelta(days=config['max_file_life_days'])
-        expiration = kwargs['expiration'] if kwargs.has_key("expiration") else None
-        if (expiration is None or expiration == "" or expiration.lower() =="never"):
-            if AccountController.user_has_permission(user,  "expiration_exempt") or AccountController.user_has_permission(user, "admin"): #Check permission before allowing a non-expiring upload
-                expiration = None
-            else:
-                expiration = maxExpiration
-        else:
-            expiration = datetime.datetime(*time.strptime(strip_tags(expiration), "%m/%d/%Y")[0:5])
-            if expiration > maxExpiration and AccountController.user_has_permission(user,  "expiration_exempt")==False:
-                fMessages.append("Expiration date was invalid. Expiration set to %s" % maxExpiration.strftime("%m/%d/%Y"))
-                expiration = maxExpiration
-        newFile.date_expires = expiration
-
-        scanFile = True if ((kwargs.has_key("scanFile") and kwargs['scanFile'].lower() == "true") or (uploadRequest is not None and uploadRequest.scan_file)) else False
-
-        newFile.notify_on_download = True if (kwargs.has_key("notifyOnDownload") and strip_tags(notifyOnDownload.lower()) == "on") else False
-        newFile.date_uploaded = datetime.datetime.now()
-        newFile.status = "Processing"
-        newFile.upload_request_id = None if (uploadRequest is None) else uploadRequest.id
-        session.add(newFile)
-        session.commit()
-        
-        #Set status to scanning
-        if cherrypy.file_uploads.has_key(uploadKey):
-            for fileTransfer in cherrypy.file_uploads[uploadKey]:
-                if fileTransfer.file_object.name == upFile.file_object.name:
-                    fileTransfer.status = "Scanning and Encrypting" if scanFile else "Encrypting"
-        #Check in the file
-        try:
-            check_in_file(tempFileName, newFile)
-            #If this is an upload request, check to see if it's a single use request and nullify the ticket if so, now that the file has been successfully uploaded
-            if uploadRequest is not None:
-                if uploadRequest.type == "single":
-                    session.add(AuditLog(cherrypy.request.remote.ip, "Upload Requested File", "File %s has been uploaded by an external user to your Filelocker account. This was a single user request and the request has now expired." % (newFile.name), uploadRequest.owner_id))
-                    attachedUploadRequest = session.query(UploadRequest).filter(UploadRequest.id == uploadRequest.id).one()
-                    session.delete(attachedUploadRequest)
-                    cherrypy.session['uploadRequest'].expired = True
-                else:
-                    session.add(AuditLog(cherrypy.request.remote.ip, "Upload Requested File", "File %s has been uploaded by an external user to your Filelocker account." % (newFile.name), uploadRequest.owner_id))
-            session.add(AuditLog(user.id, "Check In File", "File %s (%s) checked in to Filelocker: MD5 %s " % (newFile.name, newFile.id, newFile.md5)))
-            sMessages.append("File %s uploaded successfully." % str(fileName))
-            session.commit()
-        except sqlalchemy.orm.exc.NoResultFound, nrf:
-            fMessages.append("Could not find upload request with ID: %s" % str(uploadRequest.id))
-        except Exception, e:
-            logging.error("[%s] [upload] [Couldn't check in file: %s]" % (user.id, str(e)))
-            fMessages.append("File couldn't be checked in to the file repository: %s" % str(e))
-        
-
-        #At this point the file upload is done, one way or the other. Remove the ProgressFile from the transfer dictionary
-        try:
-            if cherrypy.file_uploads.has_key(uploadKey):
-                for fileTransfer in cherrypy.file_uploads[uploadKey]:
-                    if fileTransfer.file_object.name == upFile.file_object.name:
-                        cherrypy.file_uploads[uploadKey].remove(fileTransfer)
-                if len(cherrypy.file_uploads[uploadKey]) == 0:
-                    del cherrypy.file_uploads[uploadKey]
-        except KeyError, ke:
-            logging.warning("[%s] [upload] [Key error deleting entry in file_transfer]" % user.userId)
-
-        #Queue the temp file for secure erasure
-        queue_for_deletion(tempFileName)
-
-        #Return the response
-        if format=="cli":
-            newFileXML = "<file id='%s' name='%s'></file>" % (createdFile.fileId, createdFile.fileName)
-            return fl_response(sMessages, fMessages, format, data=newFileXML)
-        else:
-            return fl_response(sMessages, fMessages, format)
+        return "DERP"
+#        cherrypy.response.timeout = 86400
+#        user, uploadRequest, uploadKey, config, sMessages, fMessages = None, None, None, cherrypy.request.app.config['filelocker'], [], []
+#
+#        #Check Permission to upload since we can't wrap in requires login for public uploads
+#        if cherrypy.session.has_key("uploadRequest") and cherrypy.session.get("uploadRequest") is not None and cherrypy.session.get("uploadRequest").expired == False:
+#            uploadRequest = cherrypy.session.get("uploadRequest")
+#            user = AccountController.get_user(uploadRequest.owner_id)
+#            uploadKey = "%s:%s" % (user.id, uploadRequest.id)
+#        else:
+#            cherrypy.tools.requires_login()
+#            user, sMessages, fMessages = cherrypy.session.get("user"), cherrypy.session.get("sMessages"), cherrypy.session.get("fMessages")
+#            uploadKey = user.id
+#
+#        #Check upload size
+#        lcHDRS = {}
+#        for key, val in cherrypy.request.headers.iteritems():
+#            lcHDRS[key.lower()] = val
+#        try:
+#            fileSizeBytes = int(lcHDRS['content-length'])
+#        except KeyError, ke:
+#            fMessages.append("Request must have a valid content length")
+#            raise HTTPError(411, "Request must have a valid content length")
+#        fileSizeMB = ((fileSizeBytes/1024)/1024)
+#        vaultSpaceFreeMB, vaultCapacityMB = get_vault_usage()
+#        quotaSpaceRemainingBytes = (user.quota*1024*1024) - get_user_quota_usage_bytes(user.id)
+#        if (fileSizeMB*2) >= vaultSpaceFreeMB:
+#            logging.critical("[system] [upload] [File vault is running out of space and cannot fit this file. Remaining Space is %s MB, fileSizeBytes is %s]" % (vaultSpaceFreeMB, fileSizeBytes))
+#            fMessages.append("The server doesn't have enough space left on its drive to fit this file. The administrator has been notified.")
+#            raise HTTPError(413, "The server doesn't have enough space left on its drive to fit this file. The administrator has been notified.")
+#        if fileSizeBytes > quotaSpaceRemainingBytes:
+#            fMessages.append("File size is larger than your quota will accomodate")
+#            raise HTTPError(413, "File size is larger than your quota will accomodate")
+#
+#        #The server won't respond to additional user requests (polling) until we release the lock
+#        cherrypy.session.release_lock()
+#
+#        newFile = File()
+#        newFile.size = fileSizeBytes
+#        #Get the file name
+#        fileName, tempFileName = None,None
+#        if fileName is None and lcHDRS.has_key('x-file-name'):
+#            fileName = lcHDRS['x-file-name']
+#        if kwargs.has_key("fileName"):
+#            fileName = kwargs['fileName']
+#        if fileName is not None and fileName.split("\\")[-1] is not None:
+#            fileName = fileName.split("\\")[-1]
+#
+#        #Set upload index if it's found in the arguments
+#        if kwargs.has_key('uploadIndex'):
+#            uploadIndex = kwargs['uploadIndex']
+#
+#        #Read file from client
+#        if lcHDRS['content-type'] == "application/octet-stream":
+#            file_object = get_temp_file()
+#            tempFileName = file_object.name.split(os.path.sep)[-1]
+#            #Create the progress file object and drop it into the transfer dictionary
+#            upFile = ProgressFile(8192, fileName, file_object, uploadIndex)
+#            if cherrypy.file_uploads.has_key(uploadKey): #Drop the transfer into the global transfer list
+#                cherrypy.file_uploads[uploadKey].append(upFile)
+#            else:
+#                cherrypy.file_uploads[uploadKey] = [upFile,]
+#            bytesRemaining = fileSizeBytes
+#            print "Bytes remaining: %s" % fileSizeBytes
+#            while True:
+#                print "reading block"
+#                if bytesRemaining >= 8192:
+#                    print "BigBytes"
+#                    block = cherrypy.request.rfile.read(8192)
+#                else:
+#                    print "LittleBytes"
+#                    block = cherrypy.request.rfile.read(bytesRemaining)
+#                print "Writing bytes"
+#                upFile.write(block)
+#                print "decrementing bytes"
+#                bytesRemaining -= 8192
+#                if bytesRemaining <= 0: break
+#            upFile.seek(0)
+#            #If the file didn't get all the way there
+#            if long(os.path.getsize(upFile.file_object.name)) != long(fileSizeBytes): #The file transfer stopped prematurely, take out of transfers and queue partial file for deletion
+#                logging.debug("[system] [upload] [File upload was prematurely stopped, rejected]")
+#                queue_for_deletion(tempFileName)
+#                fMessages.append("The file %s did not upload completely before the transfer ended" % fileName)
+#                if cherrypy.file_uploads.has_key(uploadKey):
+#                    for fileTransfer in cherrypy.file_uploads[uploadKey]:
+#                        if fileTransfer.file_object.name == upFile.file_object.name:
+#                            cherrypy.file_uploads[uploadKey].remove(fileTransfer)
+#                    if len(cherrypy.file_uploads[uploadKey]) == 0:
+#                        del cherrypy.file_uploads[uploadKey]
+#                raise cherrypy.HTTPError("412 Precondition Failed", "The file transfer completed, but the file appears to be missing data. Try re-uploading the file")
+#        else:
+#            cherrypy.request.headers['uploadindex'] = uploadIndex
+#            formFields = myFieldStorage(fp=cherrypy.request.rfile,
+#                                        headers=lcHDRS,
+#                                        environ={'REQUEST_METHOD':'POST'},
+#                                        keep_blank_values=True)
+#            upFile = formFields['fileName']
+#            if fileName is None:
+#                fileName = upFile.filename
+#            if str(type(upFile.file)) == '<type \'cStringIO.StringO\'>' or isinstance(upFile.file, StringIO.StringIO):
+#                newTempFile = get_temp_file()
+#                newTempFile.write(str(upFile.file.getvalue()))
+#                newTempFile.seek(0)
+#                upFile = ProgressFile(8192, fileName, newTempFile)
+#                if cherrypy.file_uploads.has_key(uploadKey): #Drop the transfer into the global transfer list
+#                    cherrypy.file_uploads[uploadKey].append(upFile)
+#                else:
+#                    cherrypy.file_uploads[uploadKey] = [upFile,]
+#            else:
+#                upFile = upFile.file
+#            tempFileName = upFile.file_object.name.split(os.path.sep)[-1]
+#
+#        #The file has been successfully uploaded by this point, process the rest of the variables regarding the file
+#        newFile.name = fileName
+#        fileNotes = strip_tags(kwargs['fileNotes']) if kwargs.has_key("fileNotes") else ""
+#        if fileNotes is not None and len(fileNotes) > 256:
+#            fileNotes = fileNotes[0:256]
+#        newFile.notes = fileNotes
+#
+#        #Owner ID is a separate variable since uploads can be owned by the system
+#        newFile.owner_id = "system" if (AccountController.user_has_permission(user, "admin") and (kwargs.has_key('systemUpload') and kwargs['systemUpload'] == "yes")) else user.id
+#
+#        #Process date provided
+#        maxExpiration = datetime.datetime.today() + datetime.timedelta(days=config['max_file_life_days'])
+#        expiration = kwargs['expiration'] if kwargs.has_key("expiration") else None
+#        if (expiration is None or expiration == "" or expiration.lower() =="never"):
+#            if AccountController.user_has_permission(user,  "expiration_exempt") or AccountController.user_has_permission(user, "admin"): #Check permission before allowing a non-expiring upload
+#                expiration = None
+#            else:
+#                expiration = maxExpiration
+#        else:
+#            expiration = datetime.datetime(*time.strptime(strip_tags(expiration), "%m/%d/%Y")[0:5])
+#            if expiration > maxExpiration and AccountController.user_has_permission(user,  "expiration_exempt")==False:
+#                fMessages.append("Expiration date was invalid. Expiration set to %s" % maxExpiration.strftime("%m/%d/%Y"))
+#                expiration = maxExpiration
+#        newFile.date_expires = expiration
+#
+#        scanFile = True if ((kwargs.has_key("scanFile") and kwargs['scanFile'].lower() == "true") or (uploadRequest is not None and uploadRequest.scan_file)) else False
+#
+#        newFile.notify_on_download = True if (kwargs.has_key("notifyOnDownload") and strip_tags(notifyOnDownload.lower()) == "on") else False
+#        newFile.date_uploaded = datetime.datetime.now()
+#        newFile.status = "Processing"
+#        newFile.upload_request_id = None if (uploadRequest is None) else uploadRequest.id
+#        session.add(newFile)
+#        session.commit()
+#
+#        #Set status to scanning
+#        if cherrypy.file_uploads.has_key(uploadKey):
+#            for fileTransfer in cherrypy.file_uploads[uploadKey]:
+#                if fileTransfer.file_object.name == upFile.file_object.name:
+#                    fileTransfer.status = "Scanning and Encrypting" if scanFile else "Encrypting"
+#        #Check in the file
+#        try:
+#            check_in_file(tempFileName, newFile)
+#            #If this is an upload request, check to see if it's a single use request and nullify the ticket if so, now that the file has been successfully uploaded
+#            if uploadRequest is not None:
+#                if uploadRequest.type == "single":
+#                    session.add(AuditLog(cherrypy.request.remote.ip, "Upload Requested File", "File %s has been uploaded by an external user to your Filelocker account. This was a single user request and the request has now expired." % (newFile.name), uploadRequest.owner_id))
+#                    attachedUploadRequest = session.query(UploadRequest).filter(UploadRequest.id == uploadRequest.id).one()
+#                    session.delete(attachedUploadRequest)
+#                    cherrypy.session['uploadRequest'].expired = True
+#                else:
+#                    session.add(AuditLog(cherrypy.request.remote.ip, "Upload Requested File", "File %s has been uploaded by an external user to your Filelocker account." % (newFile.name), uploadRequest.owner_id))
+#            session.add(AuditLog(user.id, "Check In File", "File %s (%s) checked in to Filelocker: MD5 %s " % (newFile.name, newFile.id, newFile.md5)))
+#            sMessages.append("File %s uploaded successfully." % str(fileName))
+#            session.commit()
+#        except sqlalchemy.orm.exc.NoResultFound, nrf:
+#            fMessages.append("Could not find upload request with ID: %s" % str(uploadRequest.id))
+#        except Exception, e:
+#            logging.error("[%s] [upload] [Couldn't check in file: %s]" % (user.id, str(e)))
+#            fMessages.append("File couldn't be checked in to the file repository: %s" % str(e))
+#
+#
+#        #At this point the file upload is done, one way or the other. Remove the ProgressFile from the transfer dictionary
+#        try:
+#            if cherrypy.file_uploads.has_key(uploadKey):
+#                for fileTransfer in cherrypy.file_uploads[uploadKey]:
+#                    if fileTransfer.file_object.name == upFile.file_object.name:
+#                        cherrypy.file_uploads[uploadKey].remove(fileTransfer)
+#                if len(cherrypy.file_uploads[uploadKey]) == 0:
+#                    del cherrypy.file_uploads[uploadKey]
+#        except KeyError, ke:
+#            logging.warning("[%s] [upload] [Key error deleting entry in file_transfer]" % user.userId)
+#
+#        #Queue the temp file for secure erasure
+#        queue_for_deletion(tempFileName)
+#
+#        #Return the response
+#        if format=="cli":
+#            newFileXML = "<file id='%s' name='%s'></file>" % (createdFile.fileId, createdFile.fileName)
+#            return fl_response(sMessages, fMessages, format, data=newFileXML)
+#        else:
+#            return fl_response(sMessages, fMessages, format)
 
     @cherrypy.expose
     @cherrypy.tools.requires_login()
@@ -871,6 +877,13 @@ def get_vault_usage():
 
 def get_user_quota_usage_bytes(userId):
     quotaUsage = session.query(func.sum(File.size)).select_from(File).filter(File.owner_id==userId).scalar()
+    if quotaUsage is None:
+        return 0
+    else:
+        return int(quotaUsage)
+
+def get_role_quota_usage_bytes(roleId):
+    quotaUsage = session.query(func.sum(File.size)).select_from(File).filter(File.role_owner_id==roleId).scalar()
     if quotaUsage is None:
         return 0
     else:
