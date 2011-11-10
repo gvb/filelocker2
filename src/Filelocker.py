@@ -20,8 +20,7 @@ __date__ ="$Sep 25, 2011 9:09:40 PM$"
 __version__ = "2.6"
 
 def before_upload(**kwargs):
-    pass
-#    cherrypy.request.process_request_body = False
+    cherrypy.request.process_request_body = False
     
 def requires_login(permissionId=None, **kwargs):
     format, rootURL = None, cherrypy.request.app.config['filelocker']['root_url']
@@ -166,6 +165,8 @@ def update_config(config):
             value = datetime.datetime.strptime(parameter.value, "%m/%d/%Y %H:%M:%S")
         config['filelocker'][parameter.name] = value
 
+
+
 def check_updates():
     config = cherrypy._cpconfig._Parser()
     config.read(cherrypy.configfile)
@@ -217,7 +218,7 @@ def midnightloghandler(fn, level, backups):
     h.setLevel(level)
     h.setFormatter(cherrypy._cplogging.logfmt)
     return h
-
+cherrypy.server.max_request_body_size = 0
 cherrypy.tools.requires_login = cherrypy.Tool('before_request_body', requires_login, priority=70)
 cherrypy.tools.before_upload = cherrypy.Tool('before_request_body', before_upload, priority=71)
 def start(configfile=None, daemonize=False, pidfile=None):
@@ -278,9 +279,9 @@ def start(configfile=None, daemonize=False, pidfile=None):
     hour = 0.0
     while True:
         #Set max file size, in bytes
-        maxSize = app.config['filelocker']['max_file_size']
-        cherrypy.config.update({'server.max_request_body_size': maxSize})
-        logging.error("Just updated the max size to %s" % maxSize)
+#        maxSize = app.config['filelocker']['max_file_size']
+#        cherrypy.config.update({'server.max_request_body_size': maxSize*1024*1024})
+#        logging.error("Just updated the max size to %s" % maxSize)
         if app.config['filelocker'].has_key("cluster_master") and app.config['filelocker']["cluster_master"]: # This will allow you set up other front ends that don't run maintenance on the DB or FS
             if hour == 0.0: #on startup and each new day
                 daily_maintenance(app.config)
