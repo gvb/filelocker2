@@ -225,9 +225,6 @@ FLFile = function() {
                     if(pollerId === "")
                         pollerId = setInterval(function() { poll(); }, 1000);
                 },
-                onProgress: function(id, fileName, loaded, total){
-                    Filelocker.checkMessages("uploading file");
-                },
                 onComplete: function(id, fileName, response){
                     Filelocker.checkMessages("uploading file");
                     load();

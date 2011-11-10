@@ -247,8 +247,10 @@ class AccountController:
     @cherrypy.expose
     @cherrypy.tools.requires_login(permission="admin")
     def create_role(self, roleId, roleName, email, quota, format="json", **kwargs):
+        print str(kwargs)
         user, sMessages, fMessages = (cherrypy.session.get("user"), [], [])
         try:
+            print "================================ %s" % roleId
             roleId = strip_tags(roleId)
             existingRole = session.query(Role).filter(Role.id == roleId).scalar()
             if existingRole is None:

@@ -419,7 +419,7 @@ qq.FileUploaderBasic.prototype = {
             return false;
                                                      
         } else if (size && this._options.sizeLimit && size > this._options.sizeLimit){
-            var browserAndVersion = detectBrowserVersion();
+            var browserAndVersion = Utility.detectBrowserVersion();
             if(browserAndVersion[0] != "Chrome" // File uploads larger than 2GB work in Chrome, Safari, FF4, and IE9.
                 && browserAndVersion[0] != "Safari"
                 && !(browserAndVersion[0] == "Firefox" && parseInt(browserAndVersion[1]) >= 4)
