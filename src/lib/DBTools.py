@@ -36,11 +36,14 @@ def create_admin_user(dburi, password):
 def export_db(exportFile):
     pass
     
-def import_db(importFile):
+def import_db(importFile, dburi):
     dom = parse(importFile)
+	engine = create_engine(dburi, echo=True)
+    Session = sessionmaker(bind=engine)
+    session = Session()
 
     #Permissions
-    for node in dom.getElementsByTagName("Permissions"):
+    for node in dom.getElementsByTagName("permissions"):
         for permnode in node:
             session.add(Permission(id=permnode.getAttribute("id"), name=permnode.getAttribute("name")))
 
@@ -60,7 +63,6 @@ def import_db(importFile):
             session.commit()
 
     #Groups
-    #TODO: Add members
     for node in dom.getElementsByTagName("groups"):
         for groupnode in node.getElementsByTagName("group"):
             g = Group(id=groupnode.getAttribute("id"), name=groupnode.getAttribute("name"))
@@ -68,6 +70,9 @@ def import_db(importFile):
             for permnode in groupnode.getElementsByTagName("permissions"):
                 perm = session.query(Permission).filter(Permission.id==permnode.getAttribute("id")).one()
                 g.permissions.append(perm)
+            for membernode in groupnode.getElementsByTagName("members"):
+                m = session.query(User).filter(User.id == membernode.getAttribute("id")).one()
+                g.members.append(m)
             session.commit()
 
 
@@ -81,38 +86,96 @@ def import_db(importFile):
             for permnode in rolenode.getElementsByTagName("permissions"):
                 perm = session.query(Permission).filter(Permission.id==permnode.getAttribute("id")).one()
                 r.permissions.append(perm)
+            for membernode in rolenode.getElementsByTagName("members"):
+                m = session.query(User).getElementsByTagName("id").one()
+                r.members.append(m)
             session.commit()
             
-    type = Column(Text)
-    size = Column(BigInteger)
-    notes = Column(Text)
-    date_uploaded = Column(DateTime)
-    owner_id = Column(String(30), ForeignKey('users.id'), nullable=True)
-    role_owner_id = Column(String(30), ForeignKey('roles.id'), nullable=True)
-    date_expires = Column(DateTime)
-    passed_avscan = Column(Boolean)
-    encryption_key = Column(String(64))
-    status = Column(String(255))
-    notify_on_download = Column(Boolean, nullable=False)
-    md5 = Column(String(64), nullable=True)
-    upload_request_id = Column(String(64), ForeignKey("upload_requests.id"))
     for node in dom.getElementsByTagName("files"):
         for filenode in node.getElementsByTagName("file"):
             f = File(id=filenode.getAttribute("id"), name=filenode.getAttribute("name"),
                     type=filenode.getAttribute("type"), size=long(filenode.getAttribute("size")),
                     notes=filenode.getAttribute("notes"), date_uploaded=filenode.getAttribute("date_uploaded"),
                     owner_id=filenode.getAttribute("owner_id"), role_owner_id=filenode.getAttribute("role_owner_id"),
-                    date_expires=filenode.getAttribute("date_expires"), passed_avscan=filenode.getAttribute("passed_avscan"),,
+                    date_expires=filenode.getAttribute("date_expires"), passed_avscan=filenode.getAttribute("passed_avscan"),
                     encryption_key=filenode.getAttribute("encryption_key"), status=filenode.getAttribute("status"),
                     notify_on_download=False if filenode.getAttribute("notify_on_download")=="0" else True,
-                    md5=filenode.getAttribute("md5"), upload_request_id=filenode.getAttribute("upload_request_id"))
+                    md5=filenode.getAttribute("md5"), upload_request_id=filenode.getAttribute("upload_request_id"),
+                    upload_request_id=filenode.getAttribute("upload_request_id"))
             session.add(f)
         session.commit()
-
-
-
-
-
+    
+    for node in dom.getElementsByTagName("upload_requests"):
+        for requestnode in node.getElementsByTagName("upload_request"):
+            u = UploadRequest(id=requestnode.getAttribute("id"), owner_id=requestnode.getAttribute("owner_id"), 
+                            max_file_size=requestnode.getAttribute("max_file_size"), scan_file=requestnode.getAttribute("scan_file"), 
+                            date_expires=requestnode.getAttribute("date_expires"), password=requestnode.getAttribute("password"), 
+                            type=requestnode.getAttribute("type"))
+            session.add(u)
+        session.commit()
+        
+    for node in dom.getElementsByTagName("messages"):
+        for messagenode in node.getElementsByTagName("message"):
+            m = Message(id=messagenode.getAttribute("id"), subject=messagenode.getAttribute("subject"),
+                    date_sent=messagenode.getAttribute("date_sent"), owner_id=messagenode.getAttribute("owner_id"),
+                    date_expires=messagenode.getAttribute("date_expires"), encryption_key=messagenode.getAttribute("encryption_key"))
+        session.commit()
+        
+    #TODO: Might have to change schema to make these children of message
+    for node in dom.getElementsByTagName("message_shares"):
+        for msnode in node.getElementsByTagName("message_share"):
+            m = MessageShare(message_id=msnode.getAttribute("message_id"), recipient_id=msnode.getAttribute("recipient_id"), date_viewed=msnode.getAttribute("date_viewed"))
+            session.add(m)
+        session.commit()
+    
+    for node in dom.getElementsByTagName("user_shares"):
+        for unode in node.getElementsByTagName("user_share"):
+            us = UserShare(user_id=unode.getAttribute("user_id"), file_id=unode.getAttribute("file_id"))
+            session.add(us)
+        session.commit()
+    
+    for node in dom.getElementsByTagName("group_shares"):
+        for gnode in node.getElementsByTagName("group_shares"):
+            gs = GroupShare(group_id=gnode.getAttribute("group_id"), file_id=gnode.getAttribute("file_id"))
+            session.add(gs)
+        session.commit()
+    
+    for node in dom.getElementsByTagName("public_shares"):
+        for pnode in node.getElementsByTagName("public_shares"):
+            ps = PublicShare(id=pnode.getAttribute("id"), owner_id=pnode.getAttribute("owner_id"), date_expires=pnode.getAttribute("date_expires"), 
+            reuse=pnode.getAttribute("reuse"), password=pnode.getAttribute("password"))
+            session.add(ps)
+        session.commit()
+    
+    for node in dom.getElementsByTagName("attribute_shares"):
+        for anode in node.getElementsByTagName("attribute_share"):
+            ashare = AttributeShare(attribute_id=anode.getAttribute("attribute_id"), file_id=anode.getAttribute("file_id"))
+            session.add(ashare)
+        session.commit()
+    
+	for node in dom.getElementsByTagName("config_parameters"):
+		for cnode in node.getElementsByTagName("config_parameter"):
+			c = ConfigParameter(name=cnode.getAttribute("name"), value=cnode.getAttribute("value"), 
+								description=cnode.getAttribute("description"), type=cnode.getAttribute("type"))
+			session.add(cnode)
+		session.commit()
+		
+	for node in dom.getElementsByTagName("deleted_files"):
+		for dnode in node.getElementsByTagName("deleted_file"):
+			d = DeletedFile(file_name=dnode.getAttribute("file_name")
+			session.add(d)
+		session.commit()
+	
+	for node in dom.getElementsByTagName("audit_logs"):
+		for anode in node.getElementsByTagName("audit_log")
+			log = AuditLog(id=anode.getAttribute("id"), initiator_user_id=anode.getAttribute("initiator_user_id"),
+							action=anode.getAttribute("action"), affected_user_id=anode.getAttribute("affected_user_id"),
+							message=anode.getAttribute("message"), date=anode.getAttribute("date"))
+			session.add(log)
+		session.commit()
+	
+    
+    
 
 
 
