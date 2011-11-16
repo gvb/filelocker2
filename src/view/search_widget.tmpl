@@ -34,13 +34,13 @@
         </div>
         <div>
             <br />
-            <input type="text" name="${context}_searchBox" id="${context}_searchBox" onkeypress="javascript:if (event.which == 13) manualSearch(\$(this).val(), '${context}');"/>
+            <input type="text" name="${context}_searchBox" id="${context}_searchBox" onkeypress="javascript:if (event.which == 13) Account.Search.manual(\$(this).val(), '${context}');"/>
             <a href="javascript:Account.Search.manual(\$('#${context}_searchBox').val(), '${context}');" class="inlineLink"><span class="view">&nbsp;</span></a>
             <br />
         </div>
         <div id="${context}_searchResult" class="hidden"></div>
     </div>
-    #if $context != "messages" and $context != "manage_groups"
+    #if $context != "messages" and $context != "manage_groups" and $context != "manage_roles"
     <div id="${context}_groups_tab">
         <h3>Your Groups</h3><br />
         <ul class="menu">

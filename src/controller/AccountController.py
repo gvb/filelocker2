@@ -329,7 +329,7 @@ class AccountController:
                 except sqlalchemy.orm.exc.NoResultFound:
                     fMessages.append("The role ID: %s does not exist" % str(roleId))
             session.commit()
-            sMessages.append("Successfully deleted roles%s." % str(roleUserId))
+            sMessages.append("Successfully deleted roles%s." % str(roleId))
         except Exception, e:
             session.rollback()
             logging.error("[%s] [delete_roles] [Problem deleting roles: %s]" % (user.id, str(e)))
@@ -339,7 +339,7 @@ class AccountController:
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def switch_roles(self, roleUserId=None, format="json", **kwargs):
-        user = cherrypy.session.get("user")
+        user, sMessages, fMessages = (cherrypy.session.get("user"), [], [])
         try:
             if roleUserId is None:
                 cherrypy.session['current_role'] = None
@@ -358,11 +358,11 @@ class AccountController:
     @cherrypy.expose
     @cherrypy.tools.requires_login(permission="admin")
     def add_users_to_role(self, roleId, userIds, format="json", **kwargs):
-        user = cherrypy.session.get("user")
+        user, sMessages, fMessages = (cherrypy.session.get("user"), [], [])
         try:
             roleId = strip_tags(roleId)
             userIds = split_list_sanitized(userIds)
-            if userId is not None and roleId is not None:
+            if userIds is not None and roleId is not None:
                 role = session.query(Role).filter(Role.id==roleId).one()
                 for userId in userIds:
                     try:
@@ -376,17 +376,17 @@ class AccountController:
             fMessages.append("Role with ID:%s could not be found" % str(roleId))
         except Exception, e:
             fMessages.append("Unable to add users to role: %s" % str(e))
-            logging.error("[%s] [add_users_to_role] [Error addings users to role: %s]" % (userId, str(e)))
+            logging.error("[%s] [add_users_to_role] [Error addings users to role: %s]" % (userIds, str(e)))
         return fl_response(sMessages, fMessages, format)
 
     @cherrypy.expose
     @cherrypy.tools.requires_login(permission="admin")
     def remove_users_from_role(self, roleId, userIds, format="json", **kwargs):
-        user = cherrypy.session.get("user")
+        user, sMessages, fMessages = (cherrypy.session.get("user"), [], [])
         try:
             roleId = strip_tags(roleId)
             userIds = split_list_sanitized(userIds)
-            if userId is not None and roleId is not None:
+            if userIds is not None and roleId is not None:
                 role = session.query(Role).filter(Role.id==roleId).one()
                 for userId in userIds:
                     try:
@@ -400,7 +400,7 @@ class AccountController:
             fMessages.append("Role with ID:%s could not be found" % str(roleId))
         except Exception, e:
             fMessages.append("Unable to remove users from roles: %s" % str(e))
-            logging.error("[%s] [remove_users_from_role] [Unable to remove users from roles: %s]" % (userId, str(e)))
+            logging.error("[%s] [remove_users_from_role] [Unable to remove users from roles: %s]" % (userIds, str(e)))
         return fl_response(sMessages, fMessages, format)
 
 

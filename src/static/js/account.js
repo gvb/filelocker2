@@ -59,7 +59,7 @@ Account = function() {
         var data = {};
         if(roleUserId != null) {
             data = { roleUserId: roleUserId };
-            Filelocker.request("/user/switch_roles", "switching roles", data, function() { location.reload(true); });
+            Filelocker.request("/account/switch_roles", "switching roles", data, function() { location.reload(true); });
         }
     }
 
@@ -133,14 +133,16 @@ Account = function() {
         {
             $("#"+context+"_searchBox").autocomplete("search");
         }
-        function select(userId, userName, context)
+        function select(id, name, context)
         {
-            if(userId != "0" && context == "private_sharing")
-                $("#"+context+"_searchResult").html("<br /><span class='itemTitleMedium'><span class='ownerItem memberTitle' title='"+userId+"'>"+userName+"</span></span><a href='javascript:Share.User.create(\""+userId+"\");' title='Share with "+userName+"' class='shareUser'>Share</a><br /><br /><input type='checkbox' id='private_sharing_notifyUser' checked='checked' /><span onclick='javascript:Utility.check(\"private_sharing_notifyUser\");'>Notify via email</span>");
-            else if(userId != "0" && context == "manage_groups")
-                $("#"+context+"_searchResult").html("<br /><span class='itemTitleMedium'><span class='ownerItem memberTitle' title='"+userId+"'>"+userName+"</span></span><a href='javascript:Group.Member.add(\""+userId+"\",\""+$("#manage_groups_selectedGroupId").val()+"\");' title='Add "+userName+" to the Group' class='addUser'>Add</a>");
-            else if(userId != "0" && context == "messages")
-                $("#"+context+"_searchResult").html("<br /><span class='itemTitleMedium'><span class='ownerItem memberTitle' title='"+userId+"'>"+userName+"</span></span><a href='javascript:Message.create(\""+userId+"\");' title='Send message to "+userName+"' class='shareMessage'>Send</a>");
+            if(id != "0" && context == "private_sharing")
+                $("#"+context+"_searchResult").html("<br /><span class='itemTitleMedium'><span class='ownerItem memberTitle' title='"+id+"'>"+name+"</span></span><a href='javascript:Share.User.create(\""+id+"\");' title='Share with "+name+"' class='shareUser'>Share</a><br /><br /><input type='checkbox' id='private_sharing_notifyUser' checked='checked' /><span onclick='javascript:Utility.check(\"private_sharing_notifyUser\");'>Notify via email</span>");
+            else if(id != "0" && context == "manage_groups")
+                $("#"+context+"_searchResult").html("<br /><span class='itemTitleMedium'><span class='ownerItem memberTitle' title='"+id+"'>"+name+"</span></span><a href='javascript:Group.Member.add(\""+id+"\",\""+$("#manage_groups_selectedGroupId").val()+"\");' title='Add "+name+" to the Group' class='addUser'>Add</a>");
+            else if(id != "0" && context == "manage_roles")
+                $("#"+context+"_searchResult").html("<br /><span class='itemTitleMedium'><span class='ownerItem memberTitle' title='"+id+"'>"+name+"</span></span><a href='javascript:Admin.Role.Member.add(\""+id+"\",\""+$("#manage_roles_selectedRoleId").val()+"\");' title='Add "+name+" to the role' class='addUser'>Add</a>");
+            else if(id != "0" && context == "messages")
+                $("#"+context+"_searchResult").html("<br /><span class='itemTitleMedium'><span class='ownerItem memberTitle' title='"+id+"'>"+name+"</span></span><a href='javascript:Message.create(\""+id+"\");' title='Send message to "+name+"' class='shareMessage'>Send</a>");
             $("#"+context+"_searchBox").val("");
             $("#"+context+"_searchResult").show();
             return false;

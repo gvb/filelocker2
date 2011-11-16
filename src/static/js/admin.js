@@ -57,6 +57,25 @@ Admin = function() {
                 $("#userSorterLoading").hide();
             });
         }
+        if($("#roleTable tr").length>0)
+        {
+            $("#roleTableSorter").tablesorter({
+                headers: {
+                    0: {sorter: false},
+                    1: {sorter: 'text'},
+                    2: {sorter: 'text'},
+                    3: {sorter: 'text'},
+                    4: {sorter: 'fileSize'},
+                    5: {sorter: false}
+                },
+                sortList: [[1,0]]
+            });
+            $("#roleTableSorter").bind("sortStart",function() {
+                $("#userSorterLoading").show();
+            }).bind("sortEnd",function() {
+                $("#userSorterLoading").hide();
+            });
+        }
         if($("#attributeTableSorter tr").length>2) // Accounts for header and dotted line row
         {
             $("#attributeTableSorter").tablesorter({
@@ -423,6 +442,27 @@ Admin = function() {
             else
                 StatusResponse.create(action, "Select role(s) for deletion.", false);
         }
+        function prompt(roleId)
+        {
+            $("#viewRoleBox").load(FILELOCKER_ROOT+"/account/get_role_members?format=searchbox_html&ms=" + new Date().getTime(), {roleId: roleId}, function (responseText, textStatus, xhr) {
+                if (textStatus == "error")
+                    StatusResponse.create("loading role membership", "Error "+xhr.status+": "+xhr.textStatus, false);
+                else {
+                    if ($("#sessionState").length >0 && $("#sessionState").val() == "expired")
+                        Filelocker.login();
+                    else
+                    {
+                        $("#viewRoleBox").dialog($.extend({
+                            title: "<span class='view'>View Role Membership</span>"
+                        }, Defaults.largeDialog));
+                        $("#current_role_members").accordion({ autoHeight: false });
+                        Account.Search.init("manage_roles");
+                        $("#viewRoleBox").dialog("open");
+                    }
+                }
+                Utility.tipsyfy();
+            });
+        }
         function promptCreate()
         {
             $("#createRoleId").val("");
@@ -462,15 +502,53 @@ Admin = function() {
             $(".roleSelectBox").prop("checked", $("#allRolesCheckbox").prop("checked"));
         }
 
+        RoleMember = function() {
+            function add(userIds, roleId)
+            {
+                var action = "adding user to role";
+                if(userIds !== "" && roleId !== "")
+                {
+                    var data = {
+                        userIds: userIds,
+                        roleId: roleId
+                    };
+                    Filelocker.request("/account/add_users_to_role", action, data, true, function() {
+                        Admin.Role.prompt(roleId);
+                    });
+                }
+                else
+                    StatusResponse.create("adding user to role", "Select user and role.", false);
+            }
+            function remove(userIds, roleId, context)
+            {
+                var data = {
+                    userIds: userIds,
+                    roleId: roleId
+                };
+                Filelocker.request("/account/remove_users_from_role", "removing users from role", data, true, function() {
+                    if(context === "rollout")
+                        Admin.Role.load();
+                    else if(context === "viewRoleBox")
+                        Admin.Role.prompt(roleId);
+                });
+            }
+            return {
+                add:add,
+                remove:remove
+            };
+        }();
+
         return {
             load:load,
             create:create,
             update:update,
             del:del,
+            prompt:prompt,
             promptCreate:promptCreate,
             promptUpdate:promptUpdate,
             rowClick:rowClick,
-            selectAll:selectAll
+            selectAll:selectAll,
+            Member:RoleMember
         };
     }();
     

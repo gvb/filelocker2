@@ -13,7 +13,7 @@
                         #else
                             #for $member in $group.members
                                 <li><span class="itemTitleMedium"><span class="ownerItem memberTitle">$member.display_name</span></span>
-                                <a href="javascript:removeUsersFromGroup('$member.id', '$group.id', 'viewGroupBox');" title='Remove $member.id from $group.name' class='deleteLink'>Remove</a></li>
+                                <a href="javascript:Group.Member.remove('$member.id', '$group.id', 'viewGroupBox');" title='Remove $member.id from $group.name' class='deleteLink'>Remove</a></li>
                             #end for
                         #end if
                         </ul>

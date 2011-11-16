@@ -69,7 +69,7 @@
             <div class="userLoggedInMultiple pseudoLink" title="Switch to a role" onclick="javascript:Account.toggleRoles()">$user.display_name ($user.id)</div>
             <span id="availableRoles">
             #for $role in $roles
-                <div class="roleLoggedIn pseudoLink" title="Switch to '$role.id'" onclick="javascript:Account.switchRoles('$role.id');" style="display: none;">$role.display_name ($role.id)</div><br/>
+                <div class="roleLoggedIn pseudoLink" title="Switch to '$role.id'" onclick="javascript:Account.switchRoles('$role.id');" style="display: none;">$role.name ($role.id)</div><br/>
             #end for
             </span>
         #end if

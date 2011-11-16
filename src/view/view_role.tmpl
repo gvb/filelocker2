@@ -4,7 +4,7 @@
         <tr>
             <td style="width: 310px;">
                 <input type="hidden" id="manage_roles_selectedRoleId" value="$role.id"/>
-                <div id="current_members">
+                <div id="current_role_members">
                     <h3><a href="#">Members in $role.name</a></h3>
                     <div>
                         <ul class="menu">
@@ -13,7 +13,7 @@
                         #else
                             #for $member in $role.members
                                 <li><span class="itemTitleMedium"><span class="ownerItem memberTitle">$member.display_name</span></span>
-                                <a href="javascript:removeUsersFromRole('$member.id', '$role.id', 'viewRoleBox');" title='Remove $member.id from $role.name' class='deleteLink'>Remove</a></li>
+                                <a href="javascript:Admin.Role.Member.remove('$member.id', '$role.id', 'viewRoleBox');" title='Remove $member.id from $role.name' class='deleteLink'>Remove</a></li>
                             #end for
                         #end if
                         </ul>

@@ -602,12 +602,13 @@ jQuery(document).ready(function() {
             if(element.nodeType==3) element=element.parentNode;
             if(element.tagName == 'INPUT' || element.tagName == 'TEXTAREA' || e.ctrlKey || e.altKey || e.metaKey) return;
             var code = e.charCode || e.which || e.keyCode;
-            if (code == 97)  Account.load();        // A
+            if (code == 97 && Admin != null)  Admin.load();        // A
+            else if (code == 97)  Account.prompt();        // A
             if (code == 102) FLFile.load();           // F
-            if (code == 103) Group.load();          // G
-            if (code == 104) History.load();        // H
-            if (code == 109) Message.view();        // M
-            if (code == 120) StatusResponse.hide(); // X
+            if (code == 103) Group.load();            // G
+            if (code == 104) History.load();          // H
+            if (code == 109) Message.view();          // M
+            if (code == 120) StatusResponse.hide();   // X
         });
     }
     else
@@ -619,12 +620,13 @@ jQuery(document).ready(function() {
             if(element.nodeType==3) element=element.parentNode;
             if(element.tagName == 'INPUT' || element.tagName == 'TEXTAREA' || e.ctrlKey || e.altKey || e.metaKey) return;
             var code = e.charCode || e.which || e.keyCode;
-            if (code == 65) Account.load();        // A
+            if (code == 65 && Admin != null)  Admin.load();        // A
+            else if (code == 65) Account.prompt();        // A
             if (code == 70) FLFile.load();           // F
-            if (code == 71) Group.load();          // G
-            if (code == 72) History.load();        // H
-            if (code == 77) Message.view();        // M
-            if (code == 88) StatusResponse.hide(); // X
+            if (code == 71) Group.load();            // G
+            if (code == 72) History.load();          // H
+            if (code == 77) Message.view();          // M
+            if (code == 88) StatusResponse.hide();   // X
         });
     }
 

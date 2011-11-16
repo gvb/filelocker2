@@ -833,6 +833,18 @@ td.dotted {
     width:240px;
     padding:5px;
 }
+.menuRoles {
+    position:absolute;
+    top:4px !important;
+    left:308px;
+    visibility:visible !important;
+    background-color:#b8e6fc !important;
+    border-bottom:1px solid #86a8b8;
+    border-right:1px solid #86a8b8;
+    border-left:1px solid #86a8b8;
+    width:240px;
+    padding:5px;
+}
 /*.menuUser {
     position:absolute;
     top:4px !important;
@@ -962,10 +974,10 @@ ul.menu li {
     margin:10px 0 15px 10px;
     border:1px solid #E4E4E4;
 }
-.manage_shares_table, .manage_group_table {
+.manage_shares_table, .manage_group_table, .manage_role_table {
     width: 100%;
 }
-.manage_shares_table td, .manage_group_table td {
+.manage_shares_table td, .manage_group_table td, .manage_role_table td {
     padding: 5px;
     vertical-align: top;
 }
@@ -1288,7 +1300,7 @@ ul.menu li {
     overflow-x:hidden;
     overflow-y:auto;
 }
-#userTableSorter, #attributeTableSorter {
+#userTableSorter, #roleTableSorter, #attributeTableSorter {
     width: 560px;
 }
 #CLIKeyTableSorter, #userPermissionTableSorter, #currentUsersTableSorter {
