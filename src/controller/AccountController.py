@@ -338,14 +338,14 @@ class AccountController:
 
     @cherrypy.expose
     @cherrypy.tools.requires_login()
-    def switch_roles(self, roleUserId=None, format="json", **kwargs):
+    def switch_roles(self, roleId=None, format="json", **kwargs):
         user, sMessages, fMessages = (cherrypy.session.get("user"), [], [])
         try:
-            if roleUserId is None:
+            if roleId is None:
                 cherrypy.session['current_role'] = None
             else:
                 for role in user.roles:
-                    if role.id == roleUserId:
+                    if role.id == roleId:
                         cherrypy.session['current_role'] = role
                         sMessages.append("Switched to role %s" % role.name)
                         break
@@ -402,7 +402,6 @@ class AccountController:
             fMessages.append("Unable to remove users from roles: %s" % str(e))
             logging.error("[%s] [remove_users_from_role] [Unable to remove users from roles: %s]" % (userIds, str(e)))
         return fl_response(sMessages, fMessages, format)
-
 
     @cherrypy.expose
     @cherrypy.tools.requires_login(permission="admin")
