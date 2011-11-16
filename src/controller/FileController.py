@@ -245,7 +245,7 @@ class FileController(object):
     @cherrypy.tools.before_upload()
     def upload(self, format="json", **kwargs):
         cherrypy.response.timeout = 86400
-        user, uploadRequest, uploadKey, config, sMessages, fMessages = None, None, None, cherrypy.request.app.config['filelocker'], [], []
+        user, role, uploadRequest, uploadKey, config, sMessages, fMessages = None, None, None, None, cherrypy.request.app.config['filelocker'], [], []
 
         #Check Permission to upload since we can't wrap in requires login for public uploads
         if cherrypy.session.has_key("uploadRequest") and cherrypy.session.get("uploadRequest") is not None and cherrypy.session.get("uploadRequest").expired == False:
@@ -256,6 +256,8 @@ class FileController(object):
             cherrypy.tools.requires_login()
             user, sMessages, fMessages = cherrypy.session.get("user"), cherrypy.session.get("sMessages"), cherrypy.session.get("fMessages")
             uploadKey = user.id
+            if cherrypy.session.get("current_role") is not None:
+                role = cherrypy.session.get("current_role")
 
         #Check upload size
         lcHDRS = {}
@@ -268,11 +270,16 @@ class FileController(object):
             raise HTTPError(411, "Request must have a valid content length")
         fileSizeMB = ((fileSizeBytes/1024)/1024)
         vaultSpaceFreeMB, vaultCapacityMB = get_vault_usage()
-        quotaSpaceRemainingBytes = (user.quota*1024*1024) - get_user_quota_usage_bytes(user.id)
+        
         if (fileSizeMB*2) >= vaultSpaceFreeMB:
             logging.critical("[system] [upload] [File vault is running out of space and cannot fit this file. Remaining Space is %s MB, fileSizeBytes is %s]" % (vaultSpaceFreeMB, fileSizeBytes))
             fMessages.append("The server doesn't have enough space left on its drive to fit this file. The administrator has been notified.")
             raise HTTPError(413, "The server doesn't have enough space left on its drive to fit this file. The administrator has been notified.")
+        quotaSpaceRemainingBytes = 0
+        if role is not None:
+            quotaSpaceRemainingBytes = (role.quota*1024*1024) - get_role_quota_usage_bytes(role.id)
+        else:
+            quotaSpaceRemainingBytes = (user.quota*1024*1024) - get_user_quota_usage_bytes(user.id)
         if fileSizeBytes > quotaSpaceRemainingBytes:
             fMessages.append("File size is larger than your quota will accomodate")
             raise HTTPError(413, "File size is larger than your quota will accomodate")
@@ -357,13 +364,18 @@ class FileController(object):
         newFile.notes = fileNotes
 
         #Owner ID is a separate variable since uploads can be owned by the system
-        newFile.owner_id = "system" if (AccountController.user_has_permission(user, "admin") and (kwargs.has_key('systemUpload') and kwargs['systemUpload'] == "yes")) else user.id
+        if role is not None:
+            newFile.role_owner_id = role.id
+        else:
+            newFile.owner_id = user.id
 
         #Process date provided
         maxExpiration = datetime.datetime.today() + datetime.timedelta(days=config['max_file_life_days'])
         expiration = kwargs['expiration'] if kwargs.has_key("expiration") else None
         if (expiration is None or expiration == "" or expiration.lower() =="never"):
-            if AccountController.user_has_permission(user,  "expiration_exempt") or AccountController.user_has_permission(user, "admin"): #Check permission before allowing a non-expiring upload
+            if role is not None and AccountController.role_has_permission(role, "expiration_exempt") or AccountController.role_has_permission(role, "admin"):
+                expiration = None
+            elif AccountController.user_has_permission(user,  "expiration_exempt") or AccountController.user_has_permission(user, "admin"): #Check permission before allowing a non-expiring upload
                 expiration = None
             else:
                 expiration = maxExpiration

@@ -600,6 +600,12 @@ def user_has_permission(user, permissionId):
                 return True
     return False
 
+def role_has_permission(role, permissionId):
+    for permission in role.permissions:
+        if permission.id == permissionId:
+            return True
+    return False
+
 def install_user(self, user):
     if user is not None:
         if user.quota is None:
