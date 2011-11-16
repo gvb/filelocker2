@@ -93,20 +93,14 @@ class FileController(object):
     @cherrypy.tools.requires_login()
     def get_user_file_list(self, fileIdList=None, format="json", **kwargs):
         """Get File List"""
-        user, sMessages, fMessages = (cherrypy.session.get("user"),  [], [])
-        userId = user.id
-        if kwargs.has_key("userId"):
-            if AccountController.user_has_permission(user, "admin"):
-                userId = kwargs['userId']
-            else:
-                raise cherrypy.HTTPError(413)
+        user, role, sMessages, fMessages = (cherrypy.session.get("user"), cherrypy.session.get("current_role") [], [])
         myFilesList = []
         hiddenShares = session.query(HiddenShare).filter(HiddenShare.owner_id==userId).all()
         hiddenShareIds = []
         for hiddenShare in hiddenShares:
             hiddenShareIds.append(hiddenShare.file_id)
         if fileIdList is None:
-            allFilesList = session.query(File).filter(File.owner_id == userId).all()
+            allFilesList = session.query(File).filter(File.owner_id == user.id).all() if role is None else session.query(File).filter(File.role_owner_id==role.id).all()
             for flFile in allFilesList:
                 if flFile.id not in hiddenShareIds:
                     myFilesList.append(flFile)
@@ -128,7 +122,7 @@ class FileController(object):
             #TODO: Account for attribute shares here 'document_attribute'
         if format=="json" or format=="searchbox_html" or format=="cli":
             myFilesJSON = []
-            userShareableAttributes = AccountController.get_shareable_attributes_by_user(user)
+            userShareableAttributes = AccountController.get_shareable_attributes_by_user(user) if role is None else AccountController.get_shareable_attributes_by_role(role)
             for flFile in myFilesList:
                 flFile.fileUserShares, flFile.fileGroupShares, flFile.availableGroups, sharedGroupsList, flFile.fileAttributeShares = ([],[],[],[],[])
                 for share in flFile.user_shares:

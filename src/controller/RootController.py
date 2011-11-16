@@ -259,15 +259,17 @@ class RootController:
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def files(self, **kwargs):
-        user, systemFiles = (cherrypy.session.get("user"), [])
-        if AccountController.user_has_permission(user, "admin"):
-            systemFiles = session.query(File).filter(File.owner_id == "system").all()
+        user, role, defaultExpiration, uploadRequests, userFiles, userShareableAttributes,attributeFilesDict,sharedFiles = (cherrypy.session.get("user"), cherrypy.session.get("current_role"), None, [], [], [], {}, [])
         defaultExpiration = datetime.date.today() + (datetime.timedelta(days=cherrypy.request.app.config['filelocker']['max_file_life_days']))
-        uploadRequests = session.query(UploadRequest).filter(UploadRequest.owner_id==user.id).all()
         userFiles = self.file.get_user_file_list(format="list")
-        userShareableAttributes = ShareController.get_user_shareable_attributes(user)
-        attributeFilesDict = ShareController.get_files_shared_with_user_by_attribute(user)
-        sharedFiles = ShareController.get_files_shared_with_user(user)
+        if role is None:
+            uploadRequests = session.query(UploadRequest).filter(UploadRequest.owner_id==user.id).all()
+            userFiles = self.file.get_user_file_list(format="list")
+            userShareableAttributes = ShareController.get_user_shareable_attributes(user)
+            attributeFilesDict = ShareController.get_files_shared_with_user_by_attribute(user)
+            sharedFiles = ShareController.get_files_shared_with_user(user)
+        else:
+            userShareableAttributes = ShareController.get_role_shareable_attributes(role)
         tpl = Template(file=get_template_file('files.tmpl'), searchList=[locals(),globals()])
         return str(tpl)
 

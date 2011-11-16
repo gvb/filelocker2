@@ -669,6 +669,22 @@ def get_shareable_attributes_by_user(user):
                 attributeList.append(attribute)
     return attributeList
 
+def get_shareable_attributes_by_role(role):
+    """
+    This function gets the attributes that a role has permission to share with.
+
+    Examples of this would be a teacher for a class being able to share with all users
+    who have the class as an attribute"""
+    attributeList = []
+    allAttributes = session.query(Attribute).all()
+    if role_has_permission(role, "admin"):
+        attributeList = allAttributes
+    else:
+        for attribute in allAttributes:
+            if role_has_permission(role, "(attr)%s" % attribute.id):
+                attributeList.append(attribute)
+    return attributeList
+
 def setup_session(user):
     cherrypy.session['user'] = user
     cherrypy.session['current_role'] = None
