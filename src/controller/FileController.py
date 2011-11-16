@@ -33,7 +33,7 @@ class FileController(object):
         try:
             quotaMB, quotaUsage = 0,0
             if cherrypy.session.get("current_role") is not None:
-                quotaMB = role.quota
+                quotaMB = cherrypy.session.get("current_role").quota
                 quotaUsage = get_role_quota_usage_bytes(cherrypy.session.get("current_role").id)
             else:
                 quotaMB = user.quota

@@ -54,13 +54,10 @@ Account = function() {
             }
         });
     }
-    function switchRoles(roleUserId)
+    function switchRoles(roleId)
     {
-        var data = {};
-        if(roleUserId != null) {
-            data = { roleUserId: roleUserId };
-            Filelocker.request("/account/switch_roles", "switching roles", data, function() { location.reload(true); });
-        }
+        var data = roleId != null ? { roleId: roleId } : {};
+        Filelocker.request("/account/switch_roles", "switching roles", data, true, function() { location.reload(true); });
     }
 
     Search = function() {

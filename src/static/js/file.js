@@ -602,7 +602,7 @@ jQuery(document).ready(function() {
             if(element.nodeType==3) element=element.parentNode;
             if(element.tagName == 'INPUT' || element.tagName == 'TEXTAREA' || e.ctrlKey || e.altKey || e.metaKey) return;
             var code = e.charCode || e.which || e.keyCode;
-            if (code == 97 && Admin != null)  Admin.load();        // A
+            if (code == 97 && typeof(Admin) !== 'undefined')  Admin.load();        // A
             else if (code == 97)  Account.prompt();        // A
             if (code == 102) FLFile.load();           // F
             if (code == 103) Group.load();            // G
@@ -620,7 +620,7 @@ jQuery(document).ready(function() {
             if(element.nodeType==3) element=element.parentNode;
             if(element.tagName == 'INPUT' || element.tagName == 'TEXTAREA' || e.ctrlKey || e.altKey || e.metaKey) return;
             var code = e.charCode || e.which || e.keyCode;
-            if (code == 65 && Admin != null)  Admin.load();        // A
+            if (code == 65 && typeof(Admin) !== 'undefined')  Admin.load();        // A
             else if (code == 65) Account.prompt();        // A
             if (code == 70) FLFile.load();           // F
             if (code == 71) Group.load();            // G

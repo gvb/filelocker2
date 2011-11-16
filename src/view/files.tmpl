@@ -148,124 +148,7 @@
             <tfoot id="progressBarSection">
             </tfoot>
         </table>
-    #if $len($systemFiles) > 0
-    <h3>System Owned Files</h3>
-        <table class="file_table" id="systemFileTableSorter">
-            <thead>
-                <tr>
-                    <th class="selectAllCol"><input type="checkbox" id = "selectAllSystemFiles" onClick="selectAll('systemFiles');"/></th>
-                    <th class="nameCol pseudoLink">Name</th>
-                    <th class="sizeCol pseudoLink">Size</th>
-                    <th class="expiresCol pseudoLink">Expires</th>
-                    <th class="menuCol"></th>
-                </tr>
-                <tr>
-                    <td></td>
-                    <td colspan="4" class="dotted"></td>
-                </tr>
-            </thead>
-                
-            <tbody id="systemFilesTable">
-            #for $f in $systemFiles
-                #set $rowId = $rowId + 1
-                #set $fsSuffix = "B"
-                #set $fileSize = $f.size
-                #if $fileSize > 1024
-                    #set $fileSize = $fileSize / 1024
-                    #set $fsSuffix = "kB"
-                    #if $fileSize > 1024
-                        #set $fileSize = $fileSize / 1024
-                        #set $fsSuffix = "MB" 
-                        #if $fileSize > 1024
-                            #set $fileSize = round(float($fileSize)/1024,2)
-                            #set $fsSuffix = "GB" 
-                        #end if
-                    #end if
-                #end if
-                <tr id="row_$rowId" class="fileRow">
-                    <td id="name_row_$rowId" class="nameElement">
-                        <input type="checkbox" value="$f.id" id="checkbox_row_$rowId" class="systemFileSelectBox" onClick="javascript.FLFile.onCheck()"/>
-                        <div class="posrel">
-                            <div id="menu_row_$rowId" class="menuFiles hidden"><!--add class of hidden to hide this info box-->
-                            <ul class="menu">
-                                <li>
-                                    #if $f.public_shares is not None and $len($f.public_shares) > 0
-                                    #for $publicShare in $f.public_shares
-                                        <div class="itemTitleMedium"><span class="globe">Public Share:</span>&nbsp;&nbsp;&nbsp;&nbsp;<a href="javascript:Share.Public.viewURL('$publicShare.id')">(view link)</a></div>
-                                        <input type="checkbox" name="publicShareCheckbox_row_$rowId" value="yes" class="publicShareCheckbox" title="Unshare this file with users outside of $config['org_name']" onClick="javascript:Share.Public.del('$f.id', 'files')" checked="checked" />
-                                    #end for
-                                    #else
-                                    #set $fileExpiration = "Never"
-                                    #if $f.date_expires is not None
-                                    #set $fileExpiration = $f.date_expires.strftime("%m/%d/%Y")
-                                    #end if
-                                    <div class="itemTitleMedium"><span class="globe">Public Share:</span></div>
-                                    <input type="checkbox" name="publicShareCheckbox_$f.id" value="no" class="publicShareCheckbox" title="Share this file with users outside of $config['org_name']" onClick="javascript:Share.Public.prompt('$f.id', '$f.name', '$fileExpiration', 'files')"/>
-                                    #end if
-                                </li>
-                                #set $userCount = len($f.user_shares)
-                                #set $groupCount = len($f.group_shares)
-                                #if $userCount > 0 or $groupCount > 0
-                                <li>
-                                    #set $userPlural = "s"
-                                    #if $userCount == 1
-                                        #set $userPlural = ""
-                                    #end if
-                                    #set $groupPlural = "s"
-                                    #if $groupCount == 1
-                                        #set $groupPlural = ""
-                                    #end if
-                                    <div class="itemTitle"><span class="privatelyShared">Shares: </span></div><a href="#">$userCount user$userPlural</a>, <a href="#">$groupCount group$groupPlural</a>
-                                </li>
-                                #end if
-                                <hr />
-                                <li><div class="itemTitle"><span class="ownerItem">Owner:</span></div>$f.owner_id</li>
-                                <li><div class="itemTitle">
-                                #if $f.passed_avscan
-                                    <span class="virusPassed">Virus Scan:</span></div>Passed
-                                #else
-                                    <span class="virusUnknown">Virus Scan:</span></div>Not scanned!
-                                #end if
-                                </li>
-                                <li><div class="itemTitle"><span class="clock">Uploaded:</span></div>$f.date_uploaded</li>
-                                <li><div class="itemTitleMedium"><span class="cross"><a href="javascript:Utility.promptConfirmation('FLFile.del', ['$f.id']);" title="Permanently delete this file from Filelocker" class="redText">Delete This File</a></span></div></li>
-                                <li><div class="itemTitleMedium"><span class="save"><a href="$config['root_url']/file/download?fileId=$f.id" title="Download this file from Filelocker">Download This File</a></span></div></li>
-                                #set $notesStripped = $re.sub(r'\[geo\]-?\d+\.\d+,-?\d+\.\d+\[/geo\]', '', $str($f.notes))
-                                #if $notesStripped != ""
-                                    <li><div class="itemTitleMedium"><span class="view"><a href="javascript:viewnotes('$notesStripped');" title="View the user-entered notes for this file">View File Notes</a></span></div></li>
-                                #end if
-                                #set $fileGeoData = $re.search(r'.*\[geo\](-?\d+\.\d+),(-?\d+\.\d+)\[/geo\].*', $str($f.notes))
-                                #if $fileGeoData and $config['geotagging']
-                                    <li><div class="itemTitleMedium"><span class="map"><a href="http://maps.google.com/maps?q=${fileGeoData.group(1)},${fileGeoData.group(2)}" title="View this file's upload location on Google Maps" target="_blank">View Upload Location</a></span></div></li>
-                                #end if
-                                <li><div class="button" style="width: 185px;"><a href="javascript:Share.prompt('$f.id');" title="Share this file with Filelocker users and groups" class="shareButton"><span><center>Share This File</center></span></a></div></li>
-                            </ul>
-                            </div>
-                        </div>
-                    </td>
-                    <td onClick="javascript:FLFile.rowClick($rowId)">
-                        <a class="$f.documentType" title="$f.name">
-                            #if len($f.name) > 60
-                                $f.name[0:45]...$f.name[-10:]
-                            #else
-                                $f.name
-                            #end if
-                        </a>
-                    </td>
-                    <td onClick="javascript:FLFile.rowClick($rowId)">$fileSize $fsSuffix</td>
-                    #set $fileExpiration = "Never"
-                    #if $f.date_expires is not None
-                    #set $fileExpiration = $f.date_expires.strftime("%m/%d/%Y")
-                    #end if
-                    <td onClick="javascript:FLFile.rowClick($rowId)">$fileExpiration</td>
-                    <td onClick="javascript:FLFile.rowClick($rowId)" class="dropdownArrow rightborder"></td>
-                </tr>
-            #end for
-            </tbody>
-            <tfoot id="systemFileProgressBarSection">
-            </tfoot>
-        </table>
-    #end if
+    #if $cherrypy.session.get("current_role") is None
         <div id="miscFilesSections" role="tablist" class="ui-accordion ui-widget ui-helper-reset ui-accordion-icons" style="width: 592px"> <!-- Start Accordion sections -->
             <h3 tabindex="0" aria-expanded="true" role="tab" class="head ui-accordion-header ui-helper-reset ui-state-active ui-corner-top"><a tabindex="0" href="#">Files Shared with You ($len($sharedFiles))</a></h3>
             <div id="sharedFilesSection" class="ui-accordion-content-main ui-helper-reset ui-widget-content ui-corner-bottom"  style="padding: 0px 0px 0px 0px; overflow: visible">
@@ -495,6 +378,7 @@
                 </table>
             </div>
         </div> <!-- End accordion section -->
+        #end if
     </div> <!-- End Files Area -->
 </div>
 <div id="wrapper_col2">
