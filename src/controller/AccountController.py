@@ -344,7 +344,8 @@ class AccountController:
             if roleId is None:
                 cherrypy.session['current_role'] = None
             else:
-                for role in user.roles:
+                attachedUser = session.query(User).filter(User.id==roleId).one()
+                for role in attachedUser.roles:
                     if role.id == roleId:
                         cherrypy.session['current_role'] = role
                         sMessages.append("Switched to role %s" % role.name)
