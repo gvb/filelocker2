@@ -344,7 +344,7 @@ class AccountController:
             if roleId is None:
                 cherrypy.session['current_role'] = None
             else:
-                attachedUser = session.query(User).filter(User.id==roleId).one()
+                attachedUser = session.query(User).filter(User.id==user.id).one()
                 for role in attachedUser.roles:
                     if role.id == roleId:
                         cherrypy.session['current_role'] = role.get_copy()
