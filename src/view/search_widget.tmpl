@@ -6,7 +6,7 @@
             #if len($userShareableAttributes) > 0
             <li><a href="#${context}_attributes_tab">Share by Attribute</a></li>
             #end if
-        #else if $context == "manage_groups"
+        #else if $context == "manage_groups" or $context == "manage_roles"
             <li><a href="#${context}_users_tab">Add Users</a></li>
             <!--<li><a href="#${context}_groups_tab">Add Groups</a></li>-->
             <!--<li><a href="#${context}_attributes_tab">Add by Attribute</a></li>-->

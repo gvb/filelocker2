@@ -305,6 +305,19 @@ class AccountController:
 
     @cherrypy.expose
     @cherrypy.tools.requires_login(permission="admin")
+    def get_role_members(self, roleId, **kwargs):
+        searchWidget = self.get_search_widget("manage_roles")
+        roleId = strip_tags(roleId)
+        try:
+            role = session.query(Role).filter(Role.id == roleId).one()
+            tpl = Template(file=get_template_file('view_role.tmpl'), searchList=[locals(),globals()])
+            return str(tpl)
+        except Exception, e:
+            raise cherrypy.HTTPError(500, str(e))
+
+
+    @cherrypy.expose
+    @cherrypy.tools.requires_login(permission="admin")
     def delete_roles(self, roleIds, format="json", **kwargs):
         user, sMessages, fMessages = (cherrypy.session.get("user"), [], [])
         try:

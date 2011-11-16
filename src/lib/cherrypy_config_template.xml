@@ -1,0 +1,29 @@
+<global>
+
+    <defaults>
+        <config_item name="tools.sessions.on" type="bool" value="True" description="Enable sessions"/>
+        <config_item name="tools.sessions.name" type="text" value="filelocker" description="Name of session cookie"/>
+        <config_item name="tools.sessions.secure" type="bool" value="True" description="Enable sessions"/>
+        <config_item name="tools.sessions.on" type="bool" value="True" description="Enable sessions"/>
+
+    </defaults>
+</global>
+
+[global]
+tools.sessions.on=True
+engine.autoreload.on=False
+tools.sessions.secure=False
+server.thread_pool=20
+log.screen=False
+tools.sessions.name="filelocker"
+server.socket_port=8080
+tools.gzip.on=True
+log.access_file="/home/wbdavis/filelocker2/filelocker.access.log"
+server.reverse_dns=False
+tools.gzip.mime_types=['text/html', 'text/css', 'image/jpeg', 'image/gif', 'text/javascript', 'image/png']
+tools.sessions.storage_type="ram"
+tools.sessions.timeout=15
+server.environment="development"
+server.socket_timeout=60
+log.error_file="/home/wbdavis/filelocker2/filelocker.error.log"
+server.socket_host="0.0.0.0"
