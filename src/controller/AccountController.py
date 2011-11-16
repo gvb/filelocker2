@@ -341,7 +341,7 @@ class AccountController:
     def switch_roles(self, roleId=None, format="json", **kwargs):
         user, sMessages, fMessages = (cherrypy.session.get("user"), [], [])
         try:
-            if roleId is None:
+            if strip_tags(roleId) is None:
                 cherrypy.session['current_role'] = None
             else:
                 attachedUser = session.query(User).filter(User.id==user.id).one()
