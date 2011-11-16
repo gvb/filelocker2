@@ -91,6 +91,9 @@ class Role(Base):
         for permission in self.permissions:
             permissionsList.append(permission.get_dict())
         return {'id': self.id, 'name':self.name, 'email': self.email, 'quota':self.quota, 'members':membersList, 'permissions':permissionsList}
+    
+    def get_copy(self):
+        return Role(id=self.id, name=self.name, email=self.email, quota=self.quota)
 
 role_permissions_table = Table("role_permissions", Base.metadata,
     Column("role_id", String(30), ForeignKey("roles.id"), primary_key=True, nullable=False),
