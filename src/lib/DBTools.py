@@ -168,16 +168,15 @@ def import_db(importFile, dburi):
 	
 	for node in dom.getElementsByTagName("audit_logs"):
 		for anode in node.getElementsByTagName("audit_log")
-			log = AuditLog(id=anode.getAttribute("id"), initiator_user_id=anode.getAttribute("initiator_user_id"),
-							action=anode.getAttribute("action"), affected_user_id=anode.getAttribute("affected_user_id"),
-							message=anode.getAttribute("message"), date=anode.getAttribute("date"))
+			log = AuditLog(anode.getAttribute("initiator_user_id"),
+							anode.getAttribute("action"), anode.getAttribute("affected_user_id"),
+							anode.getAttribute("message"), anode.getAttribute("date"), 
+							anode.getAttribute("affected_role_id"), anode.getAttribute("file_id"), anode.getAttribute("id"))
 			session.add(log)
 		session.commit()
 	
     
     
-
-
 
 class LegacyDBConverter():
     connection = None
@@ -253,6 +252,7 @@ class LegacyDBConverter():
 
 #Groups
     def GetAllGroups (self):
+		#TODO: Get groups owned by roles.
         sql = "SELECT * FROM groups"
         sql_args = []
         results = self.execute(sql,sql_args)
@@ -430,12 +430,15 @@ class LegacyDBConverter():
         return files
 
     def GetAuditLogs(self):
+		#TODO: Get Role logs and tag them
         logs = []
         sql = "SELECT * FROM audit_log"
         results = self.execute(sql, None)
         if results is not None and len(results) > 0:
             for row in results:
-                newLog = AuditLog(row['audit_log_initiator_user_id'], row['audit_log_action'], row['audit_log_message'], row['audit_log_action_affected_user_id'], date=row['audit_log_datetime'], id=row['audit_log_id'])
+                newLog = AuditLog(row['audit_log_initiator_user_id'], row['audit_log_action'],
+				row['audit_log_message'], row['audit_log_action_affected_user_id'],
+				row['audit_log_datetime'], row['affected_role_id'], row['file_id'], row['audit_log_id'])
                 logs.append(newLog)
         return logs
 

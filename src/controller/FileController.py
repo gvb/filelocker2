@@ -190,15 +190,24 @@ class FileController(object):
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def delete_files(self, fileIds, format="json", **kwargs):
-        user, sMessages, fMessages = (cherrypy.session.get("user"), [], [])
+        user, role, sMessages, fMessages = (cherrypy.session.get("user"),cherrypy.session.get("current_role"), [], [])
         fileIds = split_list_sanitized(fileIds)
         for fileId in fileIds:
             try:
                 fileId = int(fileId)
                 flFile = session.query(File).filter(File.id == fileId).one()
+				if flFile.role_owner_id is not None and role is not None and flFile.role_owner_id == role.id:
+					queue_for_deletion(flFile.id)
+                    session.delete(flFile)
+					log = AuditLog(user.id, "Delete File", "File %s (%s) owned by role %s has been deleted by user %s. " % (flFile.name, flFile.id, role.name, user.id))
+					log.affected_role_id = role.id
+					session.add(log)
+                    session.commit()
+                    sMessages.append("File %s deleted successfully" % flFile.name)
                 if flFile.owner_id == user.id or AccountController.user_has_permission(user, "admin"):
                     queue_for_deletion(flFile.id)
                     session.delete(flFile)
+					session.add(AuditLog(user.id, "Delete File", "File %s (%s) has been deleted" % (flFile.name, flFile.id)))
                     session.commit()
                     sMessages.append("File %s deleted successfully" % flFile.name)
                 else:

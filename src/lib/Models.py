@@ -335,9 +335,10 @@ class AuditLog(Base):
     affected_user_id = Column(String(30), ForeignKey("users.id"))
     message = Column(Text, nullable=False)
     date = Column(DateTime, nullable=False)
+	file_id = Column(Integer, ForeignKey("files.id"), nullable=True)
     display_class = None
 
-    def __init__(self, initiatorId, action, message, affectedId=None, date=datetime.datetime.now(), id=None):
+    def __init__(self, initiatorId, action, message, affectedId=None, date=datetime.datetime.now(), role_id=None, file_id=None, id=None):
         self.initiator_user_id = initiatorId
         self.action = action
         self.message = message
@@ -348,7 +349,7 @@ class AuditLog(Base):
         return "[%s] [%s] [%s] [%s] [%s]" % (self.message, self.date.strftime("%m/%d/%Y"), self.initiator_user_id, self.action, self.affected_user_id)
 
     def get_dict(self):
-        return {"initiatorUserId":self.initiator_user_id, "action": self.action, "affectedUserId": self.affected_user_id, "message": self.message, "actionDatetime": self.date.strftime("%m/%d/%Y %H:%M"), "displayClass": self.display_class, "logId": self.id}
+        return {"initiatorUserId":self.initiator_user_id, "action": self.action, "affectedUserId": self.affected_user_id, "message": self.message, "actionDatetime": self.date.strftime("%m/%d/%Y %H:%M"), "displayClass": self.display_class, "logId": self.id, "roleId": self.affected_role_id, "fileId": self.file_id}
 
 def create_admin_user(dburi, password):
     adminUser = User(id="admin", first_name="Administrator", quota=1024, date_tos_accept=datetime.datetime.now())
