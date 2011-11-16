@@ -347,7 +347,7 @@ class AccountController:
                 attachedUser = session.query(User).filter(User.id==roleId).one()
                 for role in attachedUser.roles:
                     if role.id == roleId:
-                        cherrypy.session['current_role'] = role
+                        cherrypy.session['current_role'] = role.get_copy()
                         sMessages.append("Switched to role %s" % role.name)
                         break
                     fMessages.append("You are not a member of this role")
