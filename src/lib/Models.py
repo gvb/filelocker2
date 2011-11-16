@@ -93,7 +93,10 @@ class Role(Base):
         return {'id': self.id, 'name':self.name, 'email': self.email, 'quota':self.quota, 'members':membersList, 'permissions':permissionsList}
     
     def get_copy(self):
-        return Role(id=self.id, name=self.name, email=self.email, quota=self.quota)
+        loadedPermissions = []
+        for permission in self.permissions:
+            loadedPermissions.append(permission.get_copy())
+        return Role(id=self.id, name=self.name, email=self.email, quota=self.quota, permissions=loadedPermissions)
 
 role_permissions_table = Table("role_permissions", Base.metadata,
     Column("role_id", String(30), ForeignKey("roles.id"), primary_key=True, nullable=False),

@@ -1,37 +1,65 @@
-<global>
+<config>
+    <global>
 
-    <defaults>
-        <config_item name="tools.sessions.on" type="bool" value="True" description="Enable sessions:"/>
-        <config_item name="tools.sessions.name" type="text" value="filelocker" description="Name of session cookie"/>
-        <config_item name="log.screen" type="bool" value="False" description="Log messages to screen"/>
-        <config_item name="tools.sessions.on" type="bool" value="True" description="Enable sessions"/>
-        <config_item name="engine.autoreload.on" type="bool" value="False" description="Should CherryPy restart when a change is detected in the code files?"/>
-        <config_item name="server.thread_pool" type="int" value="20" description="How many threads should be in CherryPy's threadpool by default?"/>
-        <config_item name="tools.gzip.on" type="bool" value="True" description="GZIP data by default?"/>
-        <config_item name="server.reverse_dns" type="bool" value="False" description="Reverse DNS in log entries"/>
-        <config_item name="tools.gzip.mime_types" type="list" description="What file mimetypes should be gzipped?">
-            <list_item>'text/html'</list_item>
-            <list_item>'text/css'</list_item>
-            <list_item>'image/jpeg'</list_item>
-            <list_item>'image/gif'</list_item>
-            <list_item>'text/javascript'</list_item>
-            <list_item>'image/png'</list_item>
-        </config_item>
-        <config_item name="tools.sessions.storage_type" type="text" value="ram" description="Session storage type: "/>
-        <config_item name="tools.sessions.timeout" type="int" value="15" description="How long should sessions be valid before timeout?: "/>
-        <config_item name="server.environment" type="text" value="production" description=""/>
-        <config_item name="server.socket_timeout" type="int" value="60" description="Amount of time before request times out: "/>
-        <config_item name="server.socket_host" type="text" value="0.0.0.0" description="What IP should Filelocker listen for requests on (0.0.0.0 for all IPs)?"/> 
-    </defaults>
+        <defaults>
+            <config_item name="tools.sessions.on" type="bool" value="True" description="Enable sessions:"/>
+            <config_item name="tools.sessions.name" type="text" value="filelocker" description="Name of session cookie"/>
+            <config_item name="tools.sessions.storage_type" type="text" value="ram" description="Session storage type: "/>
+            <config_item name="tools.sessions.timeout" type="int" value="15" description="How long should sessions be valid before timeout?: "/>
+            <config_item name="tools.gzip.on" type="bool" value="True" description="GZIP data by default?"/>
+            <config_item name="tools.gzip.mime_types" type="list" description="What file mimetypes should be gzipped?">
+                <list_item>'text/html'</list_item>
+                <list_item>'text/css'</list_item>
+                <list_item>'image/jpeg'</list_item>
+                <list_item>'image/gif'</list_item>
+                <list_item>'text/javascript'</list_item>
+                <list_item>'image/png'</list_item>
+            </config_item>
+            <config_item name="log.screen" type="bool" value="False" description="Log messages to screen"/>
+            <config_item name="engine.autoreload.on" type="bool" value="False" description="Should CherryPy restart when a change is detected in the code files?"/>
+            <config_item name="server.thread_pool" type="int" value="20" description="How many threads should be in CherryPy's threadpool by default?"/>
+            <config_item name="server.reverse_dns" type="bool" value="False" description="Reverse DNS in log entries"/>
+            <config_item name="server.environment" type="text" value="production" description=""/>
+            <config_item name="server.socket_timeout" type="int" value="60" description="Amount of time before request times out: "/>
+            <config_item name="server.socket_host" type="text" value="0.0.0.0" description="What IP should Filelocker listen for requests on (0.0.0.0 for all IPs)?"/>
+        </defaults>
 
-    <user_specified>
-        <config_item name="tools.sessions.secure" type="bool" value="True" description="Should session cookie be sent over HTTPS?: "/>
-        <config_item name="server.socket_port" type="int" value="8080" description="What port should the Filelocker application server listen on?: "/>
-        <config_item name="log_directory" type="derived" description="What directory should Filelocker write logs to?: "/>
-    </user_specified>
-</global>
+        <user_specified>
+            <config_item name="tools.sessions.secure" type="bool" value="True" description="Should session cookie be sent over HTTPS?: "/>
+            <config_item name="server.socket_port" type="int" value="8080" description="What port should the Filelocker application server listen on?: "/>
+            <config_item name="log_directory" type="derived" description="What directory should Filelocker write logs to?: "/>
+        </user_specified>
+    </global>
 
-<filelocker>
-    <defaults></defaults>
-</filelocker>
+    <root>
+        <user_specified>
+            <config_item name="tools.SATransaction.dburi" type="text" value="mysql+mysqldb://user:password@localhost/filelocker" description="Connection string for database. For information on possible formats, see www.sqlalchemy.org/docs/core/engines.html#supported-databases "/>
+        </user_specified>
+        <defaults>
+            <config_item name="tools.SATransaction.on" type="bool" value="True" description=""/>
+            <config_item name="tools.SATransaction.echo" type="bool" value="False" description=""/>
+        </defaults>
+    </root>
+
+
+    <filelocker>
+        <defaults>
+            <config_item name="cluster_member_id" type="int" value="0"
+            description="If this is member of a cluster of Filelocker servers, what is the cluster ID of this instance?"/>
+        </defaults>
+        <user_specified>
+            <config_item name="vault" type="text" value="/vault" description="Where should uploaded files be stored?" />
+            <config_item name="root_url" type="text" value="http://localhost" description="What URL will Filelocker be hosted at?"/>
+            <config_item name="root_path" type="text" value="/usr/filelocker" description="Where is Filelocker installed on the filesystem?" />
+        </user_specified>
+    </filelocker>
+
+    <static>
+        <defaults>
+            <config_item name="tools.staticdir.root" type="text" value="/" description=""/>
+            <config_item name="tools.staticdir.dir" type="text" value="static" description=""/>
+            <config_item name="tools.staticdir.on" type="bool" value="True" description=""/>
+        </defaults>
+    </static>
+</config>
 
