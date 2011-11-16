@@ -93,7 +93,7 @@ class FileController(object):
     @cherrypy.tools.requires_login()
     def get_user_file_list(self, fileIdList=None, format="json", **kwargs):
         """Get File List"""
-        user, role, sMessages, fMessages = (cherrypy.session.get("user"), cherrypy.session.get("current_role") [], [])
+        user, role, sMessages, fMessages = (cherrypy.session.get("user"), cherrypy.session.get("current_role"), [], [])
         myFilesList = []
         hiddenShares = session.query(HiddenShare).filter(HiddenShare.owner_id==userId).all()
         hiddenShareIds = []
