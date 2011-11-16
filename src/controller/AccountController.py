@@ -271,6 +271,28 @@ class AccountController:
 
     @cherrypy.expose
     @cherrypy.tools.requires_login(permission="admin")
+    def update_role(self, roleId, roleName, email, quota, format="json", **kwargs):
+        user, sMessages, fMessages = (cherrypy.session.get("user"), [], [])
+        try:
+            roleId = strip_tags(roleId)
+            existingRole = session.query(Role).filter(Role.id == roleId).one()
+            existingRole.name = strip_tags(roleName)
+            existingRole.email = strip_tags(email)
+            existingRole.quota = int(quota)
+            session.commit()
+            sMessages.append("Successfully updated a role named %s." % str(roleName))
+        except ValueError:
+            fMessages.append("Quota must be a positive integer")
+        except sqlalchemy.orm.exc.NoResultFound:
+            fMessages.append("Role with ID:%s could not be found to update." % str(roleId))
+        except Exception, e:
+            session.rollback()
+            logging.error("[%s] [create_role] [Problem creating role: %s]" % (user.id, str(e)))
+            fMessages.append("Problem creating role: %s" % str(e))
+        return fl_response(sMessages, fMessages, format)
+
+    @cherrypy.expose
+    @cherrypy.tools.requires_login(permission="admin")
     def get_all_roles(self, roleId, roleName, email, quota, format="json", **kwargs):
         user, sMessages, fMessages = (cherrypy.session.get("user"), [], [])
         try:
