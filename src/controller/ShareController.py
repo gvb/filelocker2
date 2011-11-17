@@ -290,12 +290,16 @@ class ShareController:
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def delete_public_share(self, shareId, format="json", **kwargs):
-        #TODO: Public sharing has to be redone to accomodate multi-shares
-        user, sMessages, fMessages = (cherrypy.session.get("user"), [], [])
+        user, role, sMessages, fMessages = (cherrypy.session.get("user"), cherrypy.session.get("current_role"), [], [])
         shareId = strip_tags(shareId)
         try:
             ps = session.query(PublicShare).filter(PublicShare.id == shareId).one()
-            if ps.owner_id == user.id or AccountController.user_has_permission(user, "admin"):
+            if role is not None and ps.role_owner_id == role.id:
+                session.delete(ps)
+                session.add(AuditLog(user.id, "Delete Public Share", "Role %s stopped sharing files publicly via URL using share ID: %s" % (role.name, str(ps.id))))
+                session.commit()
+                sMessages.append("Successfully unshared files")
+            elif ps.owner_id == user.id or AccountController.user_has_permission(user, "admin"):
                 session.delete(ps)
                 session.add(AuditLog(user.id, "Delete Public Share", "You stopped sharing files publicly via URL using share ID: %s" % str(ps.id)))
                 session.commit()
@@ -309,27 +313,27 @@ class ShareController:
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def unhide_all_shares(self, format="json"):
-        user, fl, sMessages, fMessages = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [])
+        user, sMessages, fMessages = (cherrypy.session.get("user"), [], [])
         try:
-            fl.unhide_all_private_shares(user)
+            session.query(HiddenShare).filter(HiddenShare.owner_id==user.id).delete()
+            session.commit()
             sMessages.append("Successfully unhid shares")
-        except FLError, fle:
-            fMessages.extend(fle.failureMessages)
-            sMessages.extend(fle.successMessages)
+        except Exception, e:
+            fMessages.append(str(e))
         return fl_response(sMessages, fMessages, format)
 
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def hide_share(self, fileIds, format="json"):
-        user, fl, sMessages, fMessages = (cherrypy.session.get("user"), cherrypy.thread_data.flDict['app'], [], [])
+        user, sMessages, fMessages = (cherrypy.session.get("user"), [], [])
         fileIds = split_list_sanitized(fileIds)
         for fileId in fileIds:
             try:
-                fl.hide_private_share(user, fileId)
-                sMessages.append("Successfully hid share. Unhide shares in Account Settings.")
-            except FLError, fle:
-                fMessages.extend(fle.failureMessages)
-                sMessages.extend(fle.successMessages)
+                session.add(HiddenShare(file_id=fileId, owner_id=user.id))
+            except Exception, e:
+                fMessages.append(str(e))
+        sMessages.append("Successfully hid shares. Unhide shares in Account Settings.")
+        session.commit()
         return fl_response(sMessages, fMessages, format)
 
 
