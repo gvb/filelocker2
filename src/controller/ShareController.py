@@ -273,12 +273,13 @@ class ShareController:
                 session.add(AuditLog(user.id, "Email Sent", "Email notifications about a public share were sent to the following addresses: %s" % str(",".join(notifyEmailList))))
             session.add(AuditLog(user.id, "Create Public Share", "File(s) publicly shared."))
             session.commit()
+            shareId = ps.id
             sMessages.append("Files shared successfully")
         except Exception, e:
             session.rollback()
             fMessages.append(str(e))
             logging.error("[%s] [create_public_share] [Unable to create public share: %s]" % (user.id, str(e)))
-        return fl_response(sMessages, fMessages, format, data=ps.id)
+        return fl_response(sMessages, fMessages, format, data=shareId)
 
     @cherrypy.expose
     @cherrypy.tools.requires_login()
