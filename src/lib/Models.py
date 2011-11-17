@@ -131,7 +131,7 @@ class Group(Base):
     id = Column(Integer, primary_key=True)
     name = Column(String(255), nullable=False)
     owner_id = Column(String(30), ForeignKey("users.id"), nullable=True)
-    role_owner_id = Column(String(30), ForeignKey(""), nullable=True)
+    role_owner_id = Column(String(30), ForeignKey("roles.id"), nullable=True)
     scope = Column(Enum("public", "private", "reserved"), default="private")
 #    members = relationship("User", secondary=group_membership_table, backref="groups")
     permissions = relationship("Permission", secondary=group_permissions_table)
@@ -254,7 +254,7 @@ public_share_files = Table("public_share_files", Base.metadata,
 class PublicShare(Base):
     __tablename__="public_shares"
     id = Column(String(64), primary_key=True)
-    owner_id = Column(String(30, ForeignKey("users.id")), nullable=True)
+    owner_id = Column(String(30), ForeignKey("users.id"), nullable=True)
     role_owner_id = Column(String(30), ForeignKey("roles.id"), nullable=True)
     date_expires = Column(DateTime)
     password = Column(String(80))
