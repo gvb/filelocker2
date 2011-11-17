@@ -307,7 +307,7 @@ class ShareController:
             else:
                 fMessages.append("You do not have permission to modify share ID: %s" % str(ps.id))
         except Exception, e:
-            fMessags.append(str(e))
+            fMessages.append(str(e))
         return fl_response(sMessages, fMessages, format)
 
     @cherrypy.expose

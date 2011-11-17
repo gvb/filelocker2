@@ -99,43 +99,6 @@
     </div>
 </div>
 
-<div id="publicShareBox" class="hidden">
-    <div class="popup_wrapper">
-        <div class="popup_small">
-            <form>
-            <input type="text" style="width: 0; height: 0; top: -100px; position: absolute;"/><!-- jQuery UI dialogs autofocus to the first element. -->
-            <div>
-                <label for="publicShareExpiration">Expiration date:</label>
-                <input type="text" value="" class="dateCustom" id="publicShareExpiration" />
-            </div>
-            <div>
-                <label for="publicShareEmail">Email addresses entered below (comma separated) will receive a link to this file via email:</label>
-                <input type="text" name="publicShareEmail" id="publicShareEmail" style="width: 400px;"/>
-            </div>
-            <div>
-                <label for="publicShareType">Other options:</label>
-                <input type="checkbox" id="publicShareType" onclick="javascript:Share.Public.toggleType();" /><span onclick="javascript:Utility.check('publicShareType');javascript:Share.Public.toggleType();">Allow multiple downloads (requires password)?</span>
-            </div>
-            <div>
-                <input type="checkbox" id="publicSharePasswordSelector" onclick="javascript:Share.Public.TogglePassword();"/><span onclick="javascript:Utility.check('publicSharePasswordSelector');javascript:Share.Public.togglePassword();">Password protect this public share?</span>
-                <span id="publicShareSelector" style="display:none">
-                    <label for="publicSharePassword">Password:</label>
-                    <input type="password" name="publicSharePassword" id="publicSharePassword" />
-                    <label for="publicSharePasswordConfirm">Confirm Password:</label>
-                    <input type="password" name="publicSharePasswordConfirm" id="publicSharePasswordConfirm" />
-                </span>
-            </div>
-            <input type="hidden" id="publicShareFileId" value=""/>
-            <input type="hidden" id="publicShareDestination" value=""/>
-            <div>
-                <label for="publicShareButton">By clicking "Share" below, you will make this file publicly accessible at the generated URL.</label>
-                <div class="button"><a href="javascript:Share.Public.create()" title="Share this file publicly" class="shareButton" id="publicShareButton"><span>Share</span></a></div>
-            </div>
-            </form>
-        </div>
-    </div>
-</div>
-
 <div id="userCreateBox" class="hidden">
     <div class="popup_wrapper">
         <div class="popup_small">

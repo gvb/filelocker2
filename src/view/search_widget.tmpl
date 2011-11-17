@@ -1,19 +1,16 @@
 <div id="${context}_sections">
     <ul>
         #if $context == "private_sharing"
-            <li><a href="#${context}_users_tab">Share with Users</a></li>
-            <li><a href="#${context}_groups_tab">Share with Groups</a></li>
+            <li><a href="#${context}_users_tab">Users</a></li>
+            <li><a href="#${context}_groups_tab">Groups</a></li>
+            <li><a href="#${context}_public_tab">Public</a></li>
             #if len($userShareableAttributes) > 0
-            <li><a href="#${context}_attributes_tab">Share by Attribute</a></li>
+            <li><a href="#${context}_attributes_tab">Attribute</a></li>
             #end if
         #else if $context == "manage_groups" or $context == "manage_roles"
             <li><a href="#${context}_users_tab">Add Users</a></li>
-            <!--<li><a href="#${context}_groups_tab">Add Groups</a></li>-->
-            <!--<li><a href="#${context}_attributes_tab">Add by Attribute</a></li>-->
         #else if $context == "messages"
             <li><a href="#${context}_users_tab">Message Users</a></li>
-            <!--<li><a href="#${context}_groups_tab">Message Groups</a></li>-->
-            <!--<li><a href="#${context}_attributes_tab">Message by Attribute</a></li>-->
         #end if
     </ul>
     <div id="${context}_users_tab">
@@ -65,6 +62,41 @@
         #end if
             <br />
         </ul>
+    </div>
+    #end if
+    #if $context != "messages" and $context != "manage_groups" and $context != "manage_roles"
+    <div id="${context}_public_tab">
+        <form>
+            <input type="text" style="width: 0; height: 0; top: -100px; position: absolute;"/><!-- jQuery UI dialogs autofocus to the first element. -->
+            <div>
+                <label for="publicShareExpiration">Expiration date:</label>
+                <input type="text" value="" class="dateCustom" id="publicShareExpiration" />
+            </div>
+            <div>
+                <label for="publicShareEmail">Email addresses entered below (comma separated) will receive a link to this file via email:</label>
+                <input type="text" name="publicShareEmail" id="publicShareEmail" style="width: 400px;"/>
+            </div>
+            <div>
+                <label for="publicShareType">Other options:</label>
+                <input type="checkbox" id="publicShareType" onclick="javascript:Share.Public.toggleType();" /><span onclick="javascript:Utility.check('publicShareType');javascript:Share.Public.toggleType();">Allow multiple downloads (requires password)?</span>
+            </div>
+            <div>
+                <input type="checkbox" id="publicSharePasswordSelector" onclick="javascript:Share.Public.TogglePassword();"/><span onclick="javascript:Utility.check('publicSharePasswordSelector');javascript:Share.Public.togglePassword();">Password protect this public share?</span>
+                <span id="publicShareSelector" style="display:none">
+                    <label for="publicSharePassword">Password:</label>
+                    <input type="password" name="publicSharePassword" id="publicSharePassword" />
+                    <label for="publicSharePasswordConfirm">Confirm Password:</label>
+                    <input type="password" name="publicSharePasswordConfirm" id="publicSharePasswordConfirm" />
+                </span>
+            </div>
+            <div>
+                <label for="publicShareButton">By clicking "Share" below, you will make the selected file(s) publicly accessible at the generated URL.</label>
+                <div class="button"><a href="javascript:Share.Public.create()" title="Share file(s) publicly" class="shareButton" id="publicShareButton"><span>Share</span></a></div>
+            </div>
+            <br />
+            <br />
+            <br />
+        </form>
     </div>
     #end if
     #if $context != "messages" and $context != "manage_groups" and len($userShareableAttributes) > 0

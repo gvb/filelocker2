@@ -54,21 +54,15 @@
                         <div class="posrel">
                             <div id="menu_row_$rowId" class="menuFiles hidden"><!--add class of hidden to hide this info box-->
                             <ul class="menu">
+                                #if $f.public_shares is not None and $len($f.public_shares) > 0
                                 <li>
-                                    #if $f.public_shares is not None and $len($f.public_shares) > 0
-                                        #for $publicShare in $f.public_shares
-                                            <div class="itemTitleMedium"><span class="globe">Public Share:</span>&nbsp;&nbsp;&nbsp;&nbsp;<a href="javascript:Share.Public.promptView('$publicShare.id')">(view link)</a></div>
-                                            <input type="checkbox" name="publicShareCheckbox_row_$rowId" value="yes" class="publicShareCheckbox" title="Unshare this file with users outside of $config['org_name']" onClick="javascript:Share.Public.del('$f.id', 'files')" checked="checked" />
-                                        #end for
-                                    #else
-                                    #set $fileExpiration = "Never"
-                                    #if $f.date_expires is not None
-                                    #set $fileExpiration = $f.date_expires.strftime("%m/%d/%Y")
-                                    #end if
-                                    <div class="itemTitleMedium"><span class="globe">Public Share:</span></div>
-                                    <input type="checkbox" name="publicShareCheckbox_$f.id" value="no" class="publicShareCheckbox" title="Share this file with users outside of $config['org_name']" onClick="javascript:Share.Public.promptView('$f.id', '$f.name', '$fileExpiration', 'files')"/>
-                                    #end if
+                                #for $publicShare in $f.public_shares
+                                    <div class="itemTitle"><span class="globe">Public Share:</span></div>
+                                        <span><a href="javascript:Share.Public.promptView('$publicShare.id')">(view link)</a>
+                                        <a href="javascript:Share.Public.del('$publicShare.id')" class="redText">(unshare)</a></span>
+                                #end for
                                 </li>
+                                #end if
                                 #if $f.owner_id == $user.id
                                 <li>
                                     <div class="itemTitleMedium"><span class="notifyOnDownload">Notify Me on Download:</span></div>
@@ -95,7 +89,7 @@
                                 </li>
                                 #end if
                                 <hr />
-                                <li><div class="itemTitle"><span class="id">ID:</span></div>$f.id</li>
+                                <li><div class="itemTitle"><span class="fileID">ID:</span></div>$f.id</li>
                                 <li><div class="itemTitle"><span class="ownerItem">Owner:</span></div>$f.owner_id</li>
                                 <li><div class="itemTitle">
                                 #if $f.passed_avscan
@@ -386,12 +380,14 @@
         <a href="$config['org_url']" target="_blank" title="Take me to the $config['org_name'] home page"><img src="$config['root_url']/static/images/logos/logo.gif" alt="$config['org_name']" class="orgLogo" /></a>
         <img src="$config['root_url']/static/images/page_elements/horizontal_rule.gif" alt="" class="horizontal_rule" />
         <p><span class="strong">Filelocker</span> allows you to share files with other people both inside and outside of $config['org_name']. It is a temporary and secure storage system for sharing files and data.</p>
+    #if $cherrypy.session.get("current_role") == None
         <img src="$config['root_url']/static/images/page_elements/horizontal_rule.gif" alt="" class="horizontal_rule" />
         <h4>Need a file from someone?</h4>
         <p>If you need a file from someone who doesn't have a Filelocker account, you can email them an Upload Request.</p>
         <div class="button">
             <a href="javascript:UploadRequest.prompt();" title="Request a file from a user outside of $config['org_name']" class="uploadRequestButton"><span>Request Upload</span></a>
         </div>
+    #end if
         <img src="$config['root_url']/static/images/page_elements/horizontal_rule.gif" alt="" class="horizontal_rule" />
         <p><strong>Quick Help</strong></p>
         <ul>

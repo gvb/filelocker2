@@ -31,6 +31,13 @@ Share = function() {
                         $("#current_shares").accordion("activate", tabIndex);
                     if(tabIndex != null)
                         $("#private_sharing_sections").tabs("select", tabIndex);
+
+                    $("#publicShareEmail").val("");
+                    $("#publicSharePassword").val("");
+                    $("#publicSharePasswordConfirm").val("");
+                    $("#publicShareExpiration").datepicker("destroy").datepicker({dateFormat: 'mm/dd/yy', showAnim: 'slideDown', minDate: 0});
+                    $("#publicShareExpiration").val(DEFAULT_EXPIRATION);
+
                     $("#shareMultiBox").dialog("open");
                 }
             }
@@ -198,51 +205,39 @@ Share = function() {
     PublicShare = function() {
         function create()
         {
-            if ($("#publicSharePassword").val() != $("#publicSharePasswordConfirm").val())
-                StatusResponse.create("sharing file", "Passwords must match for public share.", false);
+            var action = "sharing file(s)"
+            if ($("#publicShareExpirationDate").val() === "")
+                StatusResponse.create(action, "Public shares must have an expiration date.", false);
+            else if ($("#publicSharePassword").val() != $("#publicSharePasswordConfirm").val())
+                StatusResponse.create(action, "Passwords must match for public share.", false);
             else if ($("#publicSharePassword").val() === "" && $("#publicShareType").is(":checked"))
-                StatusResponse.create("sharing file", "You must enter a password when creating a multi-use public share.", false);
+                StatusResponse.create(action, "You must enter a password when creating a multi-use public share.", false);
             else {
-                var shareType = $("#publicShareType").is(":checked") ? "multi" : "single";
-                var data = {
-                    fileId: $("#publicShareFileId").val(),
-                    notifyEmails: $("#publicShareEmail").val(),
-                    password: $("#publicSharePassword").val(),
-                    expiration: $("#publicShareExpiration").val(),
-                    shareType: shareType
-                };
-                Filelocker.request("/share/create_public_share", "sharing files", data, true, function() {
-                    $("#publicShareBox").dialog("close");
-                    promptView();
-                });
+                var fileIds = $("#selectedFiles").val();
+                if(fileIds === "" || fileIds === ",")
+                    StatusResponse.create(action, "Select file(s) for sharing.", false);
+                else
+                {
+                    var shareType = $("#publicShareType").is(":checked") ? "multi" : "single";
+                    var data = {
+                        fileIds: fileIds,
+                        notifyEmails: $("#publicShareEmail").val(),
+                        password: $("#publicSharePassword").val(),
+                        expiration: $("#publicShareExpiration").val(),
+                        shareType: shareType
+                    };
+                    Filelocker.request("/share/create_public_share", action, data, true, function() {
+                        $("#publicShareBox").dialog("close");
+                        promptView();
+                    });
+                }
             }
         }
-        function del(fileId, destination)
+        function del(shareId)
         {
-            Filelocker.request("/share/delete_public_share", "deleting public share", { fileId:fileId }, true, function() {
-                if(destination === "files")
-                    File.load();
+            Filelocker.request("/share/delete_public_share", "deleting public share", { shareId:shareId }, true, function() {
+                FLFile.load();
             });
-        }
-        function prompt(fileId, fileName, fileExpiration, destination)
-        {
-            $("#publicShareFileId").val(fileId);
-            $("#publicShareEmail").val("");
-            $("#publicSharePassword").val("");
-            $("#publicSharePasswordConfirm").val("");
-            $("#publicShareExpiration").datepicker("destroy");
-            if(fileExpiration !== "Never")
-            {
-                $("#publicShareExpiration").datepicker({dateFormat: 'mm/dd/yy', showAnim: 'slideDown', minDate: 0, maxDate: fileExpiration});
-                $("#publicShareExpiration").val(fileExpiration);
-            }
-            else
-            {
-                $("#publicShareExpiration").datepicker({dateFormat: 'mm/dd/yy', showAnim: 'slideDown', minDate: 0});
-                $("#publicShareExpiration").val(DEFAULT_EXPIRATION);
-            }
-            $("#publicShareBox").dialog("open");
-            $("#publicShareDestination").attr("value",destination);
         }
         function promptView(shareId)
         {
@@ -273,7 +268,6 @@ Share = function() {
         return {
             create:create,
             del:del,
-            prompt:prompt,
             promptView:promptView,
             togglePassword:togglePassword,
             toggleType:toggleType
