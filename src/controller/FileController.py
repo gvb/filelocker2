@@ -200,7 +200,7 @@ class FileController(object):
                 if flFile.role_owner_id is not None and role is not None and flFile.role_owner_id == role.id:
                     queue_for_deletion(flFile.id)
                     session.delete(flFile)
-                    session.add(AuditLog(user.id, "Delete File", "File %s (%s) owned by role %s has been deleted by user %s. " % (flFile.name, flFile.id, role.name, user.id, role.id))
+                    session.add(AuditLog(user.id, "Delete File", "File %s (%s) owned by role %s has been deleted by user %s. " % (flFile.name, flFile.id, role.name, user.id, role.id)))
                     session.commit()
                     sMessages.append("File %s deleted successfully" % flFile.name)
                 elif flFile.owner_id == user.id or AccountController.user_has_permission(user, "admin"):
