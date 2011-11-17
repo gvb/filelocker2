@@ -130,7 +130,8 @@ class Group(Base):
     __tablename__ = "groups"
     id = Column(Integer, primary_key=True)
     name = Column(String(255), nullable=False)
-    owner_id = Column(String(30), ForeignKey("users.id"), nullable=False)
+    owner_id = Column(String(30), ForeignKey("users.id"), nullable=True)
+    role_owner_id = Column(String(30), ForeignKey(""), nullable=True)
     scope = Column(Enum("public", "private", "reserved"), default="private")
 #    members = relationship("User", secondary=group_membership_table, backref="groups")
     permissions = relationship("Permission", secondary=group_permissions_table)
@@ -139,7 +140,7 @@ class Group(Base):
         users = {}
         for user in self.members:
             users.append({'id':user.id, 'name':user.display_name})
-        return {'id': self.id, 'name': self.name, 'owner_id':self.owner_id, 'scope': self.scope, 'members':users}
+        return {'id': self.id, 'name': self.name, 'owner_id':self.owner_id, 'role_owner_id':self.role_owner_id, 'scope': self.scope, 'members':users}
 
 class File(Base):
     __tablename__ = "files"
@@ -182,13 +183,13 @@ class File(Base):
 
     def get_copy(self):
         return File(name = self.name, type = self.type, size = self.size, notes=self.notes,\
-                    date_uploaded=self.date_uploaded, owner_id = self.owner_id, date_expires=self.date_expires,\
+                    date_uploaded=self.date_uploaded, owner_id = self.owner_id, role_owner_id=self.role_owner_id, date_expires=self.date_expires,\
                     passed_avscan = self.passed_avscan, encryption_key=self.encryption_key, status=self.status,\
                     notify_on_download=self.notify_on_download, md5=self.md5,\
                     upload_request_id=self.upload_request_id)
 
     def get_dict(self):
-        return {'name': self.name, 'id': self.id, 'owner_id': self.owner_id,\
+        return {'name': self.name, 'id': self.id, 'owner_id': self.owner_id, 'role_owner_id': self.role_owner_id,\
         'size': self.size, 'date_uploaded': self.date_uploaded.strftime("%m/%d/%Y"),\
         'date_expires': self.date_expires.strftime("%m/%d/%Y"), 'passed_avscan':self.passed_avscan,\
         'document_type': self.document_type}
@@ -253,7 +254,8 @@ public_share_files = Table("public_share_files", Base.metadata,
 class PublicShare(Base):
     __tablename__="public_shares"
     id = Column(String(64), primary_key=True)
-    owner_id = Column(String(30, ForeignKey("users.id")), nullable=False)
+    owner_id = Column(String(30, ForeignKey("users.id")), nullable=True)
+    role_owner_id = Column(String(30), ForeignKey("roles.id"), nullable=True)
     date_expires = Column(DateTime)
     password = Column(String(80))
     reuse = Column(Enum("single", "multi"), default="single")

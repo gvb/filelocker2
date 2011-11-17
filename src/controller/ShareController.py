@@ -235,7 +235,7 @@ class ShareController:
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def create_public_share(self, fileIds, expiration, shareType, notifyEmails, cc="no", format="json", **kwargs):
-        user, sMessages, fMessages, shareId = (cherrypy.session.get("user"), [], [], None)
+        user, role, sMessages, fMessages, shareId, ps = (cherrypy.session.get("user"), cherrypy.session.get("current_role"), [], [], None, None)
         config = cherrypy.request.app.config['filelocker']
         fileIds = split_list_sanitized(fileIds)
         cc = True if cc == "yes" else False
@@ -249,10 +249,16 @@ class ShareController:
 
             shareType != "single" if shareType != "multi" else "multi"
             ps = PublicShare(date_expires=expiration, reuse=shareType)
+            if role is not None:
+                ps.role_owner_id = role.id
+            else:
+                ps.owner_id = user.id
+                
             if (kwargs.has_key("password") and kwargs['password']!=""):
                 ps.set_password(kwargs['password'])
             elif shareType=="multi":
                 raise Exception("You must specify a password for public shares that don't expire after 1 use")
+
             ps.generate_share_id()
             session.add(ps)
             sharedFiles = []
