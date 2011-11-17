@@ -61,7 +61,8 @@ class FileController(object):
                 endDateFormatted = datetime.datetime(*time.strptime(strip_tags(endDate), "%m/%d/%Y")[0:5])
             else:
                 endDateFormatted = today
-            if flFile.owner_id == user.id or self.check_admin(user):
+                
+            if flFile.owner_id == user.id or AccuontController.user_has_permission(user, "admin"):
                 if endDate is not None:
                     endDate = endDate + datetime.timedelta(days=1)
                      #for row in results:
@@ -196,18 +197,16 @@ class FileController(object):
             try:
                 fileId = int(fileId)
                 flFile = session.query(File).filter(File.id == fileId).one()
-				if flFile.role_owner_id is not None and role is not None and flFile.role_owner_id == role.id:
-					queue_for_deletion(flFile.id)
-                    session.delete(flFile)
-					log = AuditLog(user.id, "Delete File", "File %s (%s) owned by role %s has been deleted by user %s. " % (flFile.name, flFile.id, role.name, user.id))
-					log.affected_role_id = role.id
-					session.add(log)
-                    session.commit()
-                    sMessages.append("File %s deleted successfully" % flFile.name)
-                if flFile.owner_id == user.id or AccountController.user_has_permission(user, "admin"):
+                if flFile.role_owner_id is not None and role is not None and flFile.role_owner_id == role.id:
                     queue_for_deletion(flFile.id)
                     session.delete(flFile)
-					session.add(AuditLog(user.id, "Delete File", "File %s (%s) has been deleted" % (flFile.name, flFile.id)))
+                    session.add(AuditLog(user.id, "Delete File", "File %s (%s) owned by role %s has been deleted by user %s. " % (flFile.name, flFile.id, role.name, user.id, role.id))
+                    session.commit()
+                    sMessages.append("File %s deleted successfully" % flFile.name)
+                elif flFile.owner_id == user.id or AccountController.user_has_permission(user, "admin"):
+                    queue_for_deletion(flFile.id)
+                    session.delete(flFile)
+                    session.add(AuditLog(user.id, "Delete File", "File %s (%s) has been deleted" % (flFile.name, flFile.id)))
                     session.commit()
                     sMessages.append("File %s deleted successfully" % flFile.name)
                 else:
@@ -415,7 +414,10 @@ class FileController(object):
                     cherrypy.session['uploadRequest'].expired = True
                 else:
                     session.add(AuditLog(cherrypy.request.remote.ip, "Upload Requested File", "File %s has been uploaded by an external user to your Filelocker account." % (newFile.name), uploadRequest.owner_id))
-            session.add(AuditLog(user.id, "Check In File", "File %s (%s) checked in to Filelocker: MD5 %s " % (newFile.name, newFile.id, newFile.md5)))
+            checkInLog = AuditLog(user.id, "Check In File", "File %s (%s) checked in to Filelocker: MD5 %s " % (newFile.name, newFile.id, newFile.md5))
+            if role is not None:
+                checkInLog.affected_role_id = role.id
+            session.add(checkInLog)
             sMessages.append("File %s uploaded successfully." % str(fileName))
             session.commit()
         except sqlalchemy.orm.exc.NoResultFound, nrf:

@@ -211,7 +211,7 @@ class RootController:
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def history(self, userId=None, startDate=None, endDate=None, logAction=None, format="html", **kwargs):
-        sMessages, fMessages, user= ([],[],cherrypy.session.get("user"))
+        sMessages, fMessages, user, role= ([],[],cherrypy.session.get("user"),cherrypy.session.get("current_role"))
         config = cherrypy.request.app.config['filelocker']
         userId = strip_tags(userId) if strip_tags(userId) != None else user.id
         if (userId != user.id and AccountController.user_has_permission(user, "admin")==False):

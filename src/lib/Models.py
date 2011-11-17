@@ -335,7 +335,9 @@ class AuditLog(Base):
     affected_user_id = Column(String(30), ForeignKey("users.id"))
     message = Column(Text, nullable=False)
     date = Column(DateTime, nullable=False)
-	file_id = Column(Integer, ForeignKey("files.id"), nullable=True)
+    affected_role_id = Column(String(30), ForeignKey("roles.id"), nullable=True)
+    file_id = Column(Integer, ForeignKey("files.id"), nullable=True)
+
     display_class = None
 
     def __init__(self, initiatorId, action, message, affectedId=None, date=datetime.datetime.now(), role_id=None, file_id=None, id=None):
