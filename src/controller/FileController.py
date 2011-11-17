@@ -96,7 +96,7 @@ class FileController(object):
         """Get File List"""
         user, role, sMessages, fMessages = (cherrypy.session.get("user"), cherrypy.session.get("current_role"), [], [])
         myFilesList = []
-        hiddenShares = session.query(HiddenShare).filter(HiddenShare.owner_id==userId).all()
+        hiddenShares = session.query(HiddenShare).filter(HiddenShare.owner_id==user.id).all()
         hiddenShareIds = []
         for hiddenShare in hiddenShares:
             hiddenShareIds.append(hiddenShare.file_id)
@@ -109,7 +109,7 @@ class FileController(object):
             fileIdList = split_list_sanitized(fileIdList)
             for fileId in fileIdList:
                 flFile = session.query(File).filter(File.id==fileId).one()
-                if (flFile.owner_id == userId or flFile.shared_with(user)) and flFile.id not in hiddenShareIds:
+                if (flFile.owner_id == user.id or flFile.shared_with(user)) and flFile.id not in hiddenShareIds:
                     myFilesList.append(flFile)
         for flFile in myFilesList: #attachments to the file objects for this function, purely cosmetic
             if (len(flFile.public_shares) > 0) and (len(flFile.user_shares) > 0 or len(flFile.group_shares) > 0 ):
@@ -134,7 +134,7 @@ class FileController(object):
                     flFile.fileGroupShares.append({'id': share.group.id, 'name': share.group.name})
                 for share in flFile.attribute_shares:
                     flFile.fileAttributeShares.append({'id': share.attribute.id, 'name': share.attribute.name})
-                for group in session.query(Group).filter(Group.owner_id==userId):
+                for group in session.query(Group).filter(Group.owner_id==user.id):
                     if group.id not in sharedGroupIds:
                         flFile.availableGroups.append({'id': group.id, 'name': group.name})
                 myFilesJSON.append({'fileName': flFile.name, 'fileId': flFile.id, 'fileOwnerId': flFile.owner_id, 'fileSizeBytes': flFile.size, 'fileUploadedDatetime': flFile.date_uploaded.strftime("%m/%d/%Y"), 'fileExpirationDatetime': flFile.date_expires.strftime("%m/%d/%Y") if flFile.date_expires is not None else "Never", 'filePassedAvScan':flFile.passed_avscan, 'documentType': flFile.documentType, 'fileUserShares': flFile.fileUserShares, 'fileGroupShares': flFile.fileGroupShares, 'availableGroups': flFile.availableGroups, 'fileAttributeShares': flFile.fileAttributeShares})
@@ -143,7 +143,7 @@ class FileController(object):
             elif format=="searchbox_html":
                 selectedFileIds = ",".join(fileIdList)
                 context = "private_sharing"
-                groups = session.query(Group).filter(Group.owner_id == userId).all()
+                groups = session.query(Group).filter(Group.owner_id == user.id).all()
                 searchWidget = str(Template(file=get_template_file('search_widget.tmpl'), searchList=[locals(),globals()]))
                 tpl = Template(file=get_template_file('share_files.tmpl'), searchList=[locals(),globals()])
                 return str(tpl)
@@ -436,14 +436,14 @@ class FileController(object):
                 if len(cherrypy.file_uploads[uploadKey]) == 0:
                     del cherrypy.file_uploads[uploadKey]
         except KeyError, ke:
-            logging.warning("[%s] [upload] [Key error deleting entry in file_transfer]" % user.userId)
+            logging.warning("[%s] [upload] [Key error deleting entry in file_transfer]" % user.id)
 
         #Queue the temp file for secure erasure
         queue_for_deletion(tempFileName)
 
         #Return the response
         if format=="cli":
-            newFileXML = "<file id='%s' name='%s'></file>" % (createdFile.fileId, createdFile.fileName)
+            newFileXML = "<file id='%s' name='%s'></file>" % (createdFile.id, createdFile.name)
             return fl_response(sMessages, fMessages, format, data=newFileXML)
         else:
             return fl_response(sMessages, fMessages, format)
