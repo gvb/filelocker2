@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 import os
+import re
 import datetime
 import MySQLdb
 import logging
+from Cheetah.Template import Template
 import sys
 from xml.dom.minidom import parse, parseString
 from Models import *
@@ -38,7 +40,7 @@ def export_db(exportFile):
     
 def import_db(importFile, dburi):
     dom = parse(importFile)
-	engine = create_engine(dburi, echo=True)
+    engine = create_engine(dburi, echo=True)
     Session = sessionmaker(bind=engine)
     session = Session()
 
@@ -57,7 +59,7 @@ def import_db(importFile, dburi):
             date_tos_accept=usernode.getAttribute("date_tos_accept")))
             session.add(u)
             session.commit()
-            for permnode in usernode.getElementsByTagName("permission")
+            for permnode in usernode.getElementsByTagName("permission"):
                 perm = session.query(Permission).filter(Permission.id==permnode.getAttribute("id")).one()
                 u.permissions.append(perm)
             session.commit()
@@ -100,8 +102,7 @@ def import_db(importFile, dburi):
                     date_expires=filenode.getAttribute("date_expires"), passed_avscan=filenode.getAttribute("passed_avscan"),
                     encryption_key=filenode.getAttribute("encryption_key"), status=filenode.getAttribute("status"),
                     notify_on_download=False if filenode.getAttribute("notify_on_download")=="0" else True,
-                    md5=filenode.getAttribute("md5"), upload_request_id=filenode.getAttribute("upload_request_id"),
-                    upload_request_id=filenode.getAttribute("upload_request_id"))
+                    md5=filenode.getAttribute("md5"), upload_request_id=filenode.getAttribute("upload_request_id"))
             session.add(f)
         session.commit()
     
@@ -162,12 +163,12 @@ def import_db(importFile, dburi):
 		
 	for node in dom.getElementsByTagName("deleted_files"):
 		for dnode in node.getElementsByTagName("deleted_file"):
-			d = DeletedFile(file_name=dnode.getAttribute("file_name")
+			d = DeletedFile(file_name=dnode.getAttribute("file_name"))
 			session.add(d)
 		session.commit()
 	
 	for node in dom.getElementsByTagName("audit_logs"):
-		for anode in node.getElementsByTagName("audit_log")
+		for anode in node.getElementsByTagName("audit_log"):
 			log = AuditLog(anode.getAttribute("initiator_user_id"),
 							anode.getAttribute("action"), anode.getAttribute("affected_user_id"),
 							anode.getAttribute("message"), anode.getAttribute("date"), 
@@ -186,6 +187,7 @@ class LegacyDBConverter():
     dbName = None
     db = None
     cursor = None
+    role_user_ids = []
     def __init__(self, dbHost, dbUser, dbPassword, dbName, config):
         self.dbHost = dbHost
         self.dbUser = dbUser
@@ -201,12 +203,12 @@ class LegacyDBConverter():
     def get_db(self):
         return MySQLdb.connect(self.dbHost, self.dbUser, self.dbPassword, self.dbName)
 
-    def port_database():
-        host = raw_input("What is the host of the old DB server?: ")
-        db = raw_input("Database: ")
-        username = raw_input("Username: ")
-        password = getpass("Password: ")
+    def port_database(self, outfile=None):
+        if outfile is None:
+            outfile = os.path.join(os.getcwd(), "FL_Data_Export.xml")
+        
         configParameters = self.GetAllParameters()
+        roles = self.GetRoles()
         files = self.GetAllFiles()
         groups = self.GetAllGroups ()
         permissions = self.GetAllPermissions()
@@ -217,7 +219,6 @@ class LegacyDBConverter():
         attributeShares = self.GetAllAttributeShares()
         publicShares = self.GetAllPublicShares ()
         users = self.GetAllUsers ()
-        roles = self.GetRoles()
         messages = self.GetMessages()
         messageShares = self.GetAllMessageShares()
         uploadRequests = self.GetUploadRequests()
@@ -225,10 +226,10 @@ class LegacyDBConverter():
         auditLogs = self.GetAuditLogs()
         templatePath = os.path.join(self.config['root_path'], "lib", "DataSchema.tmpl")
         tpl = str(Template(file=templatePath, searchList=[locals(),globals()]))
-        f = open(os.path.join(os.getcwd(), "FL_Data_Export.xml"), "wb")
+        f = open(outfile, "wb")
         f.write(tpl)
         f.close()
-        print "Data has been exported to %s" % templatePath
+        print "Data has been exported to %s" % outfile
 
     def GetAllParameters(self):
         params = []
@@ -246,7 +247,11 @@ class LegacyDBConverter():
         results = self.execute(sql, sql_args)
         allFiles = []
         for row in results:
-            currentFile = File(name=row['file_name'], type=row['file_type'], notes=row['file_notes'], size=row['file_size'], date_uploaded=row['file_uploaded_datetime'], owner_id=row['file_owner_id'], date_expires=row['file_expiration_datetime'], passed_avscan=row['file_passed_avscan'], encryption_key=row['file_encryption_key'], id=row['file_id'], status=row['file_status'],  notify_on_download=row['file_notify_on_download'], upload_request_id=row['file_upload_ticket_id'])
+            currentFile = None
+            if (row['file_owner_id'] in self.role_user_ids):
+                currentFile = File(name=row['file_name'], type=row['file_type'], notes=row['file_notes'], size=row['file_size'], date_uploaded=row['file_uploaded_datetime'], role_owner_id=row['file_owner_id'], date_expires=row['file_expiration_datetime'], passed_avscan=row['file_passed_avscan'], encryption_key=row['file_encryption_key'], id=row['file_id'], status=row['file_status'],  notify_on_download=row['file_notify_on_download'], upload_request_id=row['file_upload_ticket_id'])
+            else:
+                currentFile = File(name=row['file_name'], type=row['file_type'], notes=row['file_notes'], size=row['file_size'], date_uploaded=row['file_uploaded_datetime'], owner_id=row['file_owner_id'], date_expires=row['file_expiration_datetime'], passed_avscan=row['file_passed_avscan'], encryption_key=row['file_encryption_key'], id=row['file_id'], status=row['file_status'],  notify_on_download=row['file_notify_on_download'], upload_request_id=row['file_upload_ticket_id'])
             allFiles.append(currentFile)
         return allFiles
 
@@ -258,8 +263,12 @@ class LegacyDBConverter():
         results = self.execute(sql,sql_args)
         allGroups = []
         for row in results:
-            group = Group(id=row['group_id'], name=row['group_name'], owner_id=row['group_owner_id'], scope=row['group_scope'])
-            sql_args = [groupId,]
+            group=None
+            if row['group_owner_id'] in self.role_user_ids:
+                group = Group(id=row['group_id'], name=row['group_name'], role_owner_id=row['group_owner_id'], scope=row['group_scope'])
+            else:
+                group = Group(id=row['group_id'], name=row['group_name'], owner_id=row['group_owner_id'], scope=row['group_scope'])
+            sql_args = [group.id,]
             sql = "SELECT * FROM group_membership WHERE group_membership_group_id=%s"
             memberResults = self.execute(sql,sql_args)
             for memberRow in memberResults:
@@ -361,7 +370,7 @@ class LegacyDBConverter():
         for row in permResults:
             if userPermissions.has_key(row["user_permission_user_id"])==False:
                 userPermissions[row["user_permission_user_id"]] = []
-            userPermissions[row["user_permission_user_id"]].append(row['user_permission_permission_id'][6:])
+            userPermissions[row["user_permission_user_id"]].append(row['user_permission_permission_id'])
 
         sql = "SELECT * FROM user"
         sql_args = []
@@ -383,15 +392,25 @@ class LegacyDBConverter():
         rSql = "SELECT * FROM permission WHERE permission_id LIKE '(role)%%'"
         sql_args = []
         roles=[]
-        rolesResults = self.execute(rSql, sql_args)
+        role_permissions = {}
+        pSql = "SELECT * FROM user_permission WHERE user_permission_permission_id NOT LIKE '(role)%%'"
+        permResults = self.execute(pSql, None)
+        for row in permResults:
+            if role_permissions.has_key(row["user_permission_user_id"])==False:
+                role_permissions[row["user_permission_user_id"]] = []
+            role_permissions[row["user_permission_user_id"]].append(row['user_permission_permission_id'])
+        rolesResults = self.execute(rSql, None)
         for row in rolesResults:
             userId = row['permission_id'][6:]
             sql = "SELECT * FROM user WHERE user_id=%s"
             sql_args=[userId,]
             roleUserResults = self.execute(sql, sql_args)
             for userRow in roleUserResults:
-                roleName = "%s %s" % (row['user_first_name'], row['user_last_name'])
-                roles.append(Role(name=roleName, quota=int(row['user_quota']), email=row['user_email'], id=row['user_id']))
+                roleName = "%s %s" % (userRow['user_first_name'], userRow['user_last_name'])
+                newRole = Role(name=roleName, quota=int(userRow['user_quota']), email=userRow['user_email'], id=userRow['user_id'])
+                if role_permissions.has_key(userRow['user_id']):
+                    newRole.permissions.extend(role_permissions[userRow['user_id']])
+                self.role_user_ids.append(userRow['user_id'])
         return roles
     
     def GetMessages(self):
@@ -399,7 +418,8 @@ class LegacyDBConverter():
         sql = "SELECT * FROM message"
         results = self.execute(sql, None)
         for row in results:
-            messages.append(Message(id=row['message_id'], subject=row['message_subject'], date_sent=row['message_create_datetime'], owner_id=row['message_owner_id'], date_expires=row['message_expiration_datetime'], encryption_key=row['message_encryption_key']))
+            if row['message_owner_id'] not in self.role_user_ids:
+                messages.append(Message(id=row['message_id'], subject=row['message_subject'], date_sent=row['message_create_datetime'], owner_id=row['message_owner_id'], date_expires=row['message_expiration_datetime'], encryption_key=row['message_encryption_key']))
         return messages
 
     def GetAllMessageShares(self):
@@ -407,7 +427,8 @@ class LegacyDBConverter():
         sql = "SELECT * FROM message_recipient"
         results = self.execute(sql, None)
         for row in results:
-            messageRecipients.append(ReceivedMessage(message_id=row['message_recipient_message_id'], recipient_id=row['message_recipient_user_id'], date_viewed=row['message_recipient_viewed_datetime']))
+            if row['message_recipient_user_id'] not in self.role_user_ids:
+                messageRecipients.append(ReceivedMessage(message_id=row['message_recipient_message_id'], recipient_id=row['message_recipient_user_id'], date_viewed=row['message_recipient_viewed_datetime']))
         return messageRecipients
 
 #Upload Tickets
@@ -417,7 +438,8 @@ class LegacyDBConverter():
         tickets = []
         if results is not None:
             for row in results:
-                tickets.append(UploadRequest(owner_id=row['upload_ticket_owner_id'], max_size=row['upload_ticket_max_size'], date_expires=row['upload_ticket_expiration'], password=row['upload_ticket_password_hash'], scan_file=row['upload_ticket_scan_file'], type=row['upload_ticket_type'], id=row['upload_ticket_id']))
+                if row['upload_ticket_owner_id'] not in self.role_user_ids:
+                    tickets.append(UploadRequest(owner_id=row['upload_ticket_owner_id'], max_size=row['upload_ticket_max_size'], date_expires=row['upload_ticket_expiration'], password=row['upload_ticket_password_hash'], scan_file=row['upload_ticket_scan_file'], type=row['upload_ticket_type'], id=row['upload_ticket_id']))
         return tickets
 
     def GetAllDeletedFiles(self):
@@ -436,9 +458,19 @@ class LegacyDBConverter():
         results = self.execute(sql, None)
         if results is not None and len(results) > 0:
             for row in results:
-                newLog = AuditLog(row['audit_log_initiator_user_id'], row['audit_log_action'],
-				row['audit_log_message'], row['audit_log_action_affected_user_id'],
-				row['audit_log_datetime'], row['affected_role_id'], row['file_id'], row['audit_log_id'])
+                fileId = None
+                if row['audit_log_message'].find("[File ID") > -1:
+                    m = re.search(r"\[File ID: (\d+)\]", row['audit_log_message'])
+                    fileId = int(m.group(1).strip())
+                newLog = None
+                if row['audit_log_initiator_user_id'] in self.role_user_ids:
+                    newLog = AuditLog(None, row['audit_log_action'],\
+                    row['audit_log_message'], row['audit_log_action_affected_user_id'],\
+                    row['audit_log_datetime'], row['audit_log_initiator_user_id'], fileId, row['audit_log_id'])
+                else:
+                    newLog = AuditLog(row['audit_log_initiator_user_id'], row['audit_log_action'],\
+                    row['audit_log_message'], row['audit_log_action_affected_user_id'],\
+                    row['audit_log_datetime'], None, fileId, row['audit_log_id'])
                 logs.append(newLog)
         return logs
 

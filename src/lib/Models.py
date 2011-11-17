@@ -256,6 +256,7 @@ class PublicShare(Base):
     id = Column(String(64), primary_key=True)
     owner_id = Column(String(30), ForeignKey("users.id"), nullable=True)
     role_owner_id = Column(String(30), ForeignKey("roles.id"), nullable=True)
+    message = Column(Text, nullable=True)
     date_expires = Column(DateTime)
     password = Column(String(80))
     reuse = Column(Enum("single", "multi"), default="single")
@@ -338,7 +339,7 @@ class AuditLog(Base):
     message = Column(Text, nullable=False)
     date = Column(DateTime, nullable=False)
     affected_role_id = Column(String(30), ForeignKey("roles.id"), nullable=True)
-    file_id = Column(Integer, ForeignKey("files.id"), nullable=True)
+    file_id = Column(Integer, nullable=True)
 
     display_class = None
 

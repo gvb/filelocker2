@@ -328,7 +328,18 @@ def stop(pidfile=None):
             os.kill(pid, 9)
 
 def port_database(configfile=None):
-    pass
+    config = cherrypy._cpconfig._Parser()
+    cherrypy.config.update({'log.screen': False})
+    if configfile is None:
+        configfile = os.path.join(os.getcwd(),"etc","filelocker.conf")
+    config.read(configfile)
+    from lib.DBTools import LegacyDBConverter
+    host = raw_input("What is the host of the old DB server?: ")
+    db = raw_input("Database: ")
+    username = raw_input("Username: ")
+    password = getpass("Password: ")
+    converter = LegacyDBConverter(host, username, password, db, config.as_dict()['filelocker'])
+    converter.port_database()
             
 def build_database(configfile=None):
     config = cherrypy._cpconfig._Parser()

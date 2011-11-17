@@ -1,7 +1,8 @@
 <data>
     <permissions>
-    <permission id="admin" name="Administrators"/>
-    <permission id="expiration_exempt" name="No file expiration"/>
+        <permission id="admin" name="Administrators"/>
+        <permission id="expiration_exempt" name="No file expiration"/>
+        <permission id="(role)roleuser" name="Role: Test1  Test2"/>
     </permissions>
 
     <attributes>
@@ -11,10 +12,11 @@
     </roles>
 
     <users>
-        <user id="wbdavis" first_name="Brett" last_name="Davis" quota="1024" email="wbdavis@purdue.edu" date_last_login="2011-08-18 00:12:20" date_tos_accept="2011-08-15 01:20:23">
+        <user id="wbdavis" first_name="Brett" last_name="Davis" quota="1024" email="wbdavis@purdue.edu" date_last_login="2011-11-17 02:11:23" date_tos_accept="2011-08-15 01:20:23">
             <permissions>
-                <permission id="{'inherited_from': None, 'id': 'admin', 'name': 'Administrators'}"/>
-                <permission id="{'inherited_from': None, 'id': 'expiration_exempt', 'name': 'No file expiration'}"/>
+                <permission id="admin"/>
+                <permission id="expiration_exempt"/>
+                <permission id="(role)roleuser"/>
             </permissions>
             <roles>
             </roles>
@@ -22,17 +24,18 @@
     </users>
 
     <groups>
+        <group id="1" name="Favorites" scope="private">
+            <members>
+            </members>
+        </group>
     </groups>
 
 
     <files>
-        <file id="88" name="valums-file-uploader-b3b20b1.zip" type="Zip archive data, at least v1.0 to extract" date_uploaded="2011-08-17 00:24:33" owner_id="wbdavis" date_expires="2011-08-24 00:00:00" passed_avscan="1" encryption_key="oXKXQQmiZpMMacwIF4r4se87BC0tIC36" status="Checked In" notify_on_download="0" md5="" upload_request_id="886b7eaae3f524b4c13da131386813ca" />
-        <file id="89" name="1312238471827.jpg" type="JPEG image data, JFIF standard 1.01" date_uploaded="2011-08-17 01:00:54" owner_id="wbdavis" date_expires="2011-08-24 00:00:00" passed_avscan="1" encryption_key="MiK63pJqD50rp8v99LwO0N4W1k57goB6" status="Checked In" notify_on_download="0" md5="" upload_request_id="" />
-        <file id="90" name="1313030688650.jpg" type="JPEG image data, JFIF standard 1.01" date_uploaded="2011-08-17 01:01:04" owner_id="wbdavis" date_expires="2011-08-24 00:00:00" passed_avscan="1" encryption_key="Wdgi6xMTtddTMCHElbhGapyM9kY45kdj" status="Checked In" notify_on_download="0" md5="" upload_request_id="" />
-        <file id="92" name="ubuntu-11.04-desktop-i386.iso" type="# ISO 9660 CD-ROM filesystem data 'Ubuntu 11.04 i386              ' (bootable)" date_uploaded="2011-08-18 00:13:26" owner_id="wbdavis" date_expires="2011-08-25 00:00:00" passed_avscan="1" encryption_key="R8mN5rcZkvrFdE1esqj8S9P95fQJnDaw" status="Checked In" notify_on_download="0" md5="" upload_request_id="" />
     </files>
 
     <deleted_files>
+        <deleted_file file_name="[0]fltmp364572.tmp"/>
     </deleted_files>
 
     <messages>
@@ -95,6 +98,6 @@
         <config_parameter name="ldap_email_attr" description="LDAP email address attribute" type="text" value="mail"/>
         <config_parameter name="banner" description="Message displayed to all users upon login" type="text" value=""/>
         <config_parameter name="geotagging" description="Should users be allowed to geotag Filelocker uploads?" type="boolean" value="No"/>
-        <config_parameter name="db_version" description="Running version of the Filelocker Database" type="text" value="2.6"/>
+        <config_parameter name="db_version" description="Running version of the Filelocker Database" type="text" value="2.4.5"/>
     </config_parameters>
 </data>

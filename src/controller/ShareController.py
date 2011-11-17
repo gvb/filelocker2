@@ -234,7 +234,7 @@ class ShareController:
 
     @cherrypy.expose
     @cherrypy.tools.requires_login()
-    def create_public_share(self, fileIds, expiration, shareType, notifyEmails, cc="no", format="json", **kwargs):
+    def create_public_share(self, fileIds, expiration, shareType, message, notifyEmails, cc="no", format="json", **kwargs):
         user, role, sMessages, fMessages, shareId, ps = (cherrypy.session.get("user"), cherrypy.session.get("current_role"), [], [], None, None)
         config = cherrypy.request.app.config['filelocker']
         fileIds = split_list_sanitized(fileIds)
@@ -246,9 +246,9 @@ class ShareController:
                 raise Exception("Invalid expiration date format. Date must be in mm/dd/yyyy format.")
             if expiration is None or expiration == "":
                 raise Exception("Public shares must have a valid expiration date")
-
+            message = strip_tags(message)
             shareType != "single" if shareType != "multi" else "multi"
-            ps = PublicShare(date_expires=expiration, reuse=shareType)
+            ps = PublicShare(date_expires=expiration, reuse=shareType, message=message)
             if role is not None:
                 ps.role_owner_id = role.id
             else:
