@@ -230,8 +230,6 @@ Utility = function() {
             $("#confirmBox").html("Are you sure you want to delete this message?");
         else if(func == "UploadRequest.del")
             $("#confirmBox").html("Are you sure you want to delete this upload request?");
-        else if(func == "Share.Public.delByFileID")
-            $("#confirmBox").html("Are you sure you want to remove this file from all public shares?");
         $("#confirmBox").dialog("open").data("funcData", { "func":func, "params":paramStr }).dialog("open");
     }
     function check(checkboxId)

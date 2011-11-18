@@ -56,9 +56,12 @@
                             <ul class="menu">
                                 #if $f.public_shares is not None and $len($f.public_shares) > 0
                                 <li>
+                                    #set $publicPlural = "s"
+                                    #if $len($f.public_shares) == 1
+                                        #set $publicPlural = ""
+                                    #end if
                                     <div class="itemTitle"><span class="globe">Public Shares:</span></div>
-                                    <span><a href="javascript:Share.Public.prompt('$f.id')">(manage)</a>
-                                    <a href="javascript:Utility.promptConfirmation('Share.Public.delByFileID', ['$f.id'])" class="redText">(unshare all)</a></span>
+                                    <span><a href="javascript:Share.Public.prompt('$f.id')">$len($f.public_shares) share$publicPlural</a></span>
                                 </li>
                                 #end if
                                 #set $userCount = len($f.user_shares)

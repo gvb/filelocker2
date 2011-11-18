@@ -249,13 +249,8 @@ Share = function() {
         function del(shareId)
         {
             Filelocker.request("/share/delete_public_share", "deleting public share", { shareId:shareId }, true, function() {
-                prompt();
-            });
-        }
-        function delByFileID(fileIds)
-        {
-            Filelocker.request("/share/delete_public_shares_by_file_ids", "deleting all public shares for file(s)", { fileIds:fileIds }, true, function() {
                 FLFile.load();
+                prompt();
             });
         }
         function prompt(fileIds)
@@ -264,11 +259,12 @@ Share = function() {
 
             Filelocker.request("/share/get_public_shares_by_file_ids", "retrieving all public shares for file(s)", { fileIds:fileIds }, false, function(returnData) {
                 $("tbody#publicSharesTable").empty();
+                if (returnData.data.length > 0) {
                 $.each(returnData.data, function(index, share){
                     var $row = $(publicShareRowTemplate);
                     var fileList = "";
                     var fileCounter = 0;
-                    $row.find("td.publicShareLink").html("<a href='' class='globe'>Link</a>");
+                    $row.find("td.publicShareLink").html("<a href='/public_download?share_id="+share.id+"' target='_blank' class='globe' title='View this public share'>View</a>&nbsp;&nbsp;<a href='#' onclick='window.prompt(\"Copy to clipboard: Ctrl+C, Enter\", \""+share.id+"\")' title='Copy to clipboard'>Copy</a>");
                     $row.find("td.publicShareType").text(share.reuse.capitalize());
                     $row.find("td.publicShareExpires").text(share.date_expires);
                     $row.find("td.publicShareMessage").text(share.message);
@@ -294,6 +290,10 @@ Share = function() {
                     }
                 });
                 $("#publicShareManageBox").dialog("open");
+                }
+                else {
+                    $("#publicShareManageBox").dialog("close");
+                }
             });
         }
 
@@ -319,7 +319,6 @@ Share = function() {
         return {
             create:create,
             del:del,
-            delByFileID:delByFileID,
             prompt:prompt,
             togglePassword:togglePassword,
             toggleType:toggleType

@@ -706,6 +706,9 @@ table thead th {
     width:575px;
     clear:both;
 }
+.publicShareTable {
+    width: 710px !important;
+}
 .file_table thead th, .file_table thead th a {
     font-weight:bold;
 }
@@ -1144,6 +1147,8 @@ ul.menu li {
 .expiresCol                     { width:100px; }
 .menuCol                        { width:30px; }
 .useTypeCol                     { width:120px; }
+.messageCol                     { width:300px; }
+.fileCountCol                   { width:90px; }
 .linkCol                        { width:90px; }
 .virusScanCol                   { width:90px; }
 .personCol                      { width:300px; }
