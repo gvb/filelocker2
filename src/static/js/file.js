@@ -20,13 +20,9 @@ FLFile = function() {
         $("#uploadRequestLinkBox").dialog($.extend({
             title: "<span class='globe'>View Public URL for Upload Request</span>"
         }, Defaults.smallDialog));
-        $("#publicShareLinkBox").dialog($.extend({
-            title: "<span class='globe'>View Public URL</span>"
-        }, Defaults.smallDialog));
-        $("#publicShareBox").dialog($.extend({
-            title: "<span class='globe'>Share a File Publicly</span>",
-            close: function() { load(); }
-        }, Defaults.smallDialog));
+        $("#publicShareManageBox").dialog($.extend({
+            title: "<span class='globe'>Manage Public Shares</span>"
+        }, Defaults.largeDialog));
         $("#fileNotesBox").dialog($.extend({
             title: "<span class='view'>View File Notes</span>"
         }, Defaults.smallDialog));
@@ -549,7 +545,10 @@ jQuery(document).ready(function() {
             "OK": function() {
                 //TODO assumes Namespace.function
                 var funcParts = $(this).data("funcData").func.split(".");
-                window[funcParts[0]][funcParts[1]]($(this).data("funcData").params);
+                if (funcParts.length == 2)
+                    window[funcParts[0]][funcParts[1]]($(this).data("funcData").params);
+                if (funcParts.length == 3)
+                    window[funcParts[0]][funcParts[1]][funcParts[2]]($(this).data("funcData").params);
                 $(this).dialog("close");
             }
         }

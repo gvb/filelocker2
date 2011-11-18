@@ -313,7 +313,7 @@ class ShareController:
         except Exception,e:
             fMessages.append("Could delete public shares by file ids: %s" % str(e))
             logging.error("[%s] [delete_public_shares_by_file_ids] [Could delete public shares by file ids: %s]" % (user.id, str(e)))
-        return fl_response(sMessages, fMessages, format, data=shareId)
+        return fl_response(sMessages, fMessages, format)
 
     @cherrypy.expose
     @cherrypy.tools.requires_login()

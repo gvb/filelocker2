@@ -56,21 +56,9 @@
                             <ul class="menu">
                                 #if $f.public_shares is not None and $len($f.public_shares) > 0
                                 <li>
-                                #for $publicShare in $f.public_shares
-                                    <div class="itemTitle"><span class="globe">Public Share:</span></div>
-                                        <span><a href="javascript:Share.Public.promptView('$publicShare.id')">(view link)</a>
-                                        <a href="javascript:Share.Public.del('$publicShare.id')" class="redText">(unshare)</a></span>
-                                #end for
-                                </li>
-                                #end if
-                                #if $f.owner_id == $user.id
-                                <li>
-                                    <div class="itemTitleMedium"><span class="notifyOnDownload">Notify Me on Download:</span></div>
-                                    #if $f.notify_on_download
-                                        <input type="checkbox" name="notifyOnDownload_$f.id" id="notifyOnDownloadYes_$f.id" class="notifyCheckbox" title="Email me when someone downloads this file" onClick="javascript:FLFile.toggleNotify('$f.id', 'no')" checked="checked"/>
-                                    #else
-                                        <input type="checkbox" name="notifyOnDownload_$f.id" id="notifyOnDownloadYes_$f.id" class="notifyCheckbox" title="Email me when someone downloads this file" onClick="javascript:FLFile.toggleNotify('$f.id', 'yes')"/>
-                                    #end if
+                                    <div class="itemTitle"><span class="globe">Public Shares:</span></div>
+                                    <span><a href="javascript:Share.Public.prompt('$f.id')">(manage)</a>
+                                    <a href="javascript:Utility.promptConfirmation('Share.Public.delByFileID', ['$f.id'])" class="redText">(unshare all)</a></span>
                                 </li>
                                 #end if
                                 #set $userCount = len($f.user_shares)
@@ -85,7 +73,17 @@
                                     #if $groupCount == 1
                                         #set $groupPlural = ""
                                     #end if
-                                    <div class="itemTitle"><span class="privatelyShared">Shares: </span></div><a href="javascript:Share.prompt('$f.id');">$userCount user$userPlural, $groupCount group$groupPlural</a>
+                                    <div class="itemTitle"><span class="privatelyShared">Private Shares: </span></div><a href="javascript:Share.prompt('$f.id');">$userCount user$userPlural, $groupCount group$groupPlural</a>
+                                </li>
+                                #end if
+                                #if $f.owner_id == $user.id
+                                <li>
+                                    <div class="itemTitleMedium"><span class="notifyOnDownload">Notify Me on Download:</span></div>
+                                    #if $f.notify_on_download
+                                        <input type="checkbox" name="notifyOnDownload_$f.id" id="notifyOnDownloadYes_$f.id" class="notifyCheckbox" title="Email me when someone downloads this file" onClick="javascript:FLFile.toggleNotify('$f.id', 'no')" checked="checked"/>
+                                    #else
+                                        <input type="checkbox" name="notifyOnDownload_$f.id" id="notifyOnDownloadYes_$f.id" class="notifyCheckbox" title="Email me when someone downloads this file" onClick="javascript:FLFile.toggleNotify('$f.id', 'yes')"/>
+                                    #end if
                                 </li>
                                 #end if
                                 <hr />

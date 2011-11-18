@@ -203,6 +203,17 @@ Share = function() {
     }();
 
     PublicShare = function() {
+        var publicShareRowTemplate =
+        '<tr class="fileRow">\
+            <td class="spacer"></td>\
+            <td class="publicShareLink"></td>\
+            <td class="publicShareType"></td>\
+            <td class="publicShareExpires"></td>\
+            <td class="publicShareMessage"></td>\
+            <td class="publicShareFileCount"></td>\
+            <td class="publicShareActions"></td>\
+        </tr>';
+
         function create()
         {
             var action = "sharing file(s)"
@@ -222,13 +233,15 @@ Share = function() {
                     var data = {
                         fileIds: fileIds,
                         notifyEmails: $("#publicShareEmail").val(),
+                        message: $("#publicShareMessage").val(),
                         password: $("#publicSharePassword").val(),
+                        confirmPassword: $("#publicSharePassword").val(),
                         expiration: $("#publicShareExpiration").val(),
                         shareType: shareType
                     };
                     Filelocker.request("/share/create_public_share", action, data, true, function() {
-                        $("#publicShareBox").dialog("close");
-                        promptView();
+                        $("#shareMultiBox").dialog("close");
+                        prompt();
                     });
                 }
             }
@@ -236,14 +249,52 @@ Share = function() {
         function del(shareId)
         {
             Filelocker.request("/share/delete_public_share", "deleting public share", { shareId:shareId }, true, function() {
+                prompt();
+            });
+        }
+        function delByFileID(fileIds)
+        {
+            Filelocker.request("/share/delete_public_shares_by_file_ids", "deleting all public shares for file(s)", { fileIds:fileIds }, true, function() {
                 FLFile.load();
             });
         }
-        function promptView(shareId)
+        function prompt(fileIds)
         {
-            var linkText = FILELOCKER_ROOT+"/public_download?shareId="+shareId;
-            $("#publicShareURL").html("<p><a href='"+linkText+"' target='_blank'>"+linkText+"</a></p>");
-            $("#publicShareLinkBox").dialog("open");
+            fileIds = fileIds || $("#filesTable tr.rowSelected input.fileSelectBox").val();
+
+            Filelocker.request("/share/get_public_shares_by_file_ids", "retrieving all public shares for file(s)", { fileIds:fileIds }, false, function(returnData) {
+                $("tbody#publicSharesTable").empty();
+                $.each(returnData.data, function(index, share){
+                    var $row = $(publicShareRowTemplate);
+                    var fileList = "";
+                    var fileCounter = 0;
+                    $row.find("td.publicShareLink").html("<a href='' class='globe'>Link</a>");
+                    $row.find("td.publicShareType").text(share.reuse.capitalize());
+                    $row.find("td.publicShareExpires").text(share.date_expires);
+                    $row.find("td.publicShareMessage").text(share.message);
+
+                    $.each(share.files, function(fileId, fileName) {
+                        fileList += fileName + "<br />";
+                        fileCounter++;
+                    });
+                    $row.find("td.publicShareFileCount").html("<span class='publicShareFileList pseudoLink' title='"+fileList+"'>"+fileCounter+" files</span>");
+                    $row.find("td.publicShareActions").html("<a href='#' onclick='javascript:Share.Public.del(\""+share.id+"\")' class='inlineLink' title='Delete this public share'><span class='cross'>&nbsp;</span></a>");
+                    $("tbody#publicSharesTable").append($row);
+                });
+                Utility.tipsyfy();
+                $("#publicSharesTableSorter").tablesorter({
+                    headers: {
+                        0: {sorter: false},
+                        1: {sorter: false},
+                        2: {sorter: 'text'},
+                        3: {sorter: 'shortDate'},
+                        4: {sorter: 'text'},
+                        5: {sorter: 'text'},
+                        6: {sorter: false}
+                    }
+                });
+                $("#publicShareManageBox").dialog("open");
+            });
         }
 
         function togglePassword()
@@ -268,7 +319,8 @@ Share = function() {
         return {
             create:create,
             del:del,
-            promptView:promptView,
+            delByFileID:delByFileID,
+            prompt:prompt,
             togglePassword:togglePassword,
             toggleType:toggleType
         };

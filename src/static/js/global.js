@@ -208,7 +208,7 @@ Utility = function() {
             if((this.hostname && this.hostname !== location.hostname && $(this).attr("title")) || this.href.match(/^mailto\:/))
                 $(this).attr("title","<span class='external'>" + $(this).attr("title") + "</span>");
         });
-        $("a, #quotaProgressBar, #fileVaultUsageBar, #nameRoleContainer div, .publicShareCheckbox, .notifyCheckbox, .groupMember, .groupName, .attributeName, .userQuotaUsage").tipsy({ // Initiate tipsy for all links, progress bars, and some custom elements
+        $("a, #quotaProgressBar, #fileVaultUsageBar, #nameRoleContainer div, .publicShareCheckbox, .publicShareFileList, .notifyCheckbox, .groupMember, .groupName, .attributeName, .userQuotaUsage").tipsy({ // Initiate tipsy for all links, progress bars, and some custom elements
             delayIn: 500,
             gravity: 'nw',
             html: true,
@@ -230,6 +230,8 @@ Utility = function() {
             $("#confirmBox").html("Are you sure you want to delete this message?");
         else if(func == "UploadRequest.del")
             $("#confirmBox").html("Are you sure you want to delete this upload request?");
+        else if(func == "Share.Public.delByFileID")
+            $("#confirmBox").html("Are you sure you want to remove this file from all public shares?");
         $("#confirmBox").dialog("open").data("funcData", { "func":func, "params":paramStr }).dialog("open");
     }
     function check(checkboxId)
@@ -480,6 +482,12 @@ jQuery(document).ready(function(){
     if(typeof String.prototype.trim !== 'function') {
         String.prototype.trim = function() {
             return this.replace(/^\s+|\s+$/g, ''); 
+        };
+    }
+
+    if(typeof String.prototype.capitalize !== 'function') {
+        String.prototype.capitalize = function() {
+            return this.charAt(0).toUpperCase() + this.slice(1);
         };
     }
 

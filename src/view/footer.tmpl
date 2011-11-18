@@ -91,14 +91,6 @@
     </div>
 </div>
 
-<div id="publicShareLinkBox" class="hidden">
-    <div class="popup_wrapper">
-        <div class="popup_small">
-            <div class="url_box" id="publicShareURL"></div>
-        </div>
-    </div>
-</div>
-
 <div id="userCreateBox" class="hidden">
     <div class="popup_wrapper">
         <div class="popup_small">
@@ -412,6 +404,33 @@
 
 <div id="shareMultiBox" class="hidden"></div>
 <div id="viewGroupBox" class="hidden"></div>
+
+<div id="publicShareManageBox" class="hidden">
+    <div class="popup_wrapper">
+        <div class="popup_large">
+            <table class="file_table" id="publicSharesTableSorter">
+                <thead>
+                    <tr>
+                        <th class="spacerCol"></th>
+                        <th class="linkCol pseudoLink">Link</th>
+                        <th class="useTypeCol pseudoLink">Single/Multi use</th>
+                        <th class="expiresCol pseudoLink">Expires</th>
+                        <th class="messageCol pseudoLink">Message</th>
+                        <th class="fileCountCol pseudoLink">File Count</th>
+                        <th class="actionsCol pseudoLink">Actions</th>
+                    </tr>
+                    <tr>
+                        <td></td>
+                        <td colspan="6" class="dotted"></td>
+                    </tr>
+                </thead>
+                <tbody id="publicSharesTable">
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
 <div id="editAccountBox" class="hidden">
     <div class="popup_wrapper">
         <div class="popup_small">

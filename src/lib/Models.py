@@ -300,7 +300,7 @@ class PublicShare(Base):
     def set_password(self, password):
         self.password = hash_password(password)
         
-    def get_dict():
+    def get_dict(self):
         filesDict = {}
         for flFile in self.files:
             filesDict[flFile.id] = flFile.name
