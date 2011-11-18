@@ -395,7 +395,6 @@ def create_admin_user(dburi, password):
     testUser2 = User(id="cmiller", first_name="Chris", last_name="Miller", quota=1024, date_tos_accept=datetime.datetime.now())
     testUser2.set_password("test")
     engine = create_engine(dburi, echo=True)
-    #Base.metadata.create_all(engine)
     Session = sessionmaker(bind=engine)
     session = Session()
     adminPermission = session.query(Permission).filter(Permission.id == "admin").one()

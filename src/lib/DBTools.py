@@ -230,6 +230,7 @@ class LegacyDBConverter():
         f.write(tpl)
         f.close()
         print "Data has been exported to %s" % outfile
+        return outfile
 
     def GetAllParameters(self):
         params = []

@@ -168,20 +168,7 @@ def update_config(config):
 
 
 
-def check_updates():
-    config = cherrypy._cpconfig._Parser()
-    config.read(cherrypy.configfile)
-    confDict = config.as_dict()
-    dbSession = False
-    if cherrypy.config['tools.sessions.storage_type'] == "db":
-        dbSession = True
-    dbType = confDict['database']["dbtype"]
-    dbHost = confDict['database']["dbhost"]
-    dbUser = confDict['database']["dbuser"]
-    dbPassword = confDict['database']["dbpassword"]
-    dbName = confDict['database']["dbname"]
-    db = dao_creator.get_dao(dbType, dbHost, dbUser, dbPassword, dbName)
-    db.updateDB(__version__, dbSession)
+
 
 #def reconfig(configfile=None):
 #    config = cherrypy._cpconfig._Parser()
@@ -422,42 +409,49 @@ def stop(pidfile=None):
         else:
             os.kill(pid, 9)
 
-def port_database(configfile=None):
-    config = cherrypy._cpconfig._Parser()
-    cherrypy.config.update({'log.screen': False})
-    if configfile is None:
-        configfile = os.path.join(os.getcwd(),"etc","filelocker.conf")
-    config.read(configfile)
+def check_updates(config):
+    if config.has_key("database"):
+        proceed = raw_input("""You appear to have an outdated style of config file and database schema.
+        Would you like to attempt to automatically port the database and config?[y/n]: """ )
+        if proceed.lower().startswith("y"):
+            confirm = raw_input("""\n(WARNING: This will completely
+        rebuild your current database by backing up your current data and rebuilding the tables. If this process is interrupted,
+        all user data may be lost. You can manually run a DB backup from the Filelocker.py executable by using the syntax \n
+        $> Filelocker.py -a backup_db\n\nThis command generates an XML data dump that can be imported later.)\n
+        Proceed with in place upgrade?[y/n]: """)
+            if confirm.lower().startswith("y"):
+                dburi = "mysql+mysqldb://%s:%s@%s/%s" % (config['database']['dbuser'], config['database']['dbpassword'], config['database']['dbhost'], config['database']['dbname'] )
+                backupFile = port_database(config, config['database']['dbhost'], config['database']['dbuser'], config['database']['dbpassword'],config['database']['dbname'])
+                print "Backup complete. Rebuilding database..."
+                build_database(dburi)
+                print "Filelocker requires an admin account to be set. You will now be prompted to create a local password for the local admin account"
+                create_admin(dburi)
+
+def port_database(config, host=None, username=None, password=None, db=None):
     from lib.DBTools import LegacyDBConverter
-    host = raw_input("What is the host of the old DB server?: ")
-    db = raw_input("Database: ")
-    username = raw_input("Username: ")
-    password = getpass("Password: ")
-    converter = LegacyDBConverter(host, username, password, db, config.as_dict()['filelocker'])
-    converter.port_database()
+    if host is None:
+        host = raw_input("What is the host of the old DB server?: ")
+        db = raw_input("Database: ")
+        username = raw_input("Username: ")
+        password = getpass("Password: ")
+    converter = LegacyDBConverter(host, username, password, db, config['filelocker'])
+    outfile = converter.port_database()
+    return outfile
             
-def build_database(configfile=None):
-    if configfile is None:
-        configfile = os.path.join(os.getcwd(),"etc","filelocker.conf")
-    config = ConfigParser.SafeConfigParser()
-    config.read(configfile)
-    dburi = config.get('/', "tools.SATransaction.dburi",0).replace("\"","").replace("'","")
+def build_database(dburi):
     lib.Models.drop_database_tables(dburi)
     lib.Models.create_database_tables(dburi)
 
-def create_admin(configfile=None):
-    if configfile is None:
-        configfile = os.path.join(os.getcwd(),"etc","filelocker.conf")
-    config = ConfigParser.SafeConfigParser()
-    config.read(configfile)
-    dburi = config.get('/', "tools.SATransaction.dburi",0).replace("\"","").replace("'","")
-    password = getpass("Enter a password: ")
+def create_admin(dburi):
+    password = getpass("Enter Admin password: ")
     confirmPassword = getpass("Confirm password: ")
-    if password == confirmPassword:
-        lib.Models.create_admin_user(dburi, password)
-        print "New admin user created."
-    else:
-        print "Passwords did not match!"
+    if password != confirmPassword:
+        while (password!=confirmPassword):
+            print "Passwords did not match!"
+            password = getpass("Re-Enter Admin password: ")
+            confirmPassword = getpass("Confirm password: ")
+    lib.Models.create_admin_user(dburi, password)
+    print "New admin user created."
 
     
 if __name__ == '__main__':
@@ -473,6 +467,19 @@ if __name__ == '__main__':
     p.add_option('-a','--action', dest='action', default="start", help="action to perform (start, stop, restart, reconfig)")
     options, args = p.parse_args()
 
+    dburi = None
+    config = ConfigParser.SafeConfigParser()
+    if options.configfile is not None:
+        config.read(options.configfile)
+    else:
+        configfile = os.path.join(os.getcwd(),"etc","filelocker.conf")
+        if os.path.exists(configfile)==False:
+            configfile = os.path.join("/","etc","filelocker.conf")
+        if os.path.exists(configfile)==False:
+            raise Exception("Could not find config file, please specify one using the -c option")
+        config.read(configfile)
+    dburi = config.get("/","tools.SATransaction.dburi").replace("\"", "").replace("'","")
+
     if options.action:
         if options.action == "stop":
             stop(options.pidfile)
@@ -480,13 +487,11 @@ if __name__ == '__main__':
             stop(options.pidfile)
             start(options.configfile, options.daemonize, options.pidfile)
         elif options.action == "init_db":
-            build_database(options.configfile)
+            build_database(dburi)
         elif options.action == "port_database":
-            port_database(options.configfile)
-        elif options.action == "create_admin":
-            create_admin(options.configfile)
-        elif options.action == "reconfig":
-            reconfig(options.configfile)
+            port_database(dburi)
+        elif options.action == "reset_admin":
+            create_admin(dburi)
         elif options.action == "start":
             start(options.configfile, options.daemonize, options.pidfile)
         elif options.action == "rebuild_static":
