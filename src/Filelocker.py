@@ -1,4 +1,5 @@
 import lib.Models
+import ConfigParser
 import os
 import sys
 import time
@@ -221,19 +222,14 @@ def midnightloghandler(fn, level, backups):
 cherrypy.server.max_request_body_size = 0
 cherrypy.tools.requires_login = cherrypy.Tool('before_request_body', requires_login, priority=70)
 cherrypy.tools.before_upload = cherrypy.Tool('before_request_body', before_upload, priority=71)
+
 def start(configfile=None, daemonize=False, pidfile=None):
     cherrypy.file_uploads = dict()
     cherrypy.file_downloads = dict()
-    config = cherrypy._cpconfig._Parser()
-    cherrypy.config.update({'log.screen': False})
     if configfile is None:
         configfile = os.path.join(os.getcwd(),"etc","filelocker.conf")
-    config.read(configfile)
-    cherrypy.configfile = configfile
     cherrypy.config.update(configfile)
     logLevel = 40
-    if config.as_dict()['filelocker'].has_key("loglevel"):
-        logLevel = config.as_dict()['filelocker']['loglevel']
 
     from controller import RootController
     app = cherrypy.tree.mount(RootController.RootController(), '/', config=configfile)
@@ -263,11 +259,110 @@ def start(configfile=None, daemonize=False, pidfile=None):
         engine.console_control_handler.subscribe()
     
     #This line override the cgi Fieldstorage with the one we defined in order to track upload progress
-    cherrypy._cpcgifs.FieldStorage = FileFieldStorage
+    try:
+        class FileRequestBody(cherrypy._cpreqbody.RequestBody):
+            def __del__(self, *args, **kwargs):
+                try:
+                    uploadKey = None
+                    if cherrypy.session.has_key("user"):
+                        uploadKey = cherrypy.session.get('user').userId
+                    elif cherrypy.session.has_key("uploadTicket"):
+                        uploadKey = cherrypy.session.has_key("uploadTicket").ownerId+":"+cherrypy.session.has_key("uploadTicket").ticketId
+                    if cherrypy.file_uploads.has_key(uploadKey):
+                        for transfer in cherrypy.file_uploads[uploadKey]:
+                            if transfer.file_object.name == self.file_location:
+                                cherrypy.file_uploads[uploadKey].remove(transfer)
+                        if len(cherrypy.file_uploads[uploadKey]) == 0:
+                            del cherrypy.file_uploads[uploadKey]
+                    if os.path.isfile(self.file_location):
+                        tempFileName = self.file_location.split(os.path.sep)[-1]
+                        FileController.queue_for_deletion(tempFileName)
+                except KeyError:
+                    pass
+                except KeyError, ke:
+                    pass
+                except AttributeError, ae:
+                    pass
+                except OSError, oe:
+                    pass
+                except Exception, e:
+                    pass
+
+            def make_file(self, binary=None):
+                if self.filename is not None:
+                    uploadIndex = None
+                    if cherrypy.request.headers.has_key("uploadindex"):
+                        uploadIndex = cherrypy.request.headers['uploadindex']
+                    fo = ProgressFile(self.bufsize, self.filename, uploadIndex=uploadIndex)
+                    self.file_location = fo.file_object.name
+                    uploadKey = None
+                    if cherrypy.session.has_key("uploadRequest"):
+                        uploadKey = cherrypy.session.get("uploadRequest").owner_id+":"+cherrypy.session.get("uploadRequest").id
+                    elif cherrypy.session.has_key("user"):
+                        uploadKey = cherrypy.session.get('user').id
+
+                    if cherrypy.file_uploads.has_key(uploadKey):
+                        cherrypy.file_uploads[uploadKey].append(fo)
+                    else:
+                        cherrypy.file_uploads[uploadKey] = [fo,]
+                    return fo
+                else:
+                    return StringIO.StringIO("")
+        cherrypy._cpreqbody.RequestBody = FileRequestBody
+    except Exception:
+        class FileRequestBody(cherrypy._cpcgifs.FieldStorage):
+            def __del__(self, *args, **kwargs):
+                try:
+                    uploadKey = None
+                    if cherrypy.session.has_key("user"):
+                        uploadKey = cherrypy.session.get('user').id
+                    elif cherrypy.session.has_key("uploadRequest"):
+                        uploadKey = cherrypy.session.has_key("uploadRequest").owner_id+":"+cherrypy.session.has_key("uploadRequest").id
+                    if cherrypy.file_uploads.has_key(uploadKey):
+                        for transfer in cherrypy.file_uploads[uploadKey]:
+                            if transfer.file_object.name == self.file_location:
+                                cherrypy.file_uploads[uploadKey].remove(transfer)
+                        if len(cherrypy.file_uploads[uploadKey]) == 0:
+                            del cherrypy.file_uploads[uploadKey]
+                    if os.path.isfile(self.file_location):
+                        tempFileName = self.file_location.split(os.path.sep)[-1]
+                        FileController.queue_for_deletion(tempFileName)
+                except KeyError:
+                    pass
+                except KeyError, ke:
+                    pass
+                except AttributeError, ae:
+                    pass
+                except OSError, oe:
+                    pass
+                except Exception, e:
+                    pass
+
+            def make_file(self, binary=None):
+                if self.filename is not None:
+                    uploadIndex = None
+                    if cherrypy.request.headers.has_key("uploadindex"):
+                        uploadIndex = cherrypy.request.headers['uploadindex']
+                    fo = ProgressFile(self.bufsize, self.filename, uploadIndex=uploadIndex)
+                    self.file_location = fo.file_object.name
+                    uploadKey = None
+                    if cherrypy.session.has_key("uploadTicket"):
+                        uploadKey = cherrypy.session.get("uploadTicket").ownerId+":"+cherrypy.session.get("uploadTicket").ticketId
+                    elif cherrypy.session.has_key("user"):
+                        uploadKey = cherrypy.session.get('user').userId
+
+                    if cherrypy.file_uploads.has_key(uploadKey):
+                        cherrypy.file_uploads[uploadKey].append(fo)
+                    else:
+                        cherrypy.file_uploads[uploadKey] = [fo,]
+                    return fo
+                else:
+                    return StringIO.StringIO("")
+        cherrypy._cpcgifs.FieldStorage = FileFieldStorage
+        
     engine.start()
     configure_session_for_app(app)
     update_config(app.config)
-
 
 #    try:
     from controller import FileController
@@ -342,33 +437,27 @@ def port_database(configfile=None):
     converter.port_database()
             
 def build_database(configfile=None):
-    config = cherrypy._cpconfig._Parser()
-    cherrypy.config.update({'log.screen': False})
     if configfile is None:
         configfile = os.path.join(os.getcwd(),"etc","filelocker.conf")
+    config = ConfigParser.SafeConfigParser()
     config.read(configfile)
-    if config.as_dict()['/'].has_key("tools.SATransaction.dburi"):
-        dburi = config.as_dict()['/']["tools.SATransaction.dburi"]
-        lib.Models.drop_database_tables(dburi)
-        lib.Models.create_database_tables(dburi)
+    dburi = config.get('/', "tools.SATransaction.dburi",0).replace("\"","").replace("'","")
+    lib.Models.drop_database_tables(dburi)
+    lib.Models.create_database_tables(dburi)
 
 def create_admin(configfile=None):
-    config = cherrypy._cpconfig._Parser()
-    cherrypy.config.update({'log.screen': False})
     if configfile is None:
         configfile = os.path.join(os.getcwd(),"etc","filelocker.conf")
+    config = ConfigParser.SafeConfigParser()
     config.read(configfile)
-    if config.as_dict()['/'].has_key("tools.SATransaction.dburi"):
-        dburi = config.as_dict()['/']["tools.SATransaction.dburi"]
-        password = getpass("Enter a password: ")
-        confirmPassword = getpass("Confirm password: ")
-        if password == confirmPassword:
-            lib.Models.create_admin_user(dburi, password)
-            print "New admin user created."
-        else:
-            print "Passwords did not match!"
+    dburi = config.get('/', "tools.SATransaction.dburi",0).replace("\"","").replace("'","")
+    password = getpass("Enter a password: ")
+    confirmPassword = getpass("Confirm password: ")
+    if password == confirmPassword:
+        lib.Models.create_admin_user(dburi, password)
+        print "New admin user created."
     else:
-        print "SATransaction information not specified in config file. Exiting..."
+        print "Passwords did not match!"
 
     
 if __name__ == '__main__':

@@ -1,7 +1,9 @@
 import datetime
+import sys
 import time
 import StringIO
 import cherrypy
+sys.path.append("/usr/lib/python2.7/site-packages")
 try:
     import cPickle as pickle
 except ImportError:
@@ -12,14 +14,29 @@ try:
 except ImportError, ie:
     from md5 import md5
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import relationship, backref, sessionmaker, mapper
+from sqlalchemy.orm import relation, backref, sessionmaker, mapper
 from sqlalchemy import *
 from lib.SQLAlchemyTool import configure_session_for_app, session, _engines
 from lib.Encryption import hash_password
 __author__="wbdavis"
 __date__ ="$Sep 27, 2011 8:48:55 PM$"
 Base = declarative_base()
-
+BIGINT_ALIAS = None
+FILE_FIELD_STORAGE = None
+try: 
+  import cherrypy._cpreqbody
+  FILE_FIELD_STORAGE = cherrypy._cpreqbody.RequestBody
+except ImportError: 
+  import cherrypy._cpcgifs
+  FILE_FIELD_STORAGE = cherrypy._cpcgifs.FieldStorage
+try:
+  from sqlalchemy.types import BigInteger
+  BIGINT_ALIAS = sqlalchemy.types.BIGINT
+except Exception, e:
+  from sqlalchemy.databases.mysql import MSBigInteger
+  print "Exeption e: %s" % str(e)
+  BIGINT_ALIAS = MSBigInteger
+  
 #Database Backended Models
 user_permissions_table = Table("user_permissions", Base.metadata,
     Column("user_id", String(30), ForeignKey("users.id"), primary_key=True, nullable=False),
@@ -36,15 +53,15 @@ class User(Base):
     last_name = Column(String(100))
     password = Column(String(80), nullable=True)
     _display_name = Column("display_name", Text, nullable=True)
-    permissions = relationship("Permission", secondary=lambda: user_permissions_table, backref="users")
-    groups = relationship("Group", secondary=lambda: group_membership_table, backref="members")
+    permissions = relation("Permission", secondary=lambda: user_permissions_table, backref="users")
+    groups = relation("Group", secondary=lambda: group_membership_table, backref="members")
     quota_used = 0
     salt = None
     is_role = False
     authorized = True
     attributes = []
-    received_messages = relationship("MessageShare")
-    upload_requests = relationship("UploadRequest", backref="owner")
+    received_messages = relation("MessageShare")
+    upload_requests = relation("UploadRequest", backref="owner")
 
     
     def set_display_name(self, value):
@@ -81,8 +98,8 @@ class Role(Base):
     name = Column(String(50), nullable=False)
     email = Column(String(320), nullable=True)
     quota = Column(Integer, nullable=False)
-    members = relationship("User", secondary=lambda: role_membership_table, backref="roles")
-    permissions = relationship("Permission", secondary=lambda: role_permissions_table)
+    members = relation("User", secondary=lambda: role_membership_table, backref="roles")
+    permissions = relation("Permission", secondary=lambda: role_permissions_table)
 
     def get_dict(self):
         membersList, permissionsList = [], []
@@ -132,9 +149,10 @@ class Group(Base):
     name = Column(String(255), nullable=False)
     owner_id = Column(String(30), ForeignKey("users.id"), nullable=True)
     role_owner_id = Column(String(30), ForeignKey("roles.id"), nullable=True)
-    scope = Column(Enum("public", "private", "reserved"), default="private")
-#    members = relationship("User", secondary=group_membership_table, backref="groups")
-    permissions = relationship("Permission", secondary=group_permissions_table)
+    #SQL Alchemy 0.5 doesn't support enums
+    scope = Column(String(15), default="private")
+#    members = relation("User", secondary=group_membership_table, backref="groups")
+    permissions = relation("Permission", secondary=group_permissions_table)
     
     def get_dict(self):
         users = {}
@@ -147,7 +165,7 @@ class File(Base):
     id = Column(Integer, primary_key=True)
     name = Column(String(255))
     type = Column(Text)
-    size = Column(BigInteger)
+    size = Column(BIGINT_ALIAS)
     notes = Column(Text)
     date_uploaded = Column(DateTime)
     owner_id = Column(String(30), ForeignKey('users.id'), nullable=True)
@@ -161,10 +179,10 @@ class File(Base):
     upload_request_id = Column(String(64), ForeignKey("upload_requests.id"))
     document_type = None
 
-    user_shares = relationship("UserShare", backref="files", cascade="all, delete-orphan")
-    #public_shares = relationship("PublicShare", backref="files")
-    group_shares = relationship("GroupShare", backref="files", cascade="all, delete-orphan")
-    attribute_shares = relationship("AttributeShare", backref="files", cascade="all, delete-orphan")
+    user_shares = relation("UserShare", backref="files", cascade="all, delete-orphan")
+    #public_shares = relation("PublicShare", backref="files")
+    group_shares = relation("GroupShare", backref="files", cascade="all, delete-orphan")
+    attribute_shares = relation("AttributeShare", backref="files", cascade="all, delete-orphan")
 
     def shared_with(self, user):
         for share in self.user_shares:
@@ -212,7 +230,7 @@ class Message(Base):
     owner_id = Column(String(30), ForeignKey("users.id"), nullable=False)
     date_expires = Column(DateTime)
     encryption_key = Column(String(64), nullable=False)
-    message_shares = relationship("MessageShare", backref="message", single_parent=True, cascade="all, delete-orphan")
+    message_shares = relation("MessageShare", backref="message", single_parent=True, cascade="all, delete-orphan")
 
     def get_dict(self):
         messageViewedDatetime, messageCreateDatetime, messageExpirationDatetime = (None, None, None)
@@ -237,15 +255,15 @@ class UserShare(Base):
     __tablename__ = "user_shares"
     user_id = Column(String(30), ForeignKey("users.id"), primary_key=True)
     file_id = Column(Integer, ForeignKey("files.id"), primary_key=True)
-    flFile = relationship("File")
-    user = relationship("User", backref="user_shares")
+    flFile = relation("File")
+    user = relation("User", backref="user_shares")
 
 class GroupShare(Base):
     __tablename__ = "group_shares"
     group_id = Column(Integer, ForeignKey("groups.id"), primary_key=True)
     file_id = Column(Integer, ForeignKey("files.id"), primary_key=True)
-    flFile = relationship("File")
-    group = relationship("Group", backref="group_shares")
+    flFile = relation("File")
+    group = relation("Group", backref="group_shares")
 
 public_share_files = Table("public_share_files", Base.metadata,
     Column("share_id", String(64), ForeignKey("public_shares.id")),
@@ -259,8 +277,8 @@ class PublicShare(Base):
     message = Column(Text, nullable=True)
     date_expires = Column(DateTime)
     password = Column(String(80))
-    reuse = Column(Enum("single", "multi"), default="single")
-    files = relationship("File", secondary=public_share_files, backref="public_shares")
+    reuse = Column(String(15), default="single")
+    files = relation("File", secondary=public_share_files, backref="public_shares")
 
     def generate_share_id(self):
         import random
@@ -277,13 +295,21 @@ class PublicShare(Base):
 
     def set_password(self, password):
         self.password = hash_password(password)
+        
+    def get_dict():
+        filesDict = {}
+        for flFile in self.files:
+            filesDict[flFile.id] = flFile.name
+        return {'id':self.id, 'owner_id':self.owner_id, 'role_owner_id':self.role_owner_id, \
+        'message': self.message, 'date_expires': self.date_expires.strftime("%m/%d/%Y") if self.date_expires is not None else None,\
+        'reuse' : self.reuse, 'files': filesDict}
 
 class AttributeShare(Base):
     __tablename__ = "attribute_shares"
     file_id = Column(Integer, ForeignKey("files.id"), primary_key=True)
     attribute_id = Column(String(50), ForeignKey("attributes.id"), primary_key=True)
-    flFile = relationship("File")
-    attribute = relationship("Attribute")
+    flFile = relation("File")
+    attribute = relation("Attribute")
 
 class UploadRequest(Base):
     __tablename__ = "upload_requests"
@@ -293,7 +319,7 @@ class UploadRequest(Base):
     scan_file = Column(Boolean, nullable=False)
     date_expires = Column(DateTime)
     password = Column(String(80))
-    type = Column(Enum("single", "multi"))
+    type = Column(String(15), default="single")
     expired = False
 
     def get_copy(self):
@@ -319,7 +345,8 @@ class ConfigParameter(Base):
     __tablename__ = "config"
     name = Column(String(30), primary_key=True)
     description = Column(Text, nullable=False)
-    type = Column(Enum("boolean", "number", "text", "datetime"))
+    #Types: boolean, number, text, datetime
+    type = Column(String(30))
     value = Column(String(255))
 
 class Attribute(Base):
@@ -429,33 +456,39 @@ def create_database_tables(dburi):
     session.commit()
     
 def drop_database_tables(dburi):
-    from sqlalchemy.engine import reflection
-    from sqlalchemy.schema import (DropTable, Table, ForeignKeyConstraint, DropConstraint, MetaData)
     engine = create_engine(dburi, echo=True)
     conn = engine.connect()
-    trans = conn.begin()
-    inspector = reflection.Inspector.from_engine(engine)
-    metadata = MetaData()
-    tbs = []
-    all_fks = []
-    for table_name in inspector.get_table_names():
-        fks = []
-        for fk in inspector.get_foreign_keys(table_name):
-            if not fk['name']:
-                continue
-            fks.append(
-                ForeignKeyConstraint((), (), name=fk['name'])
-                )
-        t = Table(table_name, metadata,*fks)
-        tbs.append(t)
-        all_fks.extend(fks)
+    try:
+        from sqlalchemy.schema import (DropTable, Table, ForeignKeyConstraint, DropConstraint, MetaData)
+        from sqlalchemy.engine import reflection
+        trans = conn.begin()
+        inspector = reflection.Inspector.from_engine(engine)
+        metadata = MetaData()
+        tbs = []
+        all_fks = []
+        for table_name in inspector.get_table_names():
+            fks = []
+            for fk in inspector.get_foreign_keys(table_name):
+                if not fk['name']:
+                    continue
+                fks.append(
+                    ForeignKeyConstraint((), (), name=fk['name'])
+                    )
+            t = Table(table_name, metadata,*fks)
+            tbs.append(t)
+            all_fks.extend(fks)
 
-    for fkc in all_fks:
-        conn.execute(DropConstraint(fkc))
+        for fkc in all_fks:
+            conn.execute(DropConstraint(fkc))
 
-    for table in tbs:
-        conn.execute(DropTable(table))
-    trans.commit()
+        for table in tbs:
+            conn.execute(DropTable(table))
+        trans.commit()
+    except Exception, e:
+        tables_list=['config' ,'user', 'deletion_queue', 'group_membership', 'group_permission', 'groups', 'permission',\
+        'file', 'hidden_share', 'private_group_share','private_share', 'private_attribute_share', 'attribute', 'public_share',\
+        'upload_ticket', 'user_permission', 'audit_log', 'cli_key' ,'message','message_recipient', 'session']
+        conn.execute("""DROP TABLE IF EXISTS %s""" % ",".join(tables_list))
     print "Dropped all"
 
 #Non database backended models
@@ -515,55 +548,7 @@ class ProgressFile(object):
         valDict['status'] = self.status
         return valDict
 
-class FileFieldStorage(cherrypy._cpcgifs.FieldStorage):
-    def __del__(self, *args, **kwargs):
-        try:
-            uploadKey = None
-            if cherrypy.session.has_key("user"):
-                uploadKey = cherrypy.session.get('user').userId
-            elif cherrypy.session.has_key("uploadTicket"):
-                uploadKey = cherrypy.session.has_key("uploadTicket").ownerId+":"+cherrypy.session.has_key("uploadTicket").ticketId
-            if cherrypy.file_uploads.has_key(uploadKey):
-                for transfer in cherrypy.file_uploads[uploadKey]:
-                    if transfer.file_object.name == self.file_location:
-                        cherrypy.file_uploads[uploadKey].remove(transfer)
-                if len(cherrypy.file_uploads[uploadKey]) == 0:
-                    del cherrypy.file_uploads[uploadKey]
-            if os.path.isfile(self.file_location):
-                fl = cherrypy.thread_data.flDict['app']
-                tempFileName = self.file_location.split(os.path.sep)[-1]
-                fl.queue_for_deletion(tempFileName)
-        except KeyError:
-            pass
-        except KeyError, ke:
-            pass
-        except AttributeError, ae:
-            pass
-        except OSError, oe:
-            pass
-        except Exception, e:
-            pass
 
-    def make_file(self, binary=None):
-        if self.filename is not None:
-            uploadIndex = None
-            if cherrypy.request.headers.has_key("uploadindex"):
-                uploadIndex = cherrypy.request.headers['uploadindex']
-            fo = ProgressFile(self.bufsize, self.filename, uploadIndex=uploadIndex)
-            self.file_location = fo.file_object.name
-            uploadKey = None
-            if cherrypy.session.has_key("uploadTicket"):
-                uploadKey = cherrypy.session.get("uploadTicket").ownerId+":"+cherrypy.session.get("uploadTicket").ticketId
-            elif cherrypy.session.has_key("user"):
-                uploadKey = cherrypy.session.get('user').userId
-
-            if cherrypy.file_uploads.has_key(uploadKey):
-                cherrypy.file_uploads[uploadKey].append(fo)
-            else:
-                cherrypy.file_uploads[uploadKey] = [fo,]
-            return fo
-        else:
-            return StringIO.StringIO("")
 from zope.interface import Interface
 
 class FilelockerPlugin(Interface):

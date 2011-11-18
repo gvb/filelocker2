@@ -41,6 +41,8 @@ class FL_Object_Encoder(json.JSONEncoder):
             return obj.get_dict()
         elif isinstance(obj, Role):
             return obj.get_dict()
+        elif isinstance(obj, PublicShare):
+            return obj.get_dict()
         return json.JSONEncoder.default(self, obj)
 
 def fl_response(sMessages, fMessages, format, data=None):
