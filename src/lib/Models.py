@@ -24,18 +24,22 @@ Base = declarative_base()
 BIGINT_ALIAS = None
 FILE_FIELD_STORAGE = None
 try: 
-  import cherrypy._cpreqbody
-  FILE_FIELD_STORAGE = cherrypy._cpreqbody.RequestBody
+    import cherrypy._cpreqbody
+    FILE_FIELD_STORAGE = cherrypy._cpreqbody.RequestBody
 except ImportError: 
-  import cherrypy._cpcgifs
-  FILE_FIELD_STORAGE = cherrypy._cpcgifs.FieldStorage
+    import cherrypy._cpcgifs
+    FILE_FIELD_STORAGE = cherrypy._cpcgifs.FieldStorage
+    
 try:
-  from sqlalchemy.types import BigInteger
-  BIGINT_ALIAS = sqlalchemy.types.BIGINT
+    from sqlalchemy.types import BigInteger
+    BIGINT_ALIAS = BigInteger
 except Exception, e:
-  from sqlalchemy.databases.mysql import MSBigInteger
-  print "Exeption e: %s" % str(e)
-  BIGINT_ALIAS = MSBigInteger
+    try:
+        from sqlalchemy.databases.mysql import MSBigInteger
+        print "Exeption e: %s" % str(e)
+        BIGINT_ALIAS = MSBigInteger
+    except Exception, e:
+        logging.erro("Couldn't setup large integer storage: %s" % str(e))
   
 #Database Backended Models
 user_permissions_table = Table("user_permissions", Base.metadata,

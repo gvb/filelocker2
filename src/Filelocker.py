@@ -310,7 +310,7 @@ def start(configfile=None, daemonize=False, pidfile=None):
                     return StringIO.StringIO("")
         cherrypy._cpreqbody.RequestBody = FileRequestBody
     except Exception:
-        class FileRequestBody(cherrypy._cpcgifs.FieldStorage):
+        class FileFieldStorage(cherrypy._cpcgifs.FieldStorage):
             def __del__(self, *args, **kwargs):
                 try:
                     uploadKey = None

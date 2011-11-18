@@ -4,8 +4,10 @@ Reply-to: $varDict['sender']
 Subject: $varDict['ownerName'] shared a file with you on Filelocker
 
 $varDict['ownerName'] ($varDict['ownerId']) has shared the following files with you on Filelocker:
-    
-$varDict['fileName']
+
+#for $flFile in $varDict['sharedFiles']
+$flFile.name
+#end for
 
 #if $linksObscured
 To view and download this file, please copy the following link and paste it into your browser's URL bar, removing any spaces:

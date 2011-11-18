@@ -286,6 +286,34 @@ class ShareController:
             fMessages.append(str(e))
             logging.error("[%s] [create_public_share] [Unable to create public share: %s]" % (user.id, str(e)))
         return fl_response(sMessages, fMessages, format, data=shareId)
+    
+    @cherrypy.expose
+    @cherrypy.tools.requires_login()
+    def delete_public_shares_by_file_ids(self, fileIds, format="json", **kwargs):
+        user, role, sMessages, fMessages = (cherrypy.session.get("user"), cherrypy.session.get("current_role"), [], [])
+        fileIds = split_list_sanitized(fileIds)
+        try:
+            for fileId in fileIds:
+                try:
+                    flFile = session.query(File).filter(File.id==fileId).one()
+                    if role is not None:
+                        if flFile.role_owner_id == role.id:
+                            for publicShare in flFile.public_shares:
+                                publicShare.files.remove(flFile)
+                        else:
+                            fMessages.append("This role does not have permissions to modify public shares on file with ID: %s" % fileId)
+                    else:
+                        if flFile.owner_id == user.id:
+                            for publicShare in flFile.public_shares:
+                                publicShare.files.remove(flFile)
+                        else:
+                            fMessages.append("You do not have permission to modify public shares on file with ID: %s" % fileId)
+                except sqlalchemy.orm.exc.NoResultFound:
+                    fMessages.append("File with ID:%s not found" % fileId)
+        except Exception,e:
+            fMessages.append("Could delete public shares by file ids: %s" % str(e))
+            logging.error("[%s] [delete_public_shares_by_file_ids] [Could delete public shares by file ids: %s]" % (user.id, str(e)))
+        return fl_response(sMessages, fMessages, format, data=shareId)
 
     @cherrypy.expose
     @cherrypy.tools.requires_login()
@@ -309,6 +337,38 @@ class ShareController:
         except Exception, e:
             fMessages.append(str(e))
         return fl_response(sMessages, fMessages, format)
+
+    @cherrypy.expose
+    @cherrypy.tools.requires_login()
+    def get_public_shares_by_file_ids(self, fileIds, format="json", **kwargs):
+        user, role, sMessages, fMessages, publicShares = (cherrypy.session.get("user"), cherrypy.session.get("current_role"), [], [], [])
+        fileIds = split_list_sanitized(fileIds)
+        try:
+            publicShareIds = []
+            for fileId in fileIds:
+                try:
+                    flFile = session.query(File).filter(File.id==fileId).one()
+                    if role is not None:
+                        if flFile.role_owner_id == role.id:
+                            for publicShare in flFile.public_shares:
+                                if publicShare.id not in publicShareIds:
+                                    publicShareIds.append(publicShare.id)
+                                    publicShares.append(publicShare)
+                        else:
+                            fMessages.append("This role does not have permission to access public shares on file with ID: %s" % fileId)
+                    elif flFile.owner_id == user.id or AccountController.user_has_permission(user, "admin"):
+                        for publicShare in flFile.public_shares:
+                            if publicShare.id not in publicShareIds:
+                                publicShareIds.append(publicShare.id)
+                                publicShares.append(publicShare)
+                    else:
+                        fMessages.append("You do not have permission to access public shares on file with ID:%s" % fileId)
+                except sqlalchemy.orm.exc.NoResultFound:
+                    fMessages.append("File with ID:%s not found" % fileId)
+        except Exception, e:
+            fMessages.append(str(e))
+        return fl_response(sMessages, fMessages, format, data=publicShares)
+
 
     @cherrypy.expose
     @cherrypy.tools.requires_login()
