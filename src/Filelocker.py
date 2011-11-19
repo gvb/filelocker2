@@ -427,15 +427,21 @@ def check_updates(config):
                 print "Filelocker requires an admin account to be set. You will now be prompted to create a local password for the local admin account"
                 create_admin(dburi)
 
-def port_database(config, host=None, username=None, password=None, db=None):
+def port_database(dburi, host=None, username=None, password=None, db=None):
     from lib.DBTools import LegacyDBConverter
     if host is None:
         host = raw_input("What is the host of the old DB server?: ")
         db = raw_input("Database: ")
         username = raw_input("Username: ")
         password = getpass("Password: ")
-    converter = LegacyDBConverter(host, username, password, db, config['filelocker'])
+    converter = LegacyDBConverter(host, username, password, db)
     outfile = converter.port_database()
+    buildDbFromBackup = raw_input("Backup complete. Would you like initialize the database from the backup at this time?[y/n]")
+    if buildDbFromBackup.lower().startswith("y"):
+        from lib.DBTools import import_db
+        build_database(dburi)
+        import_db(outfile, dburi)
+        print "Database has been re-initialized from backed up data"
     return outfile
             
 def build_database(dburi):

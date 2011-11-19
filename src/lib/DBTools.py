@@ -188,12 +188,11 @@ class LegacyDBConverter():
     db = None
     cursor = None
     role_user_ids = []
-    def __init__(self, dbHost, dbUser, dbPassword, dbName, config):
+    def __init__(self, dbHost, dbUser, dbPassword, dbName):
         self.dbHost = dbHost
         self.dbUser = dbUser
         self.dbPassword = dbPassword
         self.dbName = dbName
-        self.config = config
         self.get_connection()
 
     def get_connection(self):
@@ -208,7 +207,7 @@ class LegacyDBConverter():
             outfile = os.path.join(os.getcwd(), "FL_Data_Export.xml")
         
         configParameters = self.GetAllParameters()
-        roles = self.GetRoles()
+        roles, role_permissions = self.GetRoles()
         files = self.GetAllFiles()
         groups = self.GetAllGroups ()
         permissions = self.GetAllPermissions()
@@ -224,7 +223,7 @@ class LegacyDBConverter():
         uploadRequests = self.GetUploadRequests()
         deletedFiles = self.GetAllDeletedFiles()
         auditLogs = self.GetAuditLogs()
-        templatePath = os.path.join(self.config['root_path'], "lib", "DataSchema.tmpl")
+        templatePath = os.path.join(os.getcwd(), "lib", "DataSchema.tmpl")
         tpl = str(Template(file=templatePath, searchList=[locals(),globals()]))
         f = open(outfile, "wb")
         f.write(tpl)
@@ -243,17 +242,18 @@ class LegacyDBConverter():
         return params
 
     def GetAllFiles(self):
-        sql = "SELECT * FROM file WHERE file_expiration_datetime < now()"
+        sql = "SELECT * FROM file"
         sql_args = None
         results = self.execute(sql, sql_args)
         allFiles = []
-        for row in results:
-            currentFile = None
-            if (row['file_owner_id'] in self.role_user_ids):
-                currentFile = File(name=row['file_name'], type=row['file_type'], notes=row['file_notes'], size=row['file_size'], date_uploaded=row['file_uploaded_datetime'], role_owner_id=row['file_owner_id'], date_expires=row['file_expiration_datetime'], passed_avscan=row['file_passed_avscan'], encryption_key=row['file_encryption_key'], id=row['file_id'], status=row['file_status'],  notify_on_download=row['file_notify_on_download'], upload_request_id=row['file_upload_ticket_id'])
-            else:
-                currentFile = File(name=row['file_name'], type=row['file_type'], notes=row['file_notes'], size=row['file_size'], date_uploaded=row['file_uploaded_datetime'], owner_id=row['file_owner_id'], date_expires=row['file_expiration_datetime'], passed_avscan=row['file_passed_avscan'], encryption_key=row['file_encryption_key'], id=row['file_id'], status=row['file_status'],  notify_on_download=row['file_notify_on_download'], upload_request_id=row['file_upload_ticket_id'])
-            allFiles.append(currentFile)
+        if results is not None and len(results)>0:
+            for row in results:
+                currentFile = None
+                if (row['file_owner_id'] in self.role_user_ids):
+                    currentFile = File(name=row['file_name'], type=row['file_type'], notes=row['file_notes'], size=row['file_size'], date_uploaded=row['file_uploaded_datetime'], role_owner_id=row['file_owner_id'], date_expires=row['file_expiration_datetime'], passed_avscan=row['file_passed_avscan'], encryption_key=row['file_encryption_key'], id=row['file_id'], status=row['file_status'],  notify_on_download=row['file_notify_on_download'], upload_request_id=row['file_upload_ticket_id'])
+                else:
+                    currentFile = File(name=row['file_name'], type=row['file_type'], notes=row['file_notes'], size=row['file_size'], date_uploaded=row['file_uploaded_datetime'], owner_id=row['file_owner_id'], date_expires=row['file_expiration_datetime'], passed_avscan=row['file_passed_avscan'], encryption_key=row['file_encryption_key'], id=row['file_id'], status=row['file_status'],  notify_on_download=row['file_notify_on_download'], upload_request_id=row['file_upload_ticket_id'])
+                allFiles.append(currentFile)
         return allFiles
 
 #Groups
@@ -273,7 +273,7 @@ class LegacyDBConverter():
             sql = "SELECT * FROM group_membership WHERE group_membership_group_id=%s"
             memberResults = self.execute(sql,sql_args)
             for memberRow in memberResults:
-                groupMembers.append(User(id=memberRow['group_membership_user_id']))
+                group.members.append(User(id=memberRow['group_membership_user_id']))
             sql = "SELECT * FROM group_permission WHERE group_permission_group_id=%s"
             permissionResults = self.execute(sql,sql_args)
             for permissionRow in permissionResults:
@@ -283,7 +283,7 @@ class LegacyDBConverter():
 
 #Permissions
     def GetAllPermissions(self):
-        sql = "SELECT * FROM permission"
+        sql = "SELECT * FROM permission WHERE permission_id NOT LIKE '(role)%%'"
         permissions = []
         results = self.execute(sql, None)
         for row in results:
@@ -305,7 +305,7 @@ class LegacyDBConverter():
         privateGroupShareList = []
         results = self.execute(sql, None)
         for row in results:
-            privateGroupShareList.append(GroupShare(file_idrow['private_group_share_file_id'], group_id=row['private_group_share_target_id']))
+            privateGroupShareList.append(GroupShare(file_id=row['private_group_share_file_id'], group_id=row['private_group_share_target_id']))
         return privateGroupShareList
 
     def GetAllHiddenShares(self):
@@ -322,7 +322,7 @@ class LegacyDBConverter():
         results = self.execute(sql, None)
         attributes = []
         for row in results:
-            attr = Attribute(row['attribute_id'], row['attribute_name'])
+            attr = Attribute(id=row['attribute_id'], name=row['attribute_name'])
             attributes.append(attr)
         return attributes
 
@@ -409,10 +409,9 @@ class LegacyDBConverter():
             for userRow in roleUserResults:
                 roleName = "%s %s" % (userRow['user_first_name'], userRow['user_last_name'])
                 newRole = Role(name=roleName, quota=int(userRow['user_quota']), email=userRow['user_email'], id=userRow['user_id'])
-                if role_permissions.has_key(userRow['user_id']):
-                    newRole.permissions.extend(role_permissions[userRow['user_id']])
                 self.role_user_ids.append(userRow['user_id'])
-        return roles
+                roles.append(newRole)
+        return roles, role_permissions
     
     def GetMessages(self):
         messages = []
@@ -429,7 +428,7 @@ class LegacyDBConverter():
         results = self.execute(sql, None)
         for row in results:
             if row['message_recipient_user_id'] not in self.role_user_ids:
-                messageRecipients.append(ReceivedMessage(message_id=row['message_recipient_message_id'], recipient_id=row['message_recipient_user_id'], date_viewed=row['message_recipient_viewed_datetime']))
+                messageRecipients.append(MessageShare(message_id=row['message_recipient_message_id'], recipient_id=row['message_recipient_user_id'], date_viewed=row['message_recipient_viewed_datetime']))
         return messageRecipients
 
 #Upload Tickets
@@ -440,7 +439,7 @@ class LegacyDBConverter():
         if results is not None:
             for row in results:
                 if row['upload_ticket_owner_id'] not in self.role_user_ids:
-                    tickets.append(UploadRequest(owner_id=row['upload_ticket_owner_id'], max_size=row['upload_ticket_max_size'], date_expires=row['upload_ticket_expiration'], password=row['upload_ticket_password_hash'], scan_file=row['upload_ticket_scan_file'], type=row['upload_ticket_type'], id=row['upload_ticket_id']))
+                    tickets.append(UploadRequest(owner_id=row['upload_ticket_owner_id'], max_file_size=row['upload_ticket_max_size'], date_expires=row['upload_ticket_expiration'], password=row['upload_ticket_password_hash'], scan_file=row['upload_ticket_scan_file'], type=row['upload_ticket_type'], id=row['upload_ticket_id']))
         return tickets
 
     def GetAllDeletedFiles(self):
