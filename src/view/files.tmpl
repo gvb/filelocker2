@@ -83,9 +83,9 @@
                                 <li>
                                     <div class="itemTitleMedium"><span class="notifyOnDownload">Notify Me on Download:</span></div>
                                     #if $f.notify_on_download
-                                        <input type="checkbox" name="notifyOnDownload_$f.id" id="notifyOnDownloadYes_$f.id" class="notifyCheckbox" title="Email me when someone downloads this file" onClick="javascript:FLFile.toggleNotify('$f.id', 'no')" checked="checked"/>
+                                        <input type="checkbox" name="notifyOnDownload_$f.id" id="notifyOnDownloadYes_$f.id" class="notifyCheckbox" title="Email me when someone downloads this file" onClick="javascript:FLFile.toggleNotify('$f.id', false)" checked="checked"/>
                                     #else
-                                        <input type="checkbox" name="notifyOnDownload_$f.id" id="notifyOnDownloadYes_$f.id" class="notifyCheckbox" title="Email me when someone downloads this file" onClick="javascript:FLFile.toggleNotify('$f.id', 'yes')"/>
+                                        <input type="checkbox" name="notifyOnDownload_$f.id" id="notifyOnDownloadYes_$f.id" class="notifyCheckbox" title="Email me when someone downloads this file" onClick="javascript:FLFile.toggleNotify('$f.id', true)"/>
                                     #end if
                                 </li>
                                 #end if

@@ -54,14 +54,12 @@
                 #end if
             </li>
         #end for
-        <span class="itemTitleMedium">
-            <li><input type='checkbox' id='${context}_notifyGroup' checked='checked' /><span onclick="javascript:Utility.check('${context}_notifyGroup');">Notify via email</span></li>
-        </span>
         #else
             <li>You haven't added any groups yet.</li>
         #end if
-            <br />
         </ul>
+        <input type="checkbox" id="${context}_notifyGroup" /><span onclick="javascript:Utility.check('${context}_notifyGroup')">Notify via email</span><br />
+        <input type="checkbox" id="${context}_ccGroup" /><span onclick="javascript:Utility.check('${context}_ccGroup')">CC me with notification</span>
     </div>
     #end if
     #if $context != "messages" and $context != "manage_groups" and $context != "manage_roles"
@@ -84,6 +82,9 @@
             <div>
                 <label for="publicShareType">Other options:</label>
                 <input type="checkbox" id="publicShareType" onclick="javascript:Share.Public.toggleType();" /><span onclick="javascript:Utility.check('publicShareType');javascript:Share.Public.toggleType();">Allow multiple downloads (requires password)?</span>
+            </div>
+            <div>
+                <input type="checkbox" id="publicShareCC" /><span onclick="javascript:Utility.check('publicShareCC');">CC me with notification?</span>
             </div>
             <div>
                 <input type="checkbox" id="publicSharePasswordSelector" onclick="javascript:Share.Public.togglePassword();"/><span onclick="javascript:Utility.check('publicSharePasswordSelector');javascript:Share.Public.togglePassword();">Password protect this public share?</span>

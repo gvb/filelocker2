@@ -133,7 +133,7 @@ Account = function() {
         function select(id, name, context)
         {
             if(id != "0" && context == "private_sharing")
-                $("#"+context+"_searchResult").html("<br /><span class='itemTitleMedium'><span class='ownerItem memberTitle' title='"+id+"'>"+name+"</span></span><a href='javascript:Share.User.create(\""+id+"\");' title='Share with "+name+"' class='shareUser'>Share</a><br /><br /><input type='checkbox' id='private_sharing_notifyUser' checked='checked' /><span onclick='javascript:Utility.check(\"private_sharing_notifyUser\");'>Notify via email</span>");
+                $("#"+context+"_searchResult").html("<br /><span class='itemTitleMedium'><span class='ownerItem memberTitle' title='"+id+"'>"+name+"</span></span><a href='javascript:Share.User.create(\""+id+"\");' title='Share with "+name+"' class='shareUser'>Share</a><br /><br /><input type='checkbox' id='private_sharing_notifyUser' /><span onclick='javascript:Utility.check(\"private_sharing_notifyUser\");'>Notify via email</span><br /><input type='checkbox' id='private_sharing_ccUser' /><span onclick='javascript:Utility.check(\"private_sharing_ccUser\")'>CC me with notification</span>");
             else if(id != "0" && context == "manage_groups")
                 $("#"+context+"_searchResult").html("<br /><span class='itemTitleMedium'><span class='ownerItem memberTitle' title='"+id+"'>"+name+"</span></span><a href='javascript:Group.Member.add(\""+id+"\",\""+$("#manage_groups_selectedGroupId").val()+"\");' title='Add "+name+" to the Group' class='addUser'>Add</a>");
             else if(id != "0" && context == "manage_roles")

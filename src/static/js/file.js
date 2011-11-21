@@ -243,11 +243,11 @@ FLFile = function() {
             });
         }
     }
-    function toggleNotify(fileId, notifyAction)
+    function toggleNotify(fileId, shouldNotify)
     {
         Filelocker.request("/file/update_file", "updating notification settings", {
             fileId: fileId,
-            notifyOnDownload: notifyAction == "yes"
+            notifyOnDownload: shouldNotify
         }, true);
     }
     function getQuota()
@@ -462,7 +462,8 @@ UploadRequest = function() {
                 password: $("#uploadRequestPassword").val(),
                 //maxFileSize: $("#uploadRequestMaxSize").val(),
                 expiration: $("#uploadRequestExpiration").val(),
-                scanFile: $("#uploadRequestScanFile").is(":checked"),
+                scanFile: $("#uploadRequestScanFile").prop("checked"),
+                cc: $("#uploadRequestCC").prop("checked"),
                 emailAddresses: $("#uploadRequestEmail").val(),
                 personalMessage: $("#uploadRequestMessage").val(),
                 requestType: requestType

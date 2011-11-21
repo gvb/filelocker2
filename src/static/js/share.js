@@ -77,8 +77,13 @@ Share = function() {
                 StatusResponse.create(action, "Select file(s) for sharing.", false);
             else
             {
-                var notify = $("#private_sharing_notifyUser").is(":checked") ? "yes" : "no";
-                Filelocker.request("/share/create_user_shares", action, {fileIds: fileIds, userId: userId, notify: notify}, true, function() {
+                var data = {
+                    fileIds: fileIds,
+                    userId: userId,
+                    notify: $("#private_sharing_notifyUser").prop("checked"),
+                    cc: $("#private_sharing_ccUser").prop("checked")
+                };
+                Filelocker.request("/share/create_user_shares", action, data, true, function() {
                     Share.prompt(fileIds, 0, 0);
                 });
             }
@@ -122,8 +127,13 @@ Share = function() {
                 StatusResponse.create(action, "Select file(s) for sharing.", false);
             else
             {
-                var notify = $("#private_sharing_notifyGroup").is(":checked") ? "yes" : "no";
-                Filelocker.request("/share/create_group_shares", action, {fileIds: fileIds, groupId: groupId, notify: notify}, true, function() {
+                var data = {
+                    fileIds: fileIds,
+                    groupId: groupId,
+                    notify: $("#private_sharing_notifyGroup").prop("checked"),
+                    cc: $("#private_sharing_ccGroup").prop("checked")
+                };
+                Filelocker.request("/share/create_group_shares", action, data, true, function() {
                     Share.prompt(fileIds, 1, 1);
                 });
             }
@@ -237,6 +247,7 @@ Share = function() {
                         password: $("#publicSharePassword").val(),
                         confirmPassword: $("#publicSharePassword").val(),
                         expiration: $("#publicShareExpiration").val(),
+                        cc: $("#publicShareCC").prop("checked"),
                         shareType: shareType
                     };
                     Filelocker.request("/share/create_public_share", action, data, true, function() {
@@ -264,7 +275,8 @@ Share = function() {
                     var $row = $(publicShareRowTemplate);
                     var fileList = "";
                     var fileCounter = 0;
-                    $row.find("td.publicShareLink").html("<a href='/public_download?share_id="+share.id+"' target='_blank' class='globe' title='View this public share'>View</a>&nbsp;&nbsp;<a href='#' onclick='window.prompt(\"Copy to clipboard: Ctrl+C, Enter\", \""+share.id+"\")' title='Copy to clipboard'>Copy</a>");
+                    var link = window.location.protocol + "//" + window.location.host + "/public_download?shareId=" + share.id;
+                    $row.find("td.publicShareLink").html("<a href='"+link+"' target='_blank' class='globe' title='View this public share'>View</a>&nbsp;&nbsp;<a href='#' onclick='window.prompt(\"Copy to clipboard: Ctrl+C, Enter\", \""+link+"\")' title='Copy to clipboard'>Copy</a>");
                     $row.find("td.publicShareType").text(share.reuse.capitalize());
                     $row.find("td.publicShareExpires").text(share.date_expires);
                     $row.find("td.publicShareMessage").text(share.message);
