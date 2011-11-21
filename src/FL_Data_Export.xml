@@ -10,51 +10,51 @@
     </attributes>
 
     <roles>
-        <role id="roleuser" name="Test1  Test2" quota="1024" email="roleuser@role.user">
-            <permissions>
-                    <permission id="admin"/>
-            </permissions>
+        <role id="roleuser" name="0 Test2" quota="1024" email="derp">
+            <role_permissions>
+                    <role_permission id="admin"/>
+            </role_permissions>
 
         </role>
     </roles>
 
     <users>
         <user id="wbdavis" first_name="Brett" last_name="Davis" quota="1024" email="wbdavis@purdue.edu" date_last_login="2011-11-18 16:58:57" date_tos_accept="2011-08-15 01:20:23">
-            <permissions>
-                <permission id="admin"/>
-            </permissions>
-            <roles>
-                <role id="roleuser"/>
-            </roles>
+            <user_permissions>
+                <user_permission id="admin"/>
+            </user_permissions>
+            <user_roles>
+                <user_role id="roleuser"/>
+            </user_roles>
         </user>
         <user id="test" first_name="test" last_name="test" quota="1024" email="" date_last_login="" date_tos_accept="">
-            <permissions>
-            </permissions>
-            <roles>
-                <role id="roleuser"/>
-            </roles>
+            <user_permissions>
+            </user_permissions>
+            <user_roles>
+                <user_role id="roleuser"/>
+            </user_roles>
         </user>
     </users>
 
     <groups>
         <group id="1" name="Favorites" scope="private" owner_id="" role_owner_id="roleuser">
-            <members>
-            </members>
+            <group_members>
+            </group_members>
         </group>
         <group id="2" name="Favorites" scope="private" owner_id="test" role_owner_id="">
-            <members>
-            </members>
+            <group_members>
+            </group_members>
         </group>
         <group id="3" name="testgroup" scope="private" owner_id="wbdavis" role_owner_id="">
-            <members>
-                <user id="test"/>
-            </members>
+            <group_members>
+                <group_member id="test"/>
+            </group_members>
         </group>
     </groups>
 
 
     <files>
-        <file id="93" name="netbeans.css" type="ASCII C program text" date_uploaded="2011-11-17 02:11:37" owner_id="wbdavis" date_expires="2011-11-24 00:00:00" passed_avscan="1" encryption_key="imjNsgGzTqtUwuHUhw4oNVsHmcnv92gH" status="Checked In" notify_on_download="0" md5="" upload_request_id="" />
+        <file id="93" name="netbeans.css" type="ASCII C program text" size="15822" date_uploaded="2011-11-17 02:11:37" owner_id="wbdavis" date_expires="2011-11-24 00:00:00" passed_avscan="1" encryption_key="imjNsgGzTqtUwuHUhw4oNVsHmcnv92gH" status="Checked In" notify_on_download="0" md5="" upload_request_id="" />
     </files>
 
     <deleted_files>
@@ -78,9 +78,9 @@
 
     <public_shares>
         <public_share id="5c94907490fa82c5aa7a868895540b8a" owner_id="wbdavis" date_expires="2011-11-24 00:00:00" password="098f6bcd4621d373cade4e832627b4f6" reuse="multi">
-            <files>
-                <file id="93">
-            </files>
+            <public_share_files>
+                <file id="93"/>
+            </public_share_files>
         </public_share>
     </public_shares>
 

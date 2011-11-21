@@ -64,8 +64,9 @@ class User(Base):
     is_role = False
     authorized = True
     attributes = []
-    received_messages = relation("MessageShare")
+    received_messages = relation("MessageShare", backref="recipient", cascade="all, delete-orphan")
     upload_requests = relation("UploadRequest", backref="owner")
+    user_shares = relation("UserShare", backref="users", cascade="all, delete-orphan")
 
     
     def set_display_name(self, value):
@@ -73,7 +74,10 @@ class User(Base):
 
     def get_display_name(self):
         if self._display_name is None or self._display_name == "":
-            return "%s %s" % (self.first_name, self.last_name)
+            if self.last_name is None or self.last_name == "":
+                return "%s" % (self.first_name)
+            else:
+                return "%s %s" % (self.first_name, self.last_name)
         else:
             return self._display_name
 
@@ -254,13 +258,14 @@ class MessageShare(Base):
     message_id = Column(Integer, ForeignKey("messages.id"), primary_key=True)
     recipient_id = Column(String(30), ForeignKey("users.id"), primary_key=True)
     date_viewed = Column(DateTime, nullable=True, default=None)
+    
 
 class UserShare(Base):
     __tablename__ = "user_shares"
     user_id = Column(String(30), ForeignKey("users.id"), primary_key=True)
     file_id = Column(Integer, ForeignKey("files.id"), primary_key=True)
     flFile = relation("File")
-    user = relation("User", backref="user_shares")
+    #user = relation("User", backref="user_shares")
 
 class GroupShare(Base):
     __tablename__ = "group_shares"
@@ -388,25 +393,19 @@ class AuditLog(Base):
         return {"initiatorUserId":self.initiator_user_id, "action": self.action, "affectedUserId": self.affected_user_id, "message": self.message, "actionDatetime": self.date.strftime("%m/%d/%Y %H:%M"), "displayClass": self.display_class, "logId": self.id, "roleId": self.affected_role_id, "fileId": self.file_id}
 
 def create_admin_user(dburi, password):
-    adminUser = User(id="admin", first_name="Administrator", quota=1024, date_tos_accept=datetime.datetime.now())
-    adminUser.set_password(password)
-    testUser1 = User(id="wbdavis", first_name="Brett", last_name="Davis", quota=1024, date_tos_accept=datetime.datetime.now())
-    testUser1.set_password("test")
-    testUser2 = User(id="cmiller", first_name="Chris", last_name="Miller", quota=1024, date_tos_accept=datetime.datetime.now())
-    testUser2.set_password("test")
-    engine = create_engine(dburi, echo=True)
+    engine = create_engine(dburi, echo=False)
     Session = sessionmaker(bind=engine)
     session = Session()
+    adminUser = session.query(User).filter(User.id=="admin").scalar()
+    if adminUser is None:
+        adminUser = User(id="admin", first_name="Administrator", quota=1024, date_tos_accept=datetime.datetime.now())
+        session.add(adminUser)
+        session.commit()
+    adminUser.set_password(password)
     adminPermission = session.query(Permission).filter(Permission.id == "admin").one()
-    adminUser.permissions.append(adminPermission)
-    oldAdmin = session.query(User).filter(User.id=="admin").scalar()
-    if oldAdmin is not None:
-        session.delete(oldAdmin)
-    session.add(adminUser)
-    session.add(testUser1)
-    session.add(testUser2)
+    if adminPermission not in adminUser.permissions:
+        adminUser.permissions.append(adminPermission)
     session.commit()
-    print "Password after set: %s" % str(adminUser.password)
 
 
 def create_database_tables(dburi):

@@ -95,7 +95,7 @@ def daily_maintenance(config):
             for share in flFile.private_attribute_shares:
                 session.delete(share)
             FileController.queue_for_deletion(flFile.id)
-            session.add(AuditLog("system", "Delete File", "File %s (ID:%s) has expired and has been purged by the system." % (flFile.name, flFile.id), flFile.owner_id))
+            session.add(AuditLog("admin", "Delete File", "File %s (ID:%s) has expired and has been purged by the system." % (flFile.name, flFile.id), flFile.owner_id))
             session.delete(flFile)
             session.commit()
         except Exception, e:
@@ -106,7 +106,7 @@ def daily_maintenance(config):
         try:
             session.delete(message)
             FileController.queue_for_deletion("m%s" % str(message.id))
-            session.add(AuditLog("system", "Delete Message", "Message %s (ID:%s) has expired and has been deleted by the system." % (message.messageSubject, message.messageId), message.owner_id))
+            session.add(AuditLog("admin", "Delete Message", "Message %s (ID:%s) has expired and has been deleted by the system." % (message.messageSubject, message.messageId), message.owner_id))
             session.commit()
         except Exception, e:
             session.rollback()
@@ -122,8 +122,9 @@ def daily_maintenance(config):
     maxUserDays = config['filelocker']['user_inactivity_expiration']
     expiredUsers = session.query(User).filter(User.date_last_login < (datetime.date.today() - datetime.timedelta(days=maxUserDays)))
     for user in expiredUsers:
+        print "Trying to delete %s" % user.id
         session.delete(user)
-        session.add(AuditLog("system", "Delete User", "User %s was deleted due to inactivity. All files and shares associated with this user have been purged as well" % str(user.id)))
+        session.add(AuditLog("admin", "Delete User", "User %s was deleted due to inactivity. All files and shares associated with this user have been purged as well" % str(user.id)))
         session.commit()
     vaultFileList = os.listdir(config['filelocker']['vault'] )
     for fileName in vaultFileList:
@@ -457,7 +458,7 @@ def create_admin(dburi):
             password = getpass("Re-Enter Admin password: ")
             confirmPassword = getpass("Confirm password: ")
     lib.Models.create_admin_user(dburi, password)
-    print "New admin user created."
+    print "Admin user account reset"
 
     
 if __name__ == '__main__':

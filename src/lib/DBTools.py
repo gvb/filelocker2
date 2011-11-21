@@ -8,6 +8,7 @@ from Cheetah.Template import Template
 import sys
 from xml.dom.minidom import parse, parseString
 from Models import *
+import sqlalchemy
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, backref, sessionmaker, mapper
 from sqlalchemy import *
@@ -16,10 +17,6 @@ from lib.SQLAlchemyTool import configure_session_for_app, session, _engines
 def create_admin_user(dburi, password):
     adminUser = User(id="admin", first_name="Administrator", quota=1024, date_tos_accept=datetime.datetime.now())
     adminUser.set_password(password)
-    testUser1 = User(id="wbdavis", first_name="Brett", last_name="Davis", quota=1024, date_tos_accept=datetime.datetime.now())
-    testUser1.set_password("test")
-    testUser2 = User(id="cmiller", first_name="Chris", last_name="Miller", quota=1024, date_tos_accept=datetime.datetime.now())
-    testUser2.set_password("test")
     engine = create_engine(dburi, echo=True)
     #Base.metadata.create_all(engine)
     Session = sessionmaker(bind=engine)
@@ -45,21 +42,22 @@ def import_db(importFile, dburi):
     session = Session()
 
     #Permissions
-    for node in dom.getElementsByTagName("permissions"):
-        for permnode in node:
-            session.add(Permission(id=permnode.getAttribute("id"), name=permnode.getAttribute("name")))
+#    for node in dom.getElementsByTagName("permissions"):
+#        for permnode in node.getElementsByTagName("permission"):
+#            session.add(Permission(id=permnode.getAttribute("id"), name=permnode.getAttribute("name")))
+#        session.commit()
 
 
     #Users
     for node in dom.getElementsByTagName("users"):
         for usernode in node.getElementsByTagName("user"):
-            u = User(id=usernode.getAttribute("id"),first_name=usernode.getAttribute(("first_name"),
-            last_name=usernode.getAttribute("last_name"), quota=int(usernode.getAttribute("quota")),
-            email=usernode.getAttribute("email"), date_last_login=usernode.getAttribute("date_last_login"),
-            date_tos_accept=usernode.getAttribute("date_tos_accept")))
+            u = User(id=usernode.getAttribute("id"), first_name=usernode.getAttribute("first_name"),\
+            last_name=usernode.getAttribute("last_name"), quota=int(usernode.getAttribute("quota")),\
+            email=usernode.getAttribute("email"), date_last_login=usernode.getAttribute("date_last_login"),\
+            date_tos_accept=usernode.getAttribute("date_tos_accept"))
             session.add(u)
             session.commit()
-            for permnode in usernode.getElementsByTagName("permission"):
+            for permnode in usernode.getElementsByTagName("user_permission"):
                 perm = session.query(Permission).filter(Permission.id==permnode.getAttribute("id")).one()
                 u.permissions.append(perm)
             session.commit()
@@ -69,12 +67,15 @@ def import_db(importFile, dburi):
         for groupnode in node.getElementsByTagName("group"):
             g = Group(id=groupnode.getAttribute("id"), name=groupnode.getAttribute("name"))
             session.add(g)
-            for permnode in groupnode.getElementsByTagName("permissions"):
+            for permnode in groupnode.getElementsByTagName("group_permission"):
                 perm = session.query(Permission).filter(Permission.id==permnode.getAttribute("id")).one()
                 g.permissions.append(perm)
-            for membernode in groupnode.getElementsByTagName("members"):
-                m = session.query(User).filter(User.id == membernode.getAttribute("id")).one()
-                g.members.append(m)
+            for membernode in groupnode.getElementsByTagName("group_member"):
+                try:
+                    m = session.query(User).filter(User.id == membernode.getAttribute("id")).one()
+                    g.members.append(m)
+                except Exception, e:
+                    print "Couldn't find user %s to add to group %s(%s)" % (membernode.getAttribute("id"), g.name, g.id)
             session.commit()
 
 
@@ -82,85 +83,101 @@ def import_db(importFile, dburi):
     #TODO: Add members
     for node in dom.getElementsByTagName("roles"):
         for rolenode in node.getElementsByTagName("role"):
-            r = Role(id=rolenode.getAttribute("id"), name=rolenode.getAttribute("name"),
-            email=rolenode.getAttribute("email"), quota=int(rolenode.getAttribute("quota")))
+            r = Role(id=rolenode.getAttribute("id"), name=rolenode.getAttribute("name"),\
+                    email=rolenode.getAttribute("email"), quota=int(rolenode.getAttribute("quota")))
             session.add(r)
-            for permnode in rolenode.getElementsByTagName("permissions"):
+            for permnode in rolenode.getElementsByTagName("role_permission"):
                 perm = session.query(Permission).filter(Permission.id==permnode.getAttribute("id")).one()
                 r.permissions.append(perm)
-            for membernode in rolenode.getElementsByTagName("members"):
+            for membernode in rolenode.getElementsByTagName("role_member"):
                 m = session.query(User).getElementsByTagName("id").one()
                 r.members.append(m)
             session.commit()
             
     for node in dom.getElementsByTagName("files"):
         for filenode in node.getElementsByTagName("file"):
-            f = File(id=filenode.getAttribute("id"), name=filenode.getAttribute("name"),
-                    type=filenode.getAttribute("type"), size=long(filenode.getAttribute("size")),
-                    notes=filenode.getAttribute("notes"), date_uploaded=filenode.getAttribute("date_uploaded"),
-                    owner_id=filenode.getAttribute("owner_id"), role_owner_id=filenode.getAttribute("role_owner_id"),
-                    date_expires=filenode.getAttribute("date_expires"), passed_avscan=filenode.getAttribute("passed_avscan"),
-                    encryption_key=filenode.getAttribute("encryption_key"), status=filenode.getAttribute("status"),
-                    notify_on_download=False if filenode.getAttribute("notify_on_download")=="0" else True,
+            f = File(id=filenode.getAttribute("id"), name=filenode.getAttribute("name"),\
+                    type=filenode.getAttribute("type"), size=long(filenode.getAttribute("size")),\
+                    notes=filenode.getAttribute("notes"), date_uploaded=filenode.getAttribute("date_uploaded"),\
+                    owner_id=filenode.getAttribute("owner_id"), role_owner_id=filenode.getAttribute("role_owner_id"),\
+                    date_expires=filenode.getAttribute("date_expires"), passed_avscan=filenode.getAttribute("passed_avscan"),\
+                    encryption_key=filenode.getAttribute("encryption_key"), status=filenode.getAttribute("status"),\
+                    notify_on_download=False if filenode.getAttribute("notify_on_download")=="0" else True,\
                     md5=filenode.getAttribute("md5"), upload_request_id=filenode.getAttribute("upload_request_id"))
             session.add(f)
         session.commit()
     
     for node in dom.getElementsByTagName("upload_requests"):
         for requestnode in node.getElementsByTagName("upload_request"):
-            u = UploadRequest(id=requestnode.getAttribute("id"), owner_id=requestnode.getAttribute("owner_id"), 
-                            max_file_size=requestnode.getAttribute("max_file_size"), scan_file=requestnode.getAttribute("scan_file"), 
-                            date_expires=requestnode.getAttribute("date_expires"), password=requestnode.getAttribute("password"), 
+            u = UploadRequest(id=requestnode.getAttribute("id"), owner_id=requestnode.getAttribute("owner_id"), \
+                            max_file_size=requestnode.getAttribute("max_file_size"), scan_file=requestnode.getAttribute("scan_file"), \
+                            date_expires=requestnode.getAttribute("date_expires"), password=requestnode.getAttribute("password"),\
                             type=requestnode.getAttribute("type"))
             session.add(u)
         session.commit()
         
     for node in dom.getElementsByTagName("messages"):
         for messagenode in node.getElementsByTagName("message"):
-            m = Message(id=messagenode.getAttribute("id"), subject=messagenode.getAttribute("subject"),
-                    date_sent=messagenode.getAttribute("date_sent"), owner_id=messagenode.getAttribute("owner_id"),
+            m = Message(id=messagenode.getAttribute("id"), subject=messagenode.getAttribute("subject"),\
+                    date_sent=messagenode.getAttribute("date_sent"), owner_id=messagenode.getAttribute("owner_id"),\
                     date_expires=messagenode.getAttribute("date_expires"), encryption_key=messagenode.getAttribute("encryption_key"))
+            session.add(m)
         session.commit()
         
     #TODO: Might have to change schema to make these children of message
     for node in dom.getElementsByTagName("message_shares"):
         for msnode in node.getElementsByTagName("message_share"):
-            m = MessageShare(message_id=msnode.getAttribute("message_id"), recipient_id=msnode.getAttribute("recipient_id"), date_viewed=msnode.getAttribute("date_viewed"))
-            session.add(m)
+            try:
+                m = session.query(Message).filter(Message.id == msnode.getAttribute("message_id")).one()
+                ms = MessageShare(message_id=msnode.getAttribute("message_id"), recipient_id=msnode.getAttribute("recipient_id"), date_viewed=msnode.getAttribute("date_viewed"))
+                m.message_shares.append(ms)
+            except Exception, e:
+                print "Problem adding message share: %s" % str(e)
         session.commit()
     
     for node in dom.getElementsByTagName("user_shares"):
         for unode in node.getElementsByTagName("user_share"):
+            flFile = session.query(File).filter(File.id == unode.getAttribute("file_id")).one()
             us = UserShare(user_id=unode.getAttribute("user_id"), file_id=unode.getAttribute("file_id"))
+            flFile.user_shares.append(us)
             session.add(us)
         session.commit()
     
     for node in dom.getElementsByTagName("group_shares"):
         for gnode in node.getElementsByTagName("group_shares"):
+            flFile = session.query(File).filter(File.id == gnode.getAttribute("file_id")).one()
             gs = GroupShare(group_id=gnode.getAttribute("group_id"), file_id=gnode.getAttribute("file_id"))
+            flFile.group_shares.append(gs)
             session.add(gs)
         session.commit()
     
     for node in dom.getElementsByTagName("public_shares"):
-        for pnode in node.getElementsByTagName("public_shares"):
+        for pnode in node.getElementsByTagName("public_share"):
             ps = PublicShare(id=pnode.getAttribute("id"), owner_id=pnode.getAttribute("owner_id"), date_expires=pnode.getAttribute("date_expires"), 
             reuse=pnode.getAttribute("reuse"), password=pnode.getAttribute("password"))
             session.add(ps)
+            for psfnode in node.getElementsByTagName("public_share_file"):
+                flFile = session.query(File).filter(File.id == int(psfnode.getAttribute("id"))).one()
+                ps.files.append(flFile)
         session.commit()
     
     for node in dom.getElementsByTagName("attribute_shares"):
         for anode in node.getElementsByTagName("attribute_share"):
+            flFile = session.query(File).filter(File.id == anode.getAttribute("file_id")).one()
             ashare = AttributeShare(attribute_id=anode.getAttribute("attribute_id"), file_id=anode.getAttribute("file_id"))
+            flFile.attribute_shares.append(ashare)
             session.add(ashare)
         session.commit()
+
+    for node in dom.getElementsByTagName("config_parameters"):
+        for cnode in node.getElementsByTagName("config_parameter"):
+            try:
+                parameter = session.query(ConfigParameter).filter(ConfigParameter.name == cnode.getAttribute("name")).one()
+                parameter.value = cnode.getAttribute("value")
+            except sqlalchemy.orm.exc.NoResultFound:
+                print "Found old config parameter, skipping"
+        session.commit()
     
-	for node in dom.getElementsByTagName("config_parameters"):
-		for cnode in node.getElementsByTagName("config_parameter"):
-			c = ConfigParameter(name=cnode.getAttribute("name"), value=cnode.getAttribute("value"), 
-								description=cnode.getAttribute("description"), type=cnode.getAttribute("type"))
-			session.add(cnode)
-		session.commit()
-		
 	for node in dom.getElementsByTagName("deleted_files"):
 		for dnode in node.getElementsByTagName("deleted_file"):
 			d = DeletedFile(file_name=dnode.getAttribute("file_name"))
@@ -169,9 +186,9 @@ def import_db(importFile, dburi):
 	
 	for node in dom.getElementsByTagName("audit_logs"):
 		for anode in node.getElementsByTagName("audit_log"):
-			log = AuditLog(anode.getAttribute("initiator_user_id"),
-							anode.getAttribute("action"), anode.getAttribute("affected_user_id"),
-							anode.getAttribute("message"), anode.getAttribute("date"), 
+			log = AuditLog(anode.getAttribute("initiator_user_id"),\
+							anode.getAttribute("action"), anode.getAttribute("affected_user_id"),\
+							anode.getAttribute("message"), anode.getAttribute("date"), \
 							anode.getAttribute("affected_role_id"), anode.getAttribute("file_id"), anode.getAttribute("id"))
 			session.add(log)
 		session.commit()
