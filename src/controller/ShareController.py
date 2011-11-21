@@ -13,13 +13,13 @@ class ShareController:
 
     @cherrypy.expose
     @cherrypy.tools.requires_login()
-    def create_user_shares(self, fileIds, userId=None, notify="no", cc="no", format="json", **kwargs):
+    def create_user_shares(self, fileIds, userId=None, notify="no", cc="false", format="json", **kwargs):
         config = cherrypy.request.app.config['filelocker']
-        print "userId %s" % str(userId)
         user, sMessages, fMessages  = (cherrypy.session.get("user"), [], [])
         fileIds = split_list_sanitized(fileIds)
         userId = strip_tags(userId) if userId is not None and userId != "" else None
-        notify = True if notify.lower() == "yes" else False
+        notify = True if notify.lower() == "true" else False
+        cc = True if cc.lower() == "true" else False
         try:
             if userId is not None:
                 sharedFiles, recipients = [], []
@@ -79,11 +79,12 @@ class ShareController:
 
     @cherrypy.expose
     @cherrypy.tools.requires_login()
-    def create_group_shares(self, fileIds, groupId, notify="no", format="json"):
+    def create_group_shares(self, fileIds, groupId, notify="false", cc="false", format="json"):
         user, sMessages, fMessages, config  = (cherrypy.session.get("user"), [], [], cherrypy.request.app.config['filelocker'])
         fileIds = split_list_sanitized(fileIds)
         groupId = strip_tags(groupId) if groupId is not None and groupId != "" else None
-        notify = True if notify.lower() == "yes" else False
+        notify = True if notify.lower() == "true" else False
+        cc = True if cc.lower() == "true" else False
         try:
             if groupId is not None:
                 group = session.query(Group).filter(Group.id==groupId).one()
