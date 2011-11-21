@@ -15,7 +15,8 @@ class LocalDirectory(object):
         #We have to support real-time conversion from less-secure MD5 hashed passwords
         isValid = False
         try:
-            passwordHash = session.query(User.password).filter(User.id == userId).one()
+            user = session.query(User).filter(User.id == userId).one()
+            passwordHash = user.password
             if password is not None and password != "":
                 isValid = lib.Encryption.compare_password_hash(password, passwordHash)
                 if isValid and len(passwordHash) == 32:
@@ -28,7 +29,7 @@ class LocalDirectory(object):
         except sqlalchemy.orm.exc.NoResultFound:
             isValid = False
         except Exception, e:
-            logging.error("[system] [authenticat] [Problem authenticating user: %s" % str(e))
+            logging.error("[system] [authenticate] [Problem authenticating user: %s" % str(e))
             isValid = False
         return isValid
 

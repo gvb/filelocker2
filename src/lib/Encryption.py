@@ -92,11 +92,12 @@ class KeyGen:
         return xor.encrypt(b)
 
 def hash_password(password, salt=None):
-    #TODO: Implement this unicode safely
     sha = SHA256.new()
     if salt is None:
         salt = os.urandom(8).encode('hex')
-    sha.update(salt+password)
+
+    cryptoString = "%s%s" % (salt,password)
+    sha.update(cryptoString)
     saltedHash = "%s%s" % (salt, sha.hexdigest()) #Yum
     return saltedHash #8char salt, 64 char hash, 72 chars total
 
