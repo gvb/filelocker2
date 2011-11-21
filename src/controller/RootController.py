@@ -357,36 +357,36 @@ class RootController:
         else:
              raise cherrypy.HTTPRedirect("%s/upload_request?msg=2" % (config['root_url']))
         return str(tpl)
-#
-##    @cherrypy.expose
-##    def public_download(self, shareId, **kwargs):
-##        message = None
-##        cherrypy.response.timeout = 36000
-##        shareId = strip_tags(shareId)
-##        try:
-##            password = None
-##            if kwargs.has_key("password"):
-##               password = kwargs['password']
-##            publicShare = fl.get_public_share(shareId, password)
-##            if publicShare is not None and publicShare.passwordHash is not None and password == None:
-##                message = "This file is password protected."
-##                currentYear = datetime.date.today().year
-##                footerText = str(Template(file=fl.get_template_file('footer_text.tmpl'), searchList=[locals(),globals()]))
-##                tpl = Template(file=fl.get_template_file('public_download_landing.tmpl'), searchList=[locals(),globals()])
-##                return str(tpl)
-##            elif publicShare is not None:
-##                publicShareOwner = fl.get_user(publicShare.ownerId)
-##                flFile = fl.get_file(publicShareOwner, publicShare.fileId)
-##                cherrypy.session['fMessages'], cherrypy.session['sMessages'] = ([], [])
-##                return self.file_interface.serve_file(flFile, fl, publicShareOwner, None, publicShare.shareId)
-##            else:
-##                raise FLError(False, ["Invalid public share ID"])
-##        except FLError, fle:
-##            message = "<br />".join(fle.failureMessages)
-##            currentYear = datetime.date.today().year
-##            footerText = str(Template(file=fl.get_template_file('footer_text.tmpl'), searchList=[locals(),globals()]))
-##            tpl = Template(file=fl.get_template_file('public_download_landing.tmpl'), searchList=[locals(),globals()])
-##            return str(tpl)
+
+    @cherrypy.expose
+    def public_download(self, shareId, **kwargs):
+        message, publicShare = None, None
+        cherrypy.response.timeout = 36000
+        shareId = strip_tags(shareId)
+
+        try:
+            publicShare = session.query(PublicShare).filter(PublicShare.id==shareId).one()
+            if cherrypy.session.has_key("public_share_id") == False or cherrypy.session.get("public_share_id") != publicShare.id:
+                password = kwargs['password'] if kwargs.has_key("password") else None
+                passwordMatch = Encryption.compare_password_hash(password, publicShare.password)
+                if publicShare.password == None or (password is not None and passwordMatch):
+                    cherrypy.session['public_share_id'] = publicShare.id
+                elif password == None:
+                    message = "This file share is password protected."
+                    publicShare = None
+                elif password is not None and passwordMatch == False:
+                    message = "Invalid password"
+                    publicShare = None
+        except sqlalchemy.orm.exc.NoResultFound:
+            message = "Invalid Share ID"
+            shareId = None
+        except Exception, e:
+            message = "Unable to access download page: %s " % str(e)
+        publicHeaderHTML = str(Template(file=get_template_file('public_header.tmpl'), searchList=[locals(),globals()]))
+        footerText = str(Template(file=get_template_file('footer_text.tmpl'), searchList=[locals(),globals()]))
+        publicFooterHTML = str(Template(file=get_template_file('public_footer.tmpl'), searchList=[locals(),globals()]))
+        body = str(Template(file=get_template_file('public_download_landing.tmpl'), searchList=[locals(),globals()]))
+        return publicHeaderHTML+body+publicFooterHTML
 
     @cherrypy.expose
     def get_server_messages(self, format="json", **kwargs):
