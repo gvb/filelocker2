@@ -4,6 +4,7 @@ import datetime
 import logging
 import cherrypy
 from lib.SQLAlchemyTool import session
+import sqlalchemy
 from Cheetah.Template import Template
 from lib import Encryption
 from lib.Models import *
@@ -360,7 +361,7 @@ class RootController:
 
     @cherrypy.expose
     def public_download(self, shareId, **kwargs):
-        message, publicShare = None, None
+        message, publicShare, config = None, None, cherrypy.request.app.config['filelocker']
         cherrypy.response.timeout = 36000
         shareId = strip_tags(shareId)
 
@@ -382,6 +383,7 @@ class RootController:
             shareId = None
         except Exception, e:
             message = "Unable to access download page: %s " % str(e)
+        currentYear = datetime.date.today().year
         publicHeaderHTML = str(Template(file=get_template_file('public_header.tmpl'), searchList=[locals(),globals()]))
         footerText = str(Template(file=get_template_file('footer_text.tmpl'), searchList=[locals(),globals()]))
         publicFooterHTML = str(Template(file=get_template_file('public_footer.tmpl'), searchList=[locals(),globals()]))
