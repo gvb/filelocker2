@@ -37,9 +37,9 @@
                         </tr>
                         </thead>
                         <tbody id="filesTable">
-                        #for $requestFile in $requestFiles
+                        #for $file in $publicShare.files
                             #set $fsSuffix = "B"
-                            #set $fileSize = $requestFile['fileSizeBytes']
+                            #set $fileSize = $file.size
                             #if $fileSize > 1024
                                 #set $fileSize = $fileSize / 1024
                                 #set $fsSuffix = "kB"
@@ -52,17 +52,17 @@
                                     #end if
                                 #end if
                             #end if
-                            <tr id="file_$requestFile['fileId']" class="fileRow">
+                            <tr id="file_$file.id" class="fileRow">
                                 <td></td>
-                                <td><span class="$requestFile['documentType'] pseudoLink">
-                                    #if len($requestFile['fileName']) > 60
-                                        $requestFile['fileName'][0:45]...$requestFile['fileName'][-10:]
+                                <td><span class="$file.document_type pseudoLink">
+                                    #if len($file.name) > 60
+                                        $file.name[0:45]...$file.name[-10:]
                                     #else
-                                        $requestFile['fileName']
+                                        $file.name
                                     #end if
                                 </span></td>
                                 <td>$fileSize $fsSuffix</td>
-                                <td>$requestFile['fileExpirationDatetime']</td>
+                                <td>$file.date_expires</td>
                                 <td></td>
                             </tr>
                         #end for
@@ -76,9 +76,9 @@
             </div>
         </div>
         <div id="wrapper_col2">
-            <div class="text_col2"><a href="$fl.orgURL" target="_blank" title="Take me to the $fl.orgName home page"><img src="$config['root_url']/static/images/logos/logo.gif" alt="$fl.orgName" class="orgLogo" /></a>
+            <div class="text_col2"><a href="$config.org_url" target="_blank" title="Take me to the $config.org_name home page"><img src="$config['root_url']/static/images/logos/logo.gif" alt="$config.org_name" class="orgLogo" /></a>
             <img src="$config['root_url']/static/images/page_elements/horizontal_rule.gif" alt="" class="horizontal_rule" />
-                <p><span class="strong">Filelocker</span> allows you to share files with other people both inside and outside of $fl.orgName. It is a temporary and secure storage system for sharing files and data.</p>
+                <p><span class="strong">Filelocker</span> allows you to share files with other people both inside and outside of $config.org_name. It is a temporary and secure storage system for sharing files and data.</p>
                 <img src="$config['root_url']/static/images/page_elements/horizontal_rule.gif" alt="" class="horizontal_rule" />
             </div>
         </div>
