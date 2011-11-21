@@ -113,6 +113,14 @@ class ShareController:
                         except Exception, e:
                             session.rollback()
                             fMessages.append("Problem sending email notification to %s: %s" % (groupMember.display_name, str(e)))
+                    if cc:
+                        try:
+                            Mail.notify(get_template_file('share_notification.tmpl'),{'sender':user.email,'recipient':user.email, 'ownerId':user.id, 'ownerName':user.display_name, 'files':sharedFiles, 'filelockerURL': config['root_url']})
+                            session.add(AuditLog(user.id, "Sent Email", "You have been carbon copied via email on the notification that was sent out as a result of your file share."))
+                            session.commit()
+                        except Exception, e:
+                            session.rollback()
+                            fMessages.append("Problem carbon copying email notification: %s" % (str(e)))
         except Exception, e:
             session.rollback
             fMessages.append(str(e))
@@ -149,15 +157,16 @@ class ShareController:
         #Determine which files are shared with the user
         user, sMessages, fMessages, sharedFiles = (cherrypy.session.get("user"), [], [], [])
         try:
-            fileIds = []
+            hiddenFileIds = []
+            hiddenShares = session.query(HiddenShare).filter(HiddenShare.owner_id == user.id).all()
+            for hiddenShare in hiddenShares:
+                hiddenFileIds.append(hiddenShare.file_id)
             for flFile in get_files_shared_with_user(user):
-                if flFile.id not in fileIds:
+                if flFile.id not in hiddenFileIds:
                     sharedFiles.append(flFile.get_dict())
                     fileIds.append(flFile.id)
-#             TODO: Implement Share Hiding
-#            if fl.is_share_hidden(user, sharedFile.fileId) is False:
-#                sharedFilesList.append(sharedFile)
         except Exception, e:
+            logging.error("[%s] [get_files_shared_with_user] [Couldn't get files shared with user: %s]" % (user.id, str(e)))
             fMessages.append(str(e))
         return fl_response(sMessages, fMessages, format, data=sharedFiles)
 
@@ -235,11 +244,11 @@ class ShareController:
 
     @cherrypy.expose
     @cherrypy.tools.requires_login()
-    def create_public_share(self, fileIds, expiration, shareType, message, notifyEmails, cc="no", format="json", **kwargs):
+    def create_public_share(self, fileIds, expiration, shareType, message, notifyEmails, cc="false", format="json", **kwargs):
         user, role, sMessages, fMessages, shareId, ps = (cherrypy.session.get("user"), cherrypy.session.get("current_role"), [], [], None, None)
         config = cherrypy.request.app.config['filelocker']
         fileIds = split_list_sanitized(fileIds)
-        cc = True if cc == "yes" else False
+        cc = True if cc == "true" else False
         try:
             try:
                 expiration = datetime.datetime(*(time.strptime(strip_tags(expiration), "%m/%d/%Y")[0:6]))

@@ -369,14 +369,15 @@ class RootController:
             publicShare = session.query(PublicShare).filter(PublicShare.id==shareId).one()
             if cherrypy.session.has_key("public_share_id") == False or cherrypy.session.get("public_share_id") != publicShare.id:
                 password = kwargs['password'] if kwargs.has_key("password") else None
-                passwordMatch = Encryption.compare_password_hash(password, publicShare.password)
-                if publicShare.password == None or (password is not None and passwordMatch):
+                if publicShare.password == None or (password is not None and Encryption.compare_password_hash(password, publicShare.password)):
                     cherrypy.session['public_share_id'] = publicShare.id
                 elif password == None:
                     message = "This file share is password protected."
                     publicShare = None
-                elif password is not None and passwordMatch == False:
+                elif password is not None and Encryption.compare_password_hash(password, publicShare.password) == False:
                     message = "Invalid password"
+                    publicShare = None
+                else:
                     publicShare = None
         except sqlalchemy.orm.exc.NoResultFound:
             message = "Invalid Share ID"
