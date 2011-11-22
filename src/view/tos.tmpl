@@ -5,15 +5,15 @@
     <meta name="description" content="Developed at Purdue University, Filelocker allows you to share files with other people both inside and outside of your organization. It is a temporary and secure storage system for sharing files and data."/> 
     <meta name="keywords" content="filelocker, encryption, security application, enterprise, auditing, secure storage, information security, online storage, file sharing, share files, online backup, sharing, collaboration" /> 
     <title>Filelocker</title>
-    <link rel="stylesheet" href="$fl.rootURL/css?style=jquery-ui" />
-    <link rel="stylesheet" href="$fl.rootURL/css?style=filelocker" />
-    <link rel="shortcut icon" href="$fl.rootURL/static/images/favicon.ico" />
-    <script type="text/javascript" src="$fl.rootURL/static/js/lib/jquery-1.6.4.js"></script>
-    <script type="text/javascript" src="$fl.rootURL/static/js/lib/jquery-ui-1.8.11.js"></script>
-    <script type="text/javascript" src="$fl.rootURL/static/js/lib/jquery.tipsy.js"></script>
-    <script type="text/javascript" src="$fl.rootURL/static/js/global.js"></script>
+    <link rel="stylesheet" href="$config['root_url']/css?style=jquery-ui" />
+    <link rel="stylesheet" href="$config['root_url']/css?style=filelocker" />
+    <link rel="shortcut icon" href="$config['root_url']/static/images/favicon.ico" />
+    <script type="text/javascript" src="$config['root_url']/static/js/lib/jquery-1.6.4.js"></script>
+    <script type="text/javascript" src="$config['root_url']/static/js/lib/jquery-ui-1.8.11.js"></script>
+    <script type="text/javascript" src="$config['root_url']/static/js/lib/jquery.tipsy.js"></script>
+    <script type="text/javascript" src="$config['root_url']/static/js/global.js"></script>
     <script type="text/javascript">
-        var FILELOCKER_ROOT = "$fl.rootURL";
+        var FILELOCKER_ROOT = "$config['root_url']";
     </script>
 </head>
 <body class="greyBackground">
@@ -21,7 +21,7 @@
 <div id="background">
     <div id="wrapper_all">
         <div id="wrapper_header">
-            <div class="logo"><a href="$fl.rootURL"><img src="$fl.rootURL/static/images/logos/filelocker_logo.png" alt="Filelocker" /></a></div>
+            <div class="logo"><a href="$config['root_url']"><img src="$config['root_url']/static/images/logos/filelocker_logo.png" alt="Filelocker" /></a></div>
         </div>
         <div id="wrapper_2col">
             <div id="wrapper_col1">
@@ -41,15 +41,15 @@
                     <p>By clicking the "I Agree" button below, you are stating that you have read and agreed to the Filelocker Terms of Service.  Purdue University reserves the right to deny access to Filelocker to any person who violates the Filelocker Terms of Service.
                     </p>
                 </div>
-                <div class="button"><a href="$fl.rootURL/sign_tos?action=sign" title="I agree to the terms of service" class="acceptButton"><span>I Agree</span></a></div>
-                <div class="link"><a href="$fl.orgURL" title="I do not agree to the terms of service" class="deleteLink">Cancel</a></div>
+                <div class="button"><a href="$config['root_url']/sign_tos?action=sign" title="I agree to the terms of service" class="acceptButton"><span>I Agree</span></a></div>
+                <div class="link"><a href="$config['org_url']" title="I do not agree to the terms of service" class="deleteLink">Cancel</a></div>
             </div>
             <div id="wrapper_col2">
                 <div class="text_col2">
-                    <a href="$fl.orgURL" target="_blank" title="Take me to the $fl.orgName home page"><img src="$fl.rootURL/static/images/logos/logo.gif" alt="$fl.orgName" class="orgLogo" /></a>
-                    <img src="$fl.rootURL/static/images/page_elements/horizontal_rule.gif" alt="" class="horizontal_rule" />
-                    <p><span class="strong">Filelocker</span> allows you to share files with other people both inside and outside of $fl.orgName. It is a temporary and secure storage system for sharing files and data.</p>
-                    <img src="$fl.rootURL/static/images/page_elements/horizontal_rule.gif" alt="" class="horizontal_rule" />
+                    <a href="$config['org_url']" target="_blank" title="Take me to the $config['org_name'] home page"><img src="$config['root_url']/static/images/logos/logo.gif" alt="$config['org_name']" class="orgLogo" /></a>
+                    <img src="$config['root_url']/static/images/page_elements/horizontal_rule.gif" alt="" class="horizontal_rule" />
+                    <p><span class="strong">Filelocker</span> allows you to share files with other people both inside and outside of $config['org_name']. It is a temporary and secure storage system for sharing files and data.</p>
+                    <img src="$config['root_url']/static/images/page_elements/horizontal_rule.gif" alt="" class="horizontal_rule" />
                 </div>
             </div>
         </div>

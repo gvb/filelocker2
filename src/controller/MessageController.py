@@ -1,6 +1,7 @@
 import cherrypy
 import logging
 import cgi
+from lib import Encryption
 from Cheetah.Template import Template
 from Cheetah.Filters import WebSafe
 from lib.SQLAlchemyTool import session
@@ -29,7 +30,7 @@ class MessageController:
             else:
                 if maxExpiration < expiration and AccountController.user_has_permission(user, "expiration_exempt")==False:
                     raise Exception("Expiration date must be between now and %s." % maxExpiration.strftime("%m/%d/%Y"))
-            newMessage = Message(subject=subject, body=body, date_sent=datetime.datetime.now(), owner_id=user.id, date_expires=expiration)
+            newMessage = Message(subject=subject, body=body, date_sent=datetime.datetime.now(), owner_id=user.id, date_expires=expiration, encryption_key=Encryption.generatePassword())
             session.add(newMessage)
             session.commit()
             encrypt_message(newMessage)
@@ -37,6 +38,7 @@ class MessageController:
                 rUser = AccountController.get_user(recipientId)
                 if rUser is not None:
                     newMessage.message_shares.append(MessageShare(message_id=newMessage.id, recipient_id=rUser.id))
+                    session.add(AuditLog(user.id, "Send Message", "You sent a message with subject: \"%s\" to %s(%s)" % (newMessage.subject, rUser.display_name, rUser.id), rUser.id, None))
                 else:
                     fMessages.append("Could not send to user with ID:%s - Invalid user ID" % str(recipientId))
             session.commit()
@@ -57,8 +59,10 @@ class MessageController:
                 rUser = AccountController.get_user(recipientId)
                 if rUser is not None:
                     session.add(MessageShare(message_id=newMessage.id, recipient_id=rUser.id))
+                    session.add(AuditLog(user.id, "Send Message", "You sent a message with subject: \"%s\" to %s(%s)" % (newMessage.subject, rUser.display_name, rUser.id), rUser.id, None))
                 else:
                     fMessages.append("Could not send to user with ID:%s - Invalid user ID" % str(recipientId))
+            session.commit()
         except Exception, e:
             logging.error("[%s] [share_message] [Could not share message: %s]" % (user.id, str(e)))
             fMessages.append("Could not share message: %s" % str(e))
@@ -108,6 +112,8 @@ class MessageController:
             message = session.query(MessageShare).filter(MessageShare.message_id == messageId).one()
             if message.recipient_id == user.id:
                 message.date_viewed = datetime.datetime.now()
+                session.add(AuditLog(user.id, "Your Read a Message", "You read message with subject \"%s\"" % (message.subject)))
+                session.add(AuditLog(message.owner_id, "Message Read", "User %s has read your message with subject: %s" % (user.id, message.message.subject), None))
             else:
                 fMessages.append("You do not have permission to read this message")
             session.commit()

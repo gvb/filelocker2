@@ -486,13 +486,14 @@ class FileController(object):
 
     @cherrypy.expose
     @cherrypy.tools.requires_login()
-    def create_upload_request(self, password, expiration, scanFile, requestType, maxFileSize=None, emailAddresses=None, personalMessage=None, format="json", **kwargs):
+    def create_upload_request(self, password, expiration, scanFile, requestType, maxFileSize=None, cc="false", emailAddresses=None, personalMessage=None, format="json", **kwargs):
         user, config, uploadURL, sMessages, fMessages = cherrypy.session.get("user"),cherrypy.request.app.config['filelocker'],"", [], []
         try:
             expiration = parse_date(expiration, datetime.datetime.now())
         except Exception, e:
             fMessages.append(str(e))
         try:
+            cc = True if cc.lower() == "true" else False
             maxFileSize = int(strip_tags(maxFileSize)) if (maxFileSize == "" or maxFileSize=="0" or maxFileSize == 0) else None
             if maxFileSize is not None and maxFileSize < 0:
                 fMessages.append("Max file size must be a positive number")
@@ -509,9 +510,14 @@ class FileController(object):
             else:
                 uploadRequest.generate_id()
                 session.add(uploadRequest)
+                if cc:
+                    emailAddresses.append(user.email)
+                for recipient in emailAddresses:
+                    Mail.notify(get_template_file('upload_request_notification.tmpl'),{'sender': user.email, 'recipient': recipient, 'ownerId': user.id, 'ownerName': user.display_name, 'requestId': uploadRequest.id, 'requestType': uploadRequest.type, 'personalMessage': personalMessage, 'filelockerURL': config['root_url']})
+                session.add(AuditLog(user.id, "Create Upload Request", "You created an upload request. As a result, the following email addresses were sent a file upload link: %s" % ",".join(emailAddresses), None))
                 session.commit()
                 uploadURL = config['root_url']+"/public_upload?ticketId=%s" % str(uploadRequest.id)
-                sMessages.append("Successfully generated upload ticket")
+                sMessages.append("Successfully created upload request")
         except Exception, e:
             fMessages.append(str(e))
         return fl_response(sMessages, fMessages, format, data=uploadURL)

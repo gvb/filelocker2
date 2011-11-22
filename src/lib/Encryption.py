@@ -33,7 +33,6 @@ def new_decrypter(password, salt):
    iteration = 2048
    keyBytes = 32
    decrypter = None
-   print "Pass: %s Type: %s" % (str(password), str(type(password)))
    password = str(password).encode("ascii")
    try:
       key = KeyGen().makeKey(password, salt, iteration, keyBytes)

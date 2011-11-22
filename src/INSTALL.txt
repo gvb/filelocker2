@@ -1,0 +1,4 @@
+If you have a previous Filelocker instance
+1) Backup the config file (filelocker.conf)
+2) Unzip that filelocker2.6.tar.gz file over the current Filelocker installation.
+3) Move old config in /etc directory in the Filelocker directory

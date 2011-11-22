@@ -161,16 +161,18 @@ class RootController:
 
     @cherrypy.expose
     def sign_tos(self, **kwargs):
-        rootURL = cherrypy.request.app.confg['filelocker']['root_url']
+        config = cherrypy.request.app.config['filelocker']
         if cherrypy.session.has_key("user") and cherrypy.session.get("user") is not None:
             user = cherrypy.session.get("user")
             if kwargs.has_key('action') and kwargs['action']=="sign":
                 try:
-                    user.date_tos_accept(datetime.datetime.now())
+                    attachedUser = session.query(User).filter(User.id == user.id).one()
+                    attachedUser.date_tos_accept = datetime.datetime.now()
+                    cherrypy.session['user'] = attachedUser.get_copy()
                     session.commit()
-                    raise cherrypy.HTTPRedirect(rootURL)
+                    raise cherrypy.HTTPRedirect(config['root_url'])
                 except Exception, e:
-                    logging.error("[%s] [signTos] [Failed to sign TOS: %s]" % (user.userId, str(e)))
+                    logging.error("[%s] [sign_tos] [Failed to sign TOS: %s]" % (user.id, str(e)))
                     return "Failed to sign TOS: %s. The administrator has been notified of this error." % str(e)
             else:
                 currentYear = datetime.date.today().year

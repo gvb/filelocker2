@@ -11,14 +11,14 @@ This file can be uploaded by copying and pasting the following URL into your bro
 This file can be uploaded by visiting the URL below:
 #end if
 
-$varDict['filelockerURL']/public_upload?ticketId=$varDict['ticketId']
+$varDict['filelockerURL']/public_upload?requestId=$varDict['requestId']
 
 #if $varDict['personalMessage'] is not None and $varDict['personalMessage'] != "":
 The requestor also attached this personal message to the file request: 
 "$varDict['personalMessage']"
 #end if
 
-#if $varDict['ticketType'] == "single"
+#if $varDict['requestType'] == "single"
 This link will expire once you have successfully uploaded a file
 #end if
 

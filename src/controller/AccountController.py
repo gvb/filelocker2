@@ -25,6 +25,7 @@ class AccountController:
                 else:
                     raise Exception("Passwords do not match")
             session.add(newUser)
+            session.add(AuditLog(user.id, "Create User", "You created a new user with ID:\"%s\" on the system" % newUser.id, "admin"))
             session.commit()
             sMessages.append("Created user %s (%s)" % (newUser.display_name, newUser.id))
         except ValueError:
@@ -71,6 +72,7 @@ class AccountController:
                 try:
                     delUser = session.query(User).filter(User.id == userId).one()
                     session.delete(delUser)
+                    session.add(AuditLog(user.id, "Delete User", "You deleted user with ID: \"%s\" from the system" % delUser.id, "admin"))
                     sMessages.append("Successfully deleted user %s" % userId)
                 except sqlalchemy.orm.exc.NoResultFound:
                     fMessages.append("User with ID:%s does not exist" % userId)
@@ -114,6 +116,7 @@ class AccountController:
                     group.members.append(member)
                 except sqlalchemy.orm.exc.NoResultFound:
                     fMessages.append("Could not find user with id:\"%s\" to add to group" % str(memberId))
+            session.add(AuditLog(user.id, "Create Group", "You created a group named \"%s\"" % group.name, None))
             session.commit()
         except Exception, e:
             session.rollback()
@@ -132,6 +135,7 @@ class AccountController:
                 if group.owner_id == user.id or user_has_permission(user, "admin"):
                     session.delete(group)
                     sMessages.append("Group %s deleted successfully" % group.name)
+                    session.add(AuditLog(user.id, "Delete Group", "You deleted group \"%s\"" % group.name, None))
             session.commit()
         except sqlalchemy.orm.exc.NoResultFound, nrf:
             fMessages.append("Could not find group with ID: %s" % str(groupId))
@@ -257,6 +261,7 @@ class AccountController:
                 quota = int(quota)
                 newRole = Role(id=roleId, name=roleName, email=email, quota=quota)
                 session.add(newRole)
+                session.add(AuditLog(user.id, "Add Role", "You added a role to the system named \"%s\"" % newRole.name, None))
                 session.commit()
                 sMessages.append("Successfully created a role named %s. Other users who are added to this role may act on behalf of this role now." % str(roleName))
             else:
@@ -326,6 +331,7 @@ class AccountController:
                 try:
                     role = session.query(Role).filter(Role.id == roleId).one()
                     session.delete(role)
+                    session.add(AuditLog(user.id, "Delete Role", "You deleted role \"%s\" from the system" % role.name, None))
                 except sqlalchemy.orm.exc.NoResultFound:
                     fMessages.append("The role ID: %s does not exist" % str(roleId))
             session.commit()
