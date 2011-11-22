@@ -26,7 +26,7 @@
             </div>
             <div class="login">
                 #if $errorMessage is not None
-                    <h3>$errorMessage</h3>
+                    <h2 class="errorMessage">$errorMessage</h2>
                 #end if
                 <form action="$loginPage" method="post" name="login">
                 <input type="hidden" name="authType" value="$authType"/> 

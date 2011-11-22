@@ -20,59 +20,50 @@
     </script>
 </head>
 <body class="greyBackground">
-
 <div id="background">
     <div id="wrapper_all">
-        <!--header-->
         <div id="wrapper_header">
             <div class="logo"><a href="$config['root_url']"><img src="$config['root_url']/static/images/logos/filelocker_logo.png" alt="Filelocker" /></a></div>
         </div>
-        
-        <!--CONTENT area-->
+        <div id="statusMessageWrapper"><div id="statusMessage" class="ui-widget ui-state-error hidden"></div></div>
         <div id="wrapper_2col">
-            <!--file area-->
             <div id="wrapper_col1">
-            <!-- Content Area>
                 <div class="section_title">
                 #if $uploadRequest is not None
-                <h1 class="files_title">Upload a file for $uploadRequest.owner.display_name</h1>
+                    <h1 class="files_title">Upload a file for $uploadRequest.owner.display_name</h1>
                 #else
-                <h1 class="files_title">Upload a file for a Filelocker user</h1>
-                 #end if
+                    <h1 class="files_title">Upload a file for a Filelocker user</h1>
+                #end if
                 </div>
 
-                <div> <!-- col 1 content -->
-                #for $message in $messages
-                <p style="color: red">$message</p>
-                #end for
-                <form action="$config['root_url']/upload_request_uploader" name="form" method="POST" id="verifyTicketForm">
-                <div>
-                    #if $requestId is None or $requestId == ""
-                    <label for="requestId">Request ID: </label>
-                    <input type="text" name="requestId" value=""/>
-                    #else
-                    <p>Request ID: <b>$requestId</b></p>
-                    <input type="hidden" name="requestId" value="$requestId" />
-                    #end if
+                <div class="login">
+                    #for $message in $messages
+                    <h2 class="errorMessage">$message</h2>
+                    #end for
+                    <form action="$config['root_url']/upload_request_uploader" name="form" method="POST" id="verifyTicketForm">
+                        <div>
+                            #if $requestId is None or $requestId == ""
+                            <label for="requestId">Request ID: </label>
+                            <input type="text" name="requestId" value=""/>
+                            #else
+                            <p>Request ID: <b>$requestId</b></p>
+                            <input type="hidden" name="requestId" value="$requestId" />
+                            #end if
+                        </div>
+                        <div>
+                            #if $uploadRequest is None or $uploadRequest.password is not None
+                            <label for="password">Password:</label>
+                            <input type="password" name="password" id="password" />
+                            #else
+                            <input type="test" disabled="disabled" name="password" id="password" value="No password required" />
+                            #end if
+                        </div>
+                        <div>
+                            <div class="button"><a href="#" onClick="document.forms['verifyTicketForm'].submit();" title="Verify password for upload request" class="uploadButton"><span>Verify Password</span></a></div>
+                        </div>
+                    </form>
                 </div>
-                <div>
-                    <label for="password">Password:</label>
-                    #if $uploadRequest is None or $uploadRequest.password is not None
-                    <input type="password" name="password" id="password" />
-                    #else
-                    <input type="test" disabled="disabled" name="password" id="password" value="No password required" />
-                    #end if
-                </div>
-                <div>
-                    <div class="button"><a href="#" onClick="document.forms['verifyTicketForm'].submit();" title="Verify password for upload request" class="uploadButton"><span>Verify Password</span></a></div>
-                </div>
-                </form>
-
-            <!-- End CONTENT -->
-            </div> <!-- End wrapper_col1 -->
-            
-            <!--right side-->
-            <div id="statusMessageWrapper"><div id="statusMessage" class="ui-widget ui-state-error hidden"></div></div>
+            </div>
             <div id="wrapper_col2">
                 <div class="text_col2">
                     <a href="$config['org_url']" target="_blank" title="Take me to the $config['org_name'] home page"><img src="$config['root_url']/static/images/logos/logo.gif" alt="$config['org_name']" class="orgLogo" /></a>

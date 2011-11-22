@@ -68,9 +68,9 @@
                 #end for
             </select>
             <label for="historyStartDate">Start Date:</label>
-            <input type="text" id="historyStartDate" class="datePast" value="$startDateFormatted.strftime("%m/%d/%Y")" onchange="loadHistory('$user.id')" onselect="this.value=''" />
+            <input type="text" id="historyStartDate" class="datePast" value="$startDateFormatted.strftime("%m/%d/%Y")" onchange="History.load('$user.id')" onselect="this.value=''" />
             <label for="historyEndDate">End Date:</label>
-            <input type="text" id="historyEndDate" class="datePast" value="$endDateFormatted.strftime("%m/%d/%Y")" onchange="loadHistory('$user.id')" onselect="this.value=''" />
+            <input type="text" id="historyEndDate" class="datePast" value="$endDateFormatted.strftime("%m/%d/%Y")" onchange="History.load('$user.id')" onselect="this.value=''" />
         </div>
     </div> <!-- End Text_col2 -->
 </div> <!--End wrapper col 2 -->

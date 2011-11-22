@@ -695,195 +695,195 @@ Admin = function() {
         };
     }();
 
-//    Statistics = function() {
-//    function showStatistics()
-//    {
-//        getHourlyStatistics();
-//        getDailyStatistics();
-//        getMonthlyStatistics();
-//        $("#systemStatistics").tabs();
-//        setTimeout(function(){ $("#systemStatisticsBox").dialog("open"); }, 300);
-//    }
-//    function getHourlyStatistics()
-//    {
-//        $("#hourly").empty();
-//        $.post(FILELOCKER_ROOT+'/file/get_hourly_statistics?format=json&ms=' + new Date().getTime(), {},
-//        function(returnData) {
-//            var hourlyTable = "<div class='statisticsTableWrapper'><table id='hourlyStatisticsTable' class='statisticsTable'><colgroup><col class='colHead' /></colgroup><caption>% of Total Usage by Hour (Last 30 Days)</caption><thead><tr><td class='rowHead'>Hour</td>";
-//            var hourlyHeaders = "";
-//            var hourlyDownloadData = "";
-//            var hourlyUploadData = "";
-//            for (var i=0; i<24; i++)
-//            {
-//                hourlyHeaders += "<th scope='col'>"+i+"</th>";
-//                var hasDownloadData = false;
-//                var hasUploadData = false;
-//                $.each(returnData.data.downloads, function(key, value) {
-//                    if (key == i)
-//                    {
-//                        hourlyDownloadData += "<td scope='row'>"+value+"</td>";
-//                        hasDownloadData = true;
-//                        return false;
-//                    }
-//                });
-//                $.each(returnData.data.uploads, function(key, value) {
-//                    if (key == i)
-//                    {
-//                        hourlyUploadData += "<td scope='row'>"+value+"</td>";
-//                        hasUploadData = true;
-//                        return false;
-//                    }
-//                });
-//                if (!hasDownloadData)
-//                    hourlyDownloadData += "<td scope='row'>0</td>";
-//                if (!hasUploadData)
-//                    hourlyUploadData += "<td scope='row'>0</td>";
-//            }
-//            hourlyTable += hourlyHeaders + "</tr></thead><tbody><tr><th scope='row' class='rowHead'>Downloads</th>" + hourlyDownloadData + "</tr>";
-//            hourlyTable += "<tr><th scope='row' class='rowHead'>Uploads</th>" + hourlyUploadData + "</tr>";
-//            hourlyTable += "</tbody></table></div>";
-//            $("#hourly").html("<div>" + hourlyTable + "</div><br />");
-//            if(!!document.createElement('canvas').getContext)
-//            {
-//                $("#hourlyStatisticsTable").visualize({
-//                    type: 'line',
-//                    width: 600,
-//                    height: 200,
-//                    appendKey: true,
-//                    colors: ['#fee932','#000000'],
-//                    diagonalLabels: false,
-//                    labelWidth: 10,
-//                    yLabelUnit: "%"
-//                }).appendTo("#hourly").trigger("visualizeRefresh");
-//            }
-//            else
-//                $("#hourly").append("<i>Your browser does not support the canvas element of HTML5.</i>");
-//        }, 'json');
-//    }
-//    function getDailyStatistics()
-//    {
-//        $("#daily").empty();
-//        $.post(FILELOCKER_ROOT+'/file/get_daily_statistics?format=json&ms=' + new Date().getTime(), {},
-//        function(returnData) {
-//            var dailyTable = "<div class='statisticsTableWrapper'><table id='dailyStatisticsTable' class='statisticsTable'><colgroup><col class='colHead' /></colgroup><caption>Total Usage by Day (Last 30 Days)</caption><thead><tr><td class='rowHead'>Hour</td>";
-//            var dailyHeaders = "";
-//            var dailyDownloadData = "";
-//            var dailyUploadData = "";
-//            var d = new Date();
-//            d.setDate(d.getDate()-30);
-//            for (var i=0; i<=30; i++)
-//            {
-//                var dateToUse = d.getMonth()+1+"/"+d.getDate();
-//                dailyHeaders += "<th scope='col'>"+dateToUse+"</th>";
-//                var hasDownloadData = false;
-//                var hasUploadData = false;
-//                $.each(returnData.data.downloads, function(key, value) {
-//                    if (key == dateToUse)
-//                    {
-//                        dailyDownloadData += "<td scope='row'>"+value+"</td>";
-//                        hasDownloadData = true;
-//                        return false;
-//                    }
-//                });
-//                $.each(returnData.data.uploads, function(key, value) {
-//                    if (key == dateToUse)
-//                    {
-//                        dailyUploadData += "<td scope='row'>"+value+"</td>";
-//                        hasUploadData = true;
-//                        return false;
-//                    }
-//                });
-//                if (!hasDownloadData)
-//                    dailyDownloadData += "<td scope='row'>0</td>";
-//                if (!hasUploadData)
-//                    dailyUploadData += "<td scope='row'>0</td>";
-//                d.setDate(d.getDate()+1);
-//            }
-//            dailyTable += dailyHeaders + "</tr></thead><tbody><tr><th scope='row' class='rowHead'>Downloads</th>" + dailyDownloadData + "</tr>";
-//            dailyTable += "<tr><th scope='row' class='rowHead'>Uploads</th>" + dailyUploadData + "</tr>";
-//            dailyTable += "</tbody></table></div>";
-//            $("#daily").html("<div>" + dailyTable + "</div><br />");
-//            if(!!document.createElement('canvas').getContext)
-//            {
-//                $("#dailyStatisticsTable").visualize({
-//                    type: 'line',
-//                    width: 600,
-//                    height: 200,
-//                    appendKey: true,
-//                    colors: ['#fee932','#000000'],
-//                    diagonalLabels: true,
-//                    dottedLast: true,
-//                    labelWidth: 10
-//                }).appendTo("#daily").trigger("visualizeRefresh");
-//            }
-//            else
-//                $("#daily").append("<i>Your browser does not support the canvas element of HTML5.</i>");
-//        }, 'json');
-//    }
-//    function getMonthlyStatistics()
-//    {
-//        $("#monthly").empty();
-//        $.post(FILELOCKER_ROOT+'/file/get_monthly_statistics?format=json&ms=' + new Date().getTime(), {},
-//        function(returnData) {
-//            var monthlyTable = "<div class='statisticsTableWrapper'><table id='monthlyStatisticsTable' class='statisticsTable'><colgroup><col class='colHead' /></colgroup><caption>Total Usage by Month (Last 12 Months)</caption><thead><tr><td class='rowHead'>Month</td>";
-//            var monthlyHeaders = "";
-//            var monthlyDownloadData = "";
-//            var monthlyUploadData = "";
-//            var months = {1:"Jan",2:"Feb",3:"Mar",4:"Apr",5:"May",6:"Jun",7:"Jul",8:"Aug",9:"Sep",10:"Oct",11:"Nov",12:"Dec"}
-//            var now = new Date().getMonth()+1;
-//            for (var i=1; i<=12; i++)
-//            {
-//                var month = 0;
-//                if (now+i > 12)
-//                    month = now+i-12;
-//                else
-//                    month = now+i;
-//                monthlyHeaders += "<th scope='col'>"+months[month]+"</th>";
-//                var hasDownloadData = false;
-//                var hasUploadData = false;
-//                $.each(returnData.data.downloads, function(key, value) {
-//                    if (key == month)
-//                    {
-//                        monthlyDownloadData += "<td scope='row'>"+value+"</td>";
-//                        hasDownloadData = true;
-//                        return false;
-//                    }
-//                });
-//                $.each(returnData.data.uploads, function(key, value) {
-//                    if (key == month)
-//                    {
-//                        monthlyUploadData += "<td scope='row'>"+value+"</td>";
-//                        hasUploadData = true;
-//                        return false;
-//                    }
-//                });
-//                if (!hasDownloadData)
-//                    monthlyDownloadData += "<td scope='row'>0</td>";
-//                if (!hasUploadData)
-//                    monthlyUploadData += "<td scope='row'>0</td>";
-//            }
-//            monthlyTable += monthlyHeaders + "</tr></thead><tbody><tr><th scope='row' class='rowHead'>Downloads</th>" + monthlyDownloadData + "</tr>";
-//            monthlyTable += "<tr><th scope='row' class='rowHead'>Uploads</th>" + monthlyUploadData + "</tr>";
-//            monthlyTable += "</tbody></table></div>";
-//            $("#monthly").html("<div>" + monthlyTable + "</div><br />");
-//            if(!!document.createElement('canvas').getContext)
-//            {
-//                $("#monthlyStatisticsTable").visualize({
-//                    type: 'line',
-//                    width: 600,
-//                    height: 200,
-//                    appendKey: true,
-//                    colors: ['#fee932','#000000'],
-//                    diagonalLabels: false,
-//                    dottedLast: true,
-//                    labelWidth: 10
-//                }).appendTo("#monthly").trigger("visualizeRefresh");
-//            }
-//            else
-//                $("#monthly").append("<i>Your browser does not support the canvas element of HTML5.</i>");
-//        }, 'json');
-//    }
-//  }();
+    Statistics = function() {
+        function show()
+        {
+            getHourlyStatistics();
+            getDailyStatistics();
+            getMonthlyStatistics();
+            $("#systemStatistics").tabs();
+            setTimeout(function(){ $("#systemStatisticsBox").dialog("open"); }, 300);
+        }
+        function getHourlyStatistics()
+        {
+            $("#hourly").empty();
+            $.post(FILELOCKER_ROOT+'/file/get_hourly_statistics?format=json&ms=' + new Date().getTime(), {},
+            function(returnData) {
+                var hourlyTable = "<div class='statisticsTableWrapper'><table id='hourlyStatisticsTable' class='statisticsTable'><colgroup><col class='colHead' /></colgroup><caption>% of Total Usage by Hour (Last 30 Days)</caption><thead><tr><td class='rowHead'>Hour</td>";
+                var hourlyHeaders = "";
+                var hourlyDownloadData = "";
+                var hourlyUploadData = "";
+                for (var i=0; i<24; i++)
+                {
+                    hourlyHeaders += "<th scope='col'>"+i+"</th>";
+                    var hasDownloadData = false;
+                    var hasUploadData = false;
+                    $.each(returnData.data.downloads, function(key, value) {
+                        if (key == i)
+                        {
+                            hourlyDownloadData += "<td scope='row'>"+value+"</td>";
+                            hasDownloadData = true;
+                            return false;
+                        }
+                    });
+                    $.each(returnData.data.uploads, function(key, value) {
+                        if (key == i)
+                        {
+                            hourlyUploadData += "<td scope='row'>"+value+"</td>";
+                            hasUploadData = true;
+                            return false;
+                        }
+                    });
+                    if (!hasDownloadData)
+                        hourlyDownloadData += "<td scope='row'>0</td>";
+                    if (!hasUploadData)
+                        hourlyUploadData += "<td scope='row'>0</td>";
+                }
+                hourlyTable += hourlyHeaders + "</tr></thead><tbody><tr><th scope='row' class='rowHead'>Downloads</th>" + hourlyDownloadData + "</tr>";
+                hourlyTable += "<tr><th scope='row' class='rowHead'>Uploads</th>" + hourlyUploadData + "</tr>";
+                hourlyTable += "</tbody></table></div>";
+                $("#hourly").html("<div>" + hourlyTable + "</div><br />");
+                if(!!document.createElement('canvas').getContext)
+                {
+                    $("#hourlyStatisticsTable").visualize({
+                        type: 'line',
+                        width: 600,
+                        height: 200,
+                        appendKey: true,
+                        colors: ['#fee932','#000000'],
+                        diagonalLabels: false,
+                        labelWidth: 10,
+                        yLabelUnit: "%"
+                    }).appendTo("#hourly").trigger("visualizeRefresh");
+                }
+                else
+                    $("#hourly").append("<i>Your browser does not support the canvas element of HTML5.</i>");
+            }, 'json');
+        }
+        function getDailyStatistics()
+        {
+            $("#daily").empty();
+            $.post(FILELOCKER_ROOT+'/file/get_daily_statistics?format=json&ms=' + new Date().getTime(), {},
+            function(returnData) {
+                var dailyTable = "<div class='statisticsTableWrapper'><table id='dailyStatisticsTable' class='statisticsTable'><colgroup><col class='colHead' /></colgroup><caption>Total Usage by Day (Last 30 Days)</caption><thead><tr><td class='rowHead'>Hour</td>";
+                var dailyHeaders = "";
+                var dailyDownloadData = "";
+                var dailyUploadData = "";
+                var d = new Date();
+                d.setDate(d.getDate()-30);
+                for (var i=0; i<=30; i++)
+                {
+                    var dateToUse = d.getMonth()+1+"/"+d.getDate();
+                    dailyHeaders += "<th scope='col'>"+dateToUse+"</th>";
+                    var hasDownloadData = false;
+                    var hasUploadData = false;
+                    $.each(returnData.data.downloads, function(key, value) {
+                        if (key == dateToUse)
+                        {
+                            dailyDownloadData += "<td scope='row'>"+value+"</td>";
+                            hasDownloadData = true;
+                            return false;
+                        }
+                    });
+                    $.each(returnData.data.uploads, function(key, value) {
+                        if (key == dateToUse)
+                        {
+                            dailyUploadData += "<td scope='row'>"+value+"</td>";
+                            hasUploadData = true;
+                            return false;
+                        }
+                    });
+                    if (!hasDownloadData)
+                        dailyDownloadData += "<td scope='row'>0</td>";
+                    if (!hasUploadData)
+                        dailyUploadData += "<td scope='row'>0</td>";
+                    d.setDate(d.getDate()+1);
+                }
+                dailyTable += dailyHeaders + "</tr></thead><tbody><tr><th scope='row' class='rowHead'>Downloads</th>" + dailyDownloadData + "</tr>";
+                dailyTable += "<tr><th scope='row' class='rowHead'>Uploads</th>" + dailyUploadData + "</tr>";
+                dailyTable += "</tbody></table></div>";
+                $("#daily").html("<div>" + dailyTable + "</div><br />");
+                if(!!document.createElement('canvas').getContext)
+                {
+                    $("#dailyStatisticsTable").visualize({
+                        type: 'line',
+                        width: 600,
+                        height: 200,
+                        appendKey: true,
+                        colors: ['#fee932','#000000'],
+                        diagonalLabels: true,
+                        dottedLast: true,
+                        labelWidth: 10
+                    }).appendTo("#daily").trigger("visualizeRefresh");
+                }
+                else
+                    $("#daily").append("<i>Your browser does not support the canvas element of HTML5.</i>");
+            }, 'json');
+        }
+        function getMonthlyStatistics()
+        {
+            $("#monthly").empty();
+            $.post(FILELOCKER_ROOT+'/file/get_monthly_statistics?format=json&ms=' + new Date().getTime(), {},
+            function(returnData) {
+                var monthlyTable = "<div class='statisticsTableWrapper'><table id='monthlyStatisticsTable' class='statisticsTable'><colgroup><col class='colHead' /></colgroup><caption>Total Usage by Month (Last 12 Months)</caption><thead><tr><td class='rowHead'>Month</td>";
+                var monthlyHeaders = "";
+                var monthlyDownloadData = "";
+                var monthlyUploadData = "";
+                var months = {1:"Jan",2:"Feb",3:"Mar",4:"Apr",5:"May",6:"Jun",7:"Jul",8:"Aug",9:"Sep",10:"Oct",11:"Nov",12:"Dec"}
+                var now = new Date().getMonth()+1;
+                for (var i=1; i<=12; i++)
+                {
+                    var month = 0;
+                    if (now+i > 12)
+                        month = now+i-12;
+                    else
+                        month = now+i;
+                    monthlyHeaders += "<th scope='col'>"+months[month]+"</th>";
+                    var hasDownloadData = false;
+                    var hasUploadData = false;
+                    $.each(returnData.data.downloads, function(key, value) {
+                        if (key == month)
+                        {
+                            monthlyDownloadData += "<td scope='row'>"+value+"</td>";
+                            hasDownloadData = true;
+                            return false;
+                        }
+                    });
+                    $.each(returnData.data.uploads, function(key, value) {
+                        if (key == month)
+                        {
+                            monthlyUploadData += "<td scope='row'>"+value+"</td>";
+                            hasUploadData = true;
+                            return false;
+                        }
+                    });
+                    if (!hasDownloadData)
+                        monthlyDownloadData += "<td scope='row'>0</td>";
+                    if (!hasUploadData)
+                        monthlyUploadData += "<td scope='row'>0</td>";
+                }
+                monthlyTable += monthlyHeaders + "</tr></thead><tbody><tr><th scope='row' class='rowHead'>Downloads</th>" + monthlyDownloadData + "</tr>";
+                monthlyTable += "<tr><th scope='row' class='rowHead'>Uploads</th>" + monthlyUploadData + "</tr>";
+                monthlyTable += "</tbody></table></div>";
+                $("#monthly").html("<div>" + monthlyTable + "</div><br />");
+                if(!!document.createElement('canvas').getContext)
+                {
+                    $("#monthlyStatisticsTable").visualize({
+                        type: 'line',
+                        width: 600,
+                        height: 200,
+                        appendKey: true,
+                        colors: ['#fee932','#000000'],
+                        diagonalLabels: false,
+                        dottedLast: true,
+                        labelWidth: 10
+                    }).appendTo("#monthly").trigger("visualizeRefresh");
+                }
+                else
+                    $("#monthly").append("<i>Your browser does not support the canvas element of HTML5.</i>");
+            }, 'json');
+        }
+    }();
     
     return {
         load:load,
