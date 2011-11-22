@@ -18,6 +18,7 @@ from sqlalchemy.orm import relation, backref, sessionmaker, mapper
 from sqlalchemy import *
 from lib.SQLAlchemyTool import configure_session_for_app, session, _engines
 from lib.Encryption import hash_password
+from Filelocker import __version__
 __author__="wbdavis"
 __date__ ="$Sep 27, 2011 8:48:55 PM$"
 Base = declarative_base()
@@ -52,7 +53,7 @@ class User(Base):
     quota = Column(Integer)
     date_last_login = Column(DateTime, nullable=True)
     date_tos_accept = Column(DateTime, nullable=True)
-    email = Column(String(320), default="directory")
+    email = Column(String(320), default="")
     first_name = Column(String(100))
     last_name = Column(String(100))
     password = Column(String(80), nullable=True)
@@ -416,6 +417,7 @@ def create_database_tables(dburi):
     Session = sessionmaker(bind=engine)
     session = Session()
     initialConfigList = [("org_name", "Name of your organization.", "text", "My Company"),
+    ("version", "Currently running version of Filelocker", "text", str(__version__)),
     ("org_url", "Home page of your organization.", "text", "http://www.mycompany.com"),
     ("admin_email", "Public email address of the Filelocker Administrator.", "text", "admin@mycompany.com"),
     ("max_file_life_days", "Max number of days a file can exist on the system. After this time, the file will be securely erased along with any shares it was associated with.", "number", "7"),

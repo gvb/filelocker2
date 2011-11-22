@@ -184,18 +184,18 @@ def import_db(importFile, dburi):
 			session.add(d)
 		session.commit()
 	
-	for node in dom.getElementsByTagName("audit_logs"):
-		for anode in node.getElementsByTagName("audit_log"):
-			log = AuditLog(anode.getAttribute("initiator_user_id"),\
-							anode.getAttribute("action"), anode.getAttribute("affected_user_id"),\
-							anode.getAttribute("message"), anode.getAttribute("date"), \
-							anode.getAttribute("affected_role_id"), anode.getAttribute("file_id"), anode.getAttribute("id"))
-			if log.action == "Create Private Share": log.action = "Create User Share"
-            if log.action == "Create Private Group Share": log.action== "Create Group Share"
-
-
+    for node in dom.getElementsByTagName("audit_logs"):
+        for anode in node.getElementsByTagName("audit_log"):
+            log = AuditLog(anode.getAttribute("initiator_user_id"),\
+            anode.getAttribute("action"), anode.getAttribute("affected_user_id"),\
+            anode.getAttribute("message"), anode.getAttribute("date"), \
+            anode.getAttribute("affected_role_id"), anode.getAttribute("file_id"), anode.getAttribute("id"))
+            if log.action == "Create Private Share":
+                log.action = "Create User Share"
+            if log.action == "Create Private Group Share":
+                log.action = "Create Group Share"
             session.add(log)
-		session.commit()
+        session.commit()
 	
     
     

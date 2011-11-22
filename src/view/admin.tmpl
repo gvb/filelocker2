@@ -191,29 +191,13 @@
             <form action="$config['root_url']/admin_interface/update_server_config" method="POST" id="configForm">
             <table>
             #for $param in $configParameters
-                #if $param.type == "boolean"
-                <tr>    
+                #if $param.name == "auth_type"
+                <tr>
                     <td>$param.name</td>
                     <td>$param.description<input type="text" name="config_desc_$param.name" style="display: none"/></td>
                     <td>$param.value
                         <select name="config_name_$param.name">
-                        #if $param.value == "Yes"
-                            <option value="Yes" selected>Yes</option>
-                            <option value="No">No</option>
-                        #else
-                            <option value="No" selected>No</option>
-                            <option value="Yes">Yes</option>
-                        #end if
-                        </select>
-                    </td>
-                </tr>
-                #elif $param.name == "auth_type"
-                <tr>    
-                    <td>$param.name</td>
-                    <td>$param.description<input type="text" name="config_desc_$param.name" style="display: none"/></td>
-                    <td>$param.value
-                        <select name="config_name_$param.name">
-                        <option value="ldap" 
+                        <option value="ldap"
                         #if $param.value=='ldap'#slurp
                         selected
                         #end if#slurp
@@ -232,17 +216,17 @@
                     </td>
                 </tr>
                 #elif $param.name == "directory_type"
-                <tr>    
+                <tr>
                     <td>$param.name</td>
                     <td>$param.description<input type="text" name="config_desc_$param.name" style="display: none"/></td>
                     <td>$param.value
                         <select name="config_name_$param.name">
-                        <option value="ldap" 
+                        <option value="ldap"
                         #if $param.value=='ldap'#slurp
                         selected
                         #end if#slurp
                         >LDAP</option>
-                        <option value="ws" 
+                        <option value="ws"
                         #if $param.value=='ws'#slurp
                         selected
                         #end if#slurp
@@ -255,11 +239,33 @@
                         </select>
                     </td>
                 </tr>
-                #elif $param.name == "db_version"
-                <tr>    
+                #elif $param.name == "version"
+                <tr>
                     <td>$param.name</td>
                     <td>$param.description</td>
                     <td>$param.value</td>
+                </tr>
+                #elif $param.name.endswith("pass")
+                <tr>
+                    <td>$param.name</td>
+                    <td>$param.description<input type="text" name="config_desc_$param.name" style="display: none"/></td>
+                    <td><input type="password" name="config_name_$param.name" value="$param.value" /></td>
+                </tr>
+                #elif $param.type == "boolean"
+                <tr>    
+                    <td>$param.name</td>
+                    <td>$param.description<input type="text" name="config_desc_$param.name" style="display: none"/></td>
+                    <td>$param.value
+                        <select name="config_name_$param.name">
+                        #if $param.value == "Yes"
+                            <option value="Yes" selected>Yes</option>
+                            <option value="No">No</option>
+                        #else
+                            <option value="No" selected>No</option>
+                            <option value="Yes">Yes</option>
+                        #end if
+                        </select>
+                    </td>
                 </tr>
                 #else
                 <tr>    

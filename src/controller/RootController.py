@@ -186,7 +186,7 @@ class RootController:
     def admin_console(self, **kwargs):
         user, config = cherrypy.session.get("user"), cherrypy.request.app.config['filelocker']
         templateFiles = os.listdir(os.path.join(config['root_path'], "view"))
-        configParameters = session.query(ConfigParameter).all()
+        configParameters = session.query(ConfigParameter).order_by(ConfigParameter.name).all()
         flUsers = session.query(User).slice(0,50)
         flRoles = session.query(Role)
         totalFileCount = session.query(func.count(File.id)).scalar()
