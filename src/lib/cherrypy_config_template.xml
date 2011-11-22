@@ -1,6 +1,5 @@
 <config>
     <global>
-
         <defaults>
             <config_item name="tools.sessions.on" type="bool" value="True" description="Enable sessions:"/>
             <config_item name="tools.sessions.name" type="text" value="filelocker" description="Name of session cookie"/>

@@ -149,9 +149,6 @@ def daily_maintenance(config):
             logging.error("[system] [daily_maintenance] [There was a problem while trying to delete an orphaned file %s: %s]" % (str(fileName), str(e)))
             session.rollback()
 
-def import_db(config, dbFile):
-    pass
-
 def update_config(config):
     config['filelocker']['version'] = __version__
     parameters = session.query(ConfigParameter).all()
@@ -167,39 +164,6 @@ def update_config(config):
             value = datetime.datetime.strptime(parameter.value, "%m/%d/%Y %H:%M:%S")
         config['filelocker'][parameter.name] = value
 
-
-
-
-
-#def reconfig(configfile=None):
-#    config = cherrypy._cpconfig._Parser()
-#    if configfile is None:
-#        configfile = os.path.join("conf","filelocker.conf")
-#    config.read(configfile)
-#    fl = Filelocker(config.as_dict())
-#    authType = None
-#    hiddenPrefixes = []
-#    dirType = None
-#    mailAuth = False
-#    params = fl.db.getAllParameters()
-#    print "=====Filelocker configuration====="
-#    for param in params:
-#        prefix = param.parameterName.split("_")[0]
-#        if prefix not in hiddenPrefixes:
-#            print str(param)
-#            resp = raw_input("Desired value for %s[%s]?: " % (param.parameterName, param.value))
-#            if resp is not None and resp !="":
-#                param.value = resp
-#                fl.db.setParameter(param)
-#            if param.parameterName == "auth_type":
-#                authType = param.value
-#            if param.parameterName == "directory_type":
-#                dirType = param.value
-#            if dirType is not None and authType is not None:
-#                if authType != "cas":
-#                    hiddenPrefixes.append("cas")
-#                if authType != "ldap" and dirType != "ldap":
-#                    hiddenPrefixes.append("ldap")
 
 def midnightloghandler(fn, level, backups):
     from logging import handlers
@@ -362,13 +326,16 @@ def start(configfile=None, daemonize=False, pidfile=None):
     hour = 0.0
     while True:
         #Set max file size, in bytes
-#        maxSize = app.config['filelocker']['max_file_size']
-#        cherrypy.config.update({'server.max_request_body_size': maxSize*1024*1024})
+        try:
+            session.query(ConfigParameter).filter(ConfigParameter.name == "max_file_size").one()
+            maxSize = long(ConfigParameter.value)
+            cherrypy.config.update({'server.max_request_body_size': maxSize*1024*1024})
+        except Exception, e:
+            logging.error("[admin] [maintenance] [Problem setting max file size: %s]" % str(e))
 #        logging.error("Just updated the max size to %s" % maxSize)
-        if app.config['filelocker'].has_key("cluster_master") and app.config['filelocker']["cluster_master"]: # This will allow you set up other front ends that don't run maintenance on the DB or FS
+        if app.config['filelocker'].has_key("cluster_member_id") and int(app.config['filelocker']["cluster_member_id"])==0: # This will allow you set up other front ends that don't run maintenance on the DB or FS
             if hour == 0.0: #on startup and each new day
                 daily_maintenance(app.config)
-                logging.error("Expirations checked")
             FileController.process_deletion_queue(app.config) #process deletion queue every 12 minutes
             if hour < 24.0:
                 hour += 0.2
@@ -428,37 +395,7 @@ def check_updates(config):
                 print "Filelocker requires an admin account to be set. You will now be prompted to create a local password for the local admin account"
                 create_admin(dburi)
 
-def port_database(dburi, host=None, username=None, password=None, db=None):
-    from lib.DBTools import LegacyDBConverter
-    if host is None:
-        host = raw_input("What is the host of the old DB server?: ")
-        db = raw_input("Database: ")
-        username = raw_input("Username: ")
-        password = getpass("Password: ")
-    converter = LegacyDBConverter(host, username, password, db)
-    outfile = converter.port_database()
-    buildDbFromBackup = raw_input("Backup complete. Would you like initialize the database from the backup at this time?[y/n]")
-    if buildDbFromBackup.lower().startswith("y"):
-        from lib.DBTools import import_db
-        build_database(dburi)
-        import_db(outfile, dburi)
-        print "Database has been re-initialized from backed up data"
-    return outfile
-            
-def build_database(dburi):
-    lib.Models.drop_database_tables(dburi)
-    lib.Models.create_database_tables(dburi)
 
-def create_admin(dburi):
-    password = getpass("Enter Admin password: ")
-    confirmPassword = getpass("Confirm password: ")
-    if password != confirmPassword:
-        while (password!=confirmPassword):
-            print "Passwords did not match!"
-            password = getpass("Re-Enter Admin password: ")
-            confirmPassword = getpass("Confirm password: ")
-    lib.Models.create_admin_user(dburi, password)
-    print "Admin user account reset"
 
     
 if __name__ == '__main__':
@@ -493,15 +430,7 @@ if __name__ == '__main__':
         elif options.action == "restart":
             stop(options.pidfile)
             start(options.configfile, options.daemonize, options.pidfile)
-        elif options.action == "init_db":
-            build_database(dburi)
-        elif options.action == "port_database":
-            port_database(dburi)
-        elif options.action == "reset_admin":
-            create_admin(dburi)
         elif options.action == "start":
             start(options.configfile, options.daemonize, options.pidfile)
-        elif options.action == "rebuild_static":
-            pass #Future use: combine/minify JS and CSS
     else:
         start(options.configfile, options.daemonize, options.pidfile)

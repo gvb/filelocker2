@@ -246,7 +246,6 @@ class LegacyDBConverter():
         f.write(tpl)
         f.close()
         print "Data has been exported to %s" % outfile
-        return outfile
 
     def GetAllParameters(self):
         params = []
@@ -483,11 +482,11 @@ class LegacyDBConverter():
                 if row['audit_log_initiator_user_id'] in self.role_user_ids:
                     newLog = AuditLog(None, row['audit_log_action'],\
                     row['audit_log_message'], row['audit_log_action_affected_user_id'],\
-                    row['audit_log_datetime'], row['audit_log_initiator_user_id'], fileId, row['audit_log_id'])
+                    row['audit_log_initiator_user_id'], fileId,row['audit_log_datetime'], row['audit_log_id'])
                 else:
                     newLog = AuditLog(row['audit_log_initiator_user_id'], row['audit_log_action'],\
                     row['audit_log_message'], row['audit_log_action_affected_user_id'],\
-                    row['audit_log_datetime'], None, fileId, row['audit_log_id'])
+                     None, fileId, row['audit_log_datetime'], row['audit_log_id'])
                 logs.append(newLog)
         return logs
 

@@ -46,7 +46,7 @@ class FileController(object):
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def get_download_statistics(self, fileId, startDate=None, endDate=None, format="json", **kwargs):
-        user, sMessages, fMessages, stats = (cherrypy.session.get("user"),  [], [], None)
+        user, role, sMessages, fMessages, stats = (cherrypy.session.get("user"), cherrypy.session.get("current_role"),  [], [], None)
         try:
             flFile = session.query(File).filter(File.id == fileId).one()
             startDateFormatted, endDateFormatted = None, None
@@ -61,24 +61,28 @@ class FileController(object):
                 endDateFormatted = datetime.datetime(*time.strptime(strip_tags(endDate), "%m/%d/%Y")[0:5])
             else:
                 endDateFormatted = today
-                
-            if flFile.owner_id == user.id or AccuontController.user_has_permission(user, "admin"):
-                if endDate is not None:
-                    endDate = endDate + datetime.timedelta(days=1)
+
+
+            if (role is not None and flFile.role_owner_id == role.id) or flFile.owner_id == user.id or AccuontController.user_has_permission(user, "admin"):
+                if endDateFormatted is not None:
+                    endDateFormatted = endDateFormatted + datetime.timedelta(days=1)
                      #for row in results:
 
                 uniqueDownloads = session.query(func.date(AuditLog.date), func.count(distinct(AuditLog.initiator_user_id))).\
                 filter(AuditLog.action=='Download File').\
-                filter(AuditLog.message.like('%%[File ID: %d]' % flFile.id)).\
+                filter(AuditLog.file_id == flFile.id).\
+                filter(AuditLog.date < endDateFormatted).\
+                filter(AuditLog.date > startDateFormatted).\
                 group_by(func.date(AuditLog.date)).all()
-                print "Unique Downloads:%s" % str(uniqueDownloads)
                 uniqueDownloadStats = []
                 for row in uniqueDownloads:
                     uniqueDownloadStats.append((row[0].strftime("%m/%d/%Y"), row[1]))
 
                 totalDownloads = session.query(func.date(AuditLog.date), func.count(AuditLog.initiator_user_id)).\
                 filter(AuditLog.action=='Download File').\
-                filter(AuditLog.message.like('%%[File ID: %d]' % flFile.id)).\
+                filter(AuditLog.file_id == flFile.id).\
+                filter(AuditLog.date < endDateFormatted).\
+                filter(AuditLog.date > startDateFormatted).\
                 group_by(func.date(AuditLog.date)).all()
                 totalDownloadStats = []
                 for row in totalDownloads:
@@ -661,10 +665,15 @@ class FileController(object):
 
 def file_download_complete(user, fileId, publicShareId=None):
     try:
+        role = None
+        if cherrypy.session.has_key("current_role"):
+            role = cherrypy.session.get("current_role")
         flFile = session.query(File).filter(File.id==fileId).one()
-        if user.id != flFile.owner_id and flFile.notify_on_download:
+        if ((role is not None and flFile.role_owner_id != role.id) or user.id != flFile.owner_id) and flFile.notify_on_download:
             try:
-                owner = session.query(User).filter(User.id==flFile.owner_id).one()
+                owner = None
+                if role is not None: owner = session.query(User).filter(User.id==flFile.role_owner_id).one()
+                else: owner = session.query(User).filter(User.id==flFile.owner_id).one()
                 if owner.email is not None and owner.email != "":
                     self.mail.notify(self.get_template_file('download_notification.tmpl'),{'sender': None, 'recipient': owner.email, 'fileName': flFile.name, 'downloadUserId': user.id, 'downloadUserName': user.display_name})
             except Exception, e:
@@ -672,10 +681,12 @@ def file_download_complete(user, fileId, publicShareId=None):
 
         if publicShareId is not None:
             publicShare = session.query(PublicShare).filter(PublicShare.id == publicShareId).one()
-            session.add(AuditLog(flFile.owner_id,"Download File", "File %s downloaded via Public Share. [File ID: %s]" % (flFile.name, flFile.id)))
+            session.add(AuditLog(flFile.owner_id,"Download File", "File %s downloaded via Public Share. " % (flFile.name), None, flFile.role_owner_id, flFile.id))
             if flFile.notify_on_download:
                 try:
-                    owner = session.query(User).filter(User.id == flFile.owner_id).one()
+                    owner = None
+                    if role is not None: owner = session.query(User).filter(User.id==flFile.role_owner_id).one()
+                    else: owner = session.query(User).filter(User.id==flFile.owner_id).one()
                     if owner.email is not None and owner.email != "":
                         Mail.notify(get_template_file('public_download_notification.tmpl'),{'sender': None, 'recipient': owner.email, 'fileName': flFile.name})
                 except Exception, e:
@@ -685,10 +696,11 @@ def file_download_complete(user, fileId, publicShareId=None):
                 session.commit()
                 if len(publicShare.files) == 0:
                     session.delete(publicShare)
-                    session.add(AuditLog(flFile.owner_id, "Delete Public Share", "File %s downloaded via single use public share. File is no longer publicly shared. [File ID: %s]" % (flFile.name, flFile.id)))
+                    session.add(AuditLog(flFile.owner_id, "Delete Public Share", "File %s downloaded via single use public share. File is no longer publicly shared. [File ID: %s]" % (flFile.name, flFile.id), None, flFile.role_owner_id, flFile.id))
                     session.commit()
         else:
-            session.add(AuditLog(user.id, "Download File", "File %s downloaded by user %s. [File ID: %s]" % (flFile.name, user.id, flFile.id)))
+            log =AuditLog(user.id, "Download File", "File %s downloaded by user %s." % (flFile.name, user.id), flFile.owner_id, role.id if role is not None else None, flFile.id)
+            session.add(log)
         session.commit()
     except Exception, e:
         logging.error("[%s] [file_download_complete] [Unable to finish download completion: %s]" % (user.id, str(e)))
@@ -873,7 +885,7 @@ def secure_delete(config, fileName):
         p = subprocess.Popen(deleteList, stdout=subprocess.PIPE)
         output = p.communicate()[0]
         if(p.returncode != 0):
-            logging.error("[%s] [checkDelete] [The command to delete the file returned a failure code of %s: %s]" % ("system", p.returncode, output))
+            logging.error("[%s] [secure_delete] [The command to delete the file returned a failure code of %s: %s]" % ("admin", p.returncode, output))
         else:
             deletedFile = session.query(DeletedFile).filter(DeletedFile.file_name==fileName).scalar()
             if deletedFile is not None:
@@ -881,15 +893,15 @@ def secure_delete(config, fileName):
                 session.commit()
     except OSError, oe:
         if oe.errno == errno.ENOENT:
-            logging.error("[system] [secureDelete] [Couldn't delete because the file was not found (dequeing): %s]" % str(oe))
+            logging.error("[admin] [secure_delete] [Couldn't delete because the file was not found (dequeing): %s]" % str(oe))
             deletedFile = session.query(DeletedFile).filter(DeletedFile.file_name==fileName).scalar()
             if deletedFile is not None:
                 session.delete(deletedFile)
                 session.commit()
         else:
-            logging.error("[system] [secureDelete] [Generic system error while deleting file: %s" % str(oe))
+            logging.error("[admin] [secure_delete] [Generic system error while deleting file: %s" % str(oe))
     except Exception, e:
-       logging.error("[system] [secureDelete] [Couldn't securely delete file: %s]" % str(e))
+       logging.error("[admin] [secure_delete] [Couldn't securely delete file: %s]" % str(e))
 
 def get_vault_usage():
     s = os.statvfs(cherrypy.request.app.config['filelocker']['vault'])

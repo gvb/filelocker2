@@ -42,10 +42,10 @@ class AccountController:
             userId = strip_tags(userId)
             if userId == user.id or user_has_permission(user, "admin"):
                 updateUser = get_user(userId) #This kind of implicitly enforces permissions
-                updateUser.email = strip_tags(email)
-                updateUser.quota = int(quota)
-                updateUser.first_name = strip_tags(firstName)
-                updateUser.last_name = strip_tags(lastName)
+                updateUser.email = strip_tags(email) if strip_tags(email) is not None else updateUser.email
+                updateUser.quota = int(strip_tags(quota)) if strip_tags(quota) is not None else updateUser.quota
+                updateUser.first_name = strip_tags(firstName) if strip_tags(firstName) is not None else updateUser.first_name
+                updateUser.last_name = strip_tags(lastName) if strip_tags(lastName) is not None else updateUser.last_name
                 if password != "" and password != None and confirmPassword != "" and confirmPassword != None:
                     if password == confirmPassword:
                         updateUser.set_password(password)
