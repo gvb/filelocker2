@@ -112,8 +112,8 @@ if __name__ == '__main__':
                  help="reset admin account")
     p.add_option('-f', '--file', dest='datafile', default=os.path.join(os.getcwd(), "FL_Data_Export.xml"),
                  help="store the process id in the given file")
-#    p.add_option('-i', '--initialize', dest='initialize',
-#                 help="Install - initialize database and config file")
+    p.add_option('-i', '--initialize', dest='initialize',
+                 help="Install - initialize database and set admin account")
     options, args = p.parse_args()
 
     dburi = None
@@ -141,5 +141,7 @@ if __name__ == '__main__':
         restore_from_backup(dburi, options.datafile)
     elif options.resetadmin:
         reset_admin(dburi)
-#    else:
+    else:
 #        setup_config()
+        build_database(dburi)
+        reset_admin(dburi)

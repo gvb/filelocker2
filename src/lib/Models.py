@@ -265,7 +265,7 @@ class UserShare(Base):
     user_id = Column(String(30), ForeignKey("users.id"), primary_key=True)
     file_id = Column(Integer, ForeignKey("files.id"), primary_key=True)
     flFile = relation("File")
-    #user = relation("User", backref="user_shares")
+    user = relation("User")
 
 class GroupShare(Base):
     __tablename__ = "group_shares"

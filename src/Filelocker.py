@@ -327,8 +327,8 @@ def start(configfile=None, daemonize=False, pidfile=None):
     while True:
         #Set max file size, in bytes
         try:
-            session.query(ConfigParameter).filter(ConfigParameter.name == "max_file_size").one()
-            maxSize = long(ConfigParameter.value)
+            maxSizeParam = session.query(ConfigParameter).filter(ConfigParameter.name == "max_file_size").one()
+            maxSize = long(maxSizeParam.value)
             cherrypy.config.update({'server.max_request_body_size': maxSize*1024*1024})
         except Exception, e:
             logging.error("[admin] [maintenance] [Problem setting max file size: %s]" % str(e))
