@@ -34,7 +34,7 @@ FLFile = function() {
         }
         $("#fileStatisticsBox").dialog($.extend({
             title: "<span class='statistics'>View File Statistics</span>"
-        }, Defaults.smallDialog));
+        }, Defaults.largeDialog));
         $("#shareMultiBox").dialog($.extend({
             title: "<span class='share'>Share a File</span>",
             close: function() { load(); }
@@ -298,65 +298,19 @@ FLFile = function() {
         else
             Share.hideMulti();
     }
-
-    //TODO fix these
-    function setGeoData()
-    {
-        if($("#uploadGeolocation").is(":checked") && GEOTAGGING)
-        {
-            var geoData = "";
-            geo_position_js.getCurrentPosition(
-            function(position) {
-                geoData = "[geo]" + position.coords.latitude + "," + position.coords.longitude + "[/geo]";
-                if($("#uploadFileNotes").val() !== "")
-                    geoData = "\n" + geoData;
-                if($("#uploadFileNotes").val().indexOf("[geo]") == -1)
-                    $("#uploadFileNotes").val($("#uploadFileNotes").val() + geoData);
-            },
-            function(error) {
-                switch(error.code)
-                {
-                    case 1: // User denies permission.
-                        if($("#uploadFileNotes").val().match(/\[geo\]-?\d+\.\d+,-?\d+\.\d+\[\/geo\]/g))
-                            $("#uploadFileNotes").val($("#uploadFileNotes").val().replace(/\[geo\]-?\d+\.\d+,-?\d+\.\d+\[\/geo\]/g, ""));
-                        $("#uploadGeolocation").prop("checked", false);
-                        break;
-                    case 2: // Unable to determine position.
-                        StatusResponse.create("geotagging file upload", "Unable to determine your current location.", false);
-                        break;
-                    case 3: // Takes more than five seconds.
-                        StatusResponse.create("geotagging file upload", "Request for current location has timed out.", false);
-                        break;
-                    default:
-                        break;
-                }
-            },
-            {
-                enableHighAccuracy: true,
-                maximumAge:30000,
-                timeout:5000
-            });
-        }
-        else
-        {
-            if($("#uploadFileNotes").val().match(/\[geo\]-?\d+\.\d+,-?\d+\.\d+\[\/geo\]/g))
-                $("#uploadFileNotes").val($("#uploadFileNotes").val().replace(/\[geo\]-?\d+\.\d+,-?\d+\.\d+\[\/geo\]/g, ""));
-        }
-    }
-    function viewFileNotes(fileNotes)
+    function viewNotes(fileNotes)
     {
         $("#fileNotes").html(fileNotes);
         $("#fileNotesBox").dialog("open");
     }
-    function viewDownloadStatistics(fileId)
+
+    function viewStatistics(fileId)
     {
         $("#totalGraph").empty();
-        statFile = fileId;
-        var params = {};
-        params.fileId = fileId;
+        var params = { fileId: fileId};
         var startDate = $("#totalGraphStartDate").val();
         var endDate = $("#totalGraphEndDate").val();
-        if (startDate !== undefined && startDate !== "")
+        if (startDate != null && startDate !== "")
             params.startDate = startDate;
         else
         {
@@ -365,7 +319,7 @@ FLFile = function() {
             var dateString1 = ("0" + (d1.getMonth()+1)).slice(-2) + "/" + ("0" + (d1.getDate())).slice(-2) + "/" + d1.getFullYear();
             $("#totalGraphStartDate").val(dateString1);
         }
-        if (endDate !== undefined && endDate !== "")
+        if (endDate != null && endDate !== "")
             params.endDate = endDate;
         else
         {
@@ -374,8 +328,7 @@ FLFile = function() {
             $("#totalGraphEndDate").val(dateString2);
         }
 
-        $.post(FILELOCKER_ROOT+'/file/get_download_statistics?format=json&ms=' + new Date().getTime(), params, 
-        function(returnData) {
+        Filelocker.request("/file/get_download_statistics", "retrieving file statistics", params, false, function(returnData) {
             var totalTable = "<div class='fileStatisticsTableWrapper'><table id='"+fileId+"_totalDownloads' class='fileStatisticsTable'><colgroup><col class='colHead' /></colgroup><caption>Total Downloads by Day</caption><thead><tr><td class='rowHead'>Date</td>";
             var totalHeaders = "";
             var totalData = "";
@@ -427,9 +380,52 @@ FLFile = function() {
             else
                 $("#totalGraph").html("<i>There are no downloads in the specified date range.</i>");
             $("#fileStatisticsBox").dialog("open");
-        }, 'json');
+        });
     }
-    //TODO end stuff to fix.
+
+    //TODO fix
+    function setGeoData()
+    {
+        if($("#uploadGeolocation").prop("checked") && GEOTAGGING)
+        {
+            var geoData = "";
+            geo_position_js.getCurrentPosition(
+            function(position) {
+                geoData = "[geo]" + position.coords.latitude + "," + position.coords.longitude + "[/geo]";
+                if($("#uploadFileNotes").val() !== "")
+                    geoData = "\n" + geoData;
+                if($("#uploadFileNotes").val().indexOf("[geo]") == -1)
+                    $("#uploadFileNotes").val($("#uploadFileNotes").val() + geoData);
+            },
+            function(error) {
+                switch(error.code)
+                {
+                    case 1: // User denies permission.
+                        if($("#uploadFileNotes").val().match(/\[geo\]-?\d+\.\d+,-?\d+\.\d+\[\/geo\]/g))
+                            $("#uploadFileNotes").val($("#uploadFileNotes").val().replace(/\[geo\]-?\d+\.\d+,-?\d+\.\d+\[\/geo\]/g, ""));
+                        $("#uploadGeolocation").prop("checked", false);
+                        break;
+                    case 2: // Unable to determine position.
+                        StatusResponse.create("geotagging file upload", "Unable to determine your current location.", false);
+                        break;
+                    case 3: // Takes more than five seconds.
+                        StatusResponse.create("geotagging file upload", "Request for current location has timed out.", false);
+                        break;
+                    default:
+                        break;
+                }
+            }, {
+                enableHighAccuracy: true,
+                maximumAge:30000,
+                timeout:5000
+            });
+        }
+        else
+        {
+            if($("#uploadFileNotes").val().match(/\[geo\]-?\d+\.\d+,-?\d+\.\d+\[\/geo\]/g))
+                $("#uploadFileNotes").val($("#uploadFileNotes").val().replace(/\[geo\]-?\d+\.\d+,-?\d+\.\d+\[\/geo\]/g, ""));
+        }
+    }
     
     return {
         init:init,
@@ -440,7 +436,9 @@ FLFile = function() {
         toggleNotify:toggleNotify,
         getQuota:getQuota,
         rowClick:rowClick,
-        onCheck:onCheck
+        onCheck:onCheck,
+        viewNotes:viewNotes,
+        viewStatistics:viewStatistics
     };
 }();
 

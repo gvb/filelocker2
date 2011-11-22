@@ -105,10 +105,12 @@
                                 #if $f.owner_id == $user.id
                                     <li><div class="itemTitleMedium"><span class="cross"><a href="javascript:Utility.promptConfirmation('FLFile.del', ['$f.id']);" title="Permanently delete this file from Filelocker" class="redText">Delete This File</a></span></div></li>
                                     <li><div class="itemTitleMedium"><span class="save"><a href="$config['root_url']/file/download?fileId=$f.id" title="Download this file from Filelocker">Download This File</a></span></div></li>
-                                    <li><div class="itemTitleMedium"><span class="statistics"><a href="javascript:viewDownloadStatistics('$f.id');" title="View a chart of this file's downloads over time">View Download Statistics</a></span></div></li>
-                                    #set $notesStripped = $re.sub(r'\[geo\]-?\d+\.\d+,-?\d+\.\d+\[/geo\]', '', $str($f.notes))
-                                    #if $notesStripped != ""
-                                        <li><div class="itemTitleMedium"><span class="view"><a href="javascript:viewnotes('$notesStripped');" title="View the user-entered notes for this file">View File Notes</a></span></div></li>
+                                    <li><div class="itemTitleMedium"><span class="statistics"><a href="javascript:FLFile.viewStatistics('$f.id');" title="View a chart of this file's downloads over time">View Download Statistics</a></span></div></li>
+                                    #if $f.notes is not None
+                                        #set $notesStripped = $re.sub(r'\[geo\]-?\d+\.\d+,-?\d+\.\d+\[/geo\]', '', $str($f.notes))
+                                        #if $notesStripped != ""
+                                            <li><div class="itemTitleMedium"><span class="view"><a href="javascript:FLFile.viewNotes('$notesStripped');" title="View the user-entered notes for this file">View File Notes</a></span></div></li>
+                                        #end if
                                     #end if
                                     #set $fileGeoData = $re.search(r'.*\[geo\](-?\d+\.\d+),(-?\d+\.\d+)\[/geo\].*', $str($f.notes))
                                     #if $fileGeoData and $config['geotagging']

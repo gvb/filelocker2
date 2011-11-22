@@ -1,5 +1,4 @@
 Filelocker = function(){
-    var statFile = "";
     var messageTabs;
     var messagePoller;
     var uploader;
@@ -109,7 +108,6 @@ Filelocker = function(){
     }
 
     return {
-        statFile:statFile,
         messageTabs:messageTabs,
         messagePoller:messagePoller,
         uploader:uploader,
