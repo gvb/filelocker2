@@ -14,6 +14,7 @@ Filelocker = function(){
     */
     function request(path, action, payloadObject, verboseMode, successFunction)
     {
+        //TODO take out console.log statements
         console.log("Start \tN/A\tverbose:" + verboseMode + "\t" + action);
         $.ajax({
             type: "POST",
@@ -54,59 +55,6 @@ Filelocker = function(){
         Filelocker.request("/get_server_messages", actionName, "{}", false);
     }
 
-    function selectAll(destination)
-    {
-        if(destination == "files")
-        {
-            if ($("#selectAllFiles").is(":checked"))
-                $(".fileSelectBox").prop("checked", true);
-            else
-                $(".fileSelectBox").prop("checked", false);
-            fileChecked();
-        }
-        else if(destination == "systemFiles")
-        {
-            if ($("#selectAllSystemFiles").is(":checked"))
-                $(".systemFileSelectBox").prop("checked", true);
-            else
-                $(".systemFileSelectBox").prop("checked", false);
-            fileChecked();
-        }
-        else if(destination == "manage_shares")
-        {
-            if ($("#selectAllShares").is(":checked"))
-                $(".fileSelectBox").prop("checked", true);
-            else
-                $(".fileSelectBox").prop("checked", false);
-        }
-        else if(destination == "manage_shares_force")
-        {
-            $("#selectAllShares").prop("checked", true);
-            $(".fileSelectBox").prop("checked", true);
-        }
-        else if(destination == "manage_groups")
-        {
-            if ($("#selectAllGroups").is(":checked"))
-                $(".groupSelectBox").prop("checked", true);
-            else
-                $(".groupSelectBox").prop("checked", false);
-        }
-        else if(destination == "messageInbox")
-        {
-            if ($("#selectAllMessageInbox").is(":checked"))
-                $(".messageInboxSelectBox").prop("checked", true);
-            else
-                $(".messageInboxSelectBox").prop("checked", false);
-        }
-        else if(destination == "messageSent")
-        {
-            if ($("#selectAllMessageSent").is(":checked"))
-                $(".messageSentSelectBox").prop("checked", true);
-            else
-                $(".messageSentSelectBox").prop("checked", false);
-        }
-    }
-
     return {
         messageTabs:messageTabs,
         messagePoller:messagePoller,
@@ -114,7 +62,6 @@ Filelocker = function(){
         request:request,
         login:login,
         sawBanner:sawBanner,
-        checkMessages:checkMessages,
-        selectAll:selectAll
+        checkMessages:checkMessages
     };
 }();

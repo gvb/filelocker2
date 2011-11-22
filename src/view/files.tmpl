@@ -17,7 +17,7 @@
         <table class="file_table" id="fileTableSorter">
             <thead>
                 <tr>
-                    <th class="selectAllCol"><input type="checkbox" id="selectAllFiles" onClick="selectAll('files');" /></th>
+                    <th class="selectAllCol"><input type="checkbox" id="selectAllFiles" onChange="javascript:jQuery('.fileSelectBox').prop('checked', jQuery(this).prop('checked'));FLFile.onCheck()" /></th>
                     <th class="nameCol pseudoLink">Name</th>
                     <th class="sizeCol pseudoLink">Size</th>
                     <th class="expiresCol pseudoLink">Expires</th>
@@ -49,7 +49,7 @@
                 <tr id="row_$rowId" class="fileRow">
                     <td id="name_row_$rowId" class="nameElement">
                     #if $f.owner_id == $user.id
-                        <input type="checkbox" value="$f.id" id="checkbox_row_$rowId" name="select_file" class="fileSelectBox" onClick="javascript:FLFile.onCheck()"/>
+                        <input type="checkbox" value="$f.id" id="checkbox_row_$rowId" name="select_file" class="fileSelectBox" onChange="javascript:FLFile.onCheck()"/>
                     #end if
                         <div class="posrel">
                             <div id="menu_row_$rowId" class="menuFiles hidden"><!--add class of hidden to hide this info box-->

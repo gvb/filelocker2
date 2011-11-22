@@ -1,29 +1,25 @@
 Account = function() {
     function update(userId)
     {
-        var runUpdate = true;
         var emailRegEx = /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,4}$/i;
         if($("#userPassword").val() != $("#userPasswordConfirm").val())
-        {
             StatusResponse.create("updating user account", "Passwords do not match.", false);
-            runUpdate = false;
-        }
-        if($("#userEmail").val() !== "" && $("#userEmail").val().search(emailRegEx) == -1)
-        {
+        else if($("#userEmail").val() !== "" && $("#userEmail").val().search(emailRegEx) == -1)
             StatusResponse.create("updating user account", "Email address is not valid.", false);
-            runUpdate = false;
-        }
-        if(runUpdate)
+        else
         {
-            var data = {};
-            data.userId = userId;
+            var data = {
+                firstName:$("#userFirstName").val(),
+                lastName:$("#userLastName").val(),
+                userId:userId,
+                emailAddress:$("#userEmail").val()
+            };
             if ($("#userPassword").val() !== "")
             {
                 data.password = $("#userPassword").val();
                 data.confirmPassword =  $("#userConfirmPassword").val();
             }
-            data.emailAddress = $("#userEmail").val();
-            Filelocker.request("/account/update_user", "updating user account", data, function() {
+            Filelocker.request("/account/update_user", "updating user account", data, true, function() {
                 $("#editAccountBox").dialog("close");
             });
         }

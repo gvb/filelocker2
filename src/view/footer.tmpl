@@ -446,19 +446,25 @@
                 <div id="accountSettings">
                     <form action="" name="generalSettingsForm" id="generalSettingsForm">
                         <div>
-                            <label for="userEmail">Update Email Address:</label>
+                            <label for="userEmail">First Name:</label>
+                            <input type="text" name="userFirstName" id="userFirstName" value="$user.first_name" />
+                        </div>
+                        <div>
+                            <label for="userEmail">Last Name:</label>
+                            <input type="text" name="userLastName" id="userLastName" value="$user.last_name" />
+                        </div>
+                        <div>
+                            <label for="userEmail">Email Address:</label>
                             <input type="text" name="userEmail" id="userEmail" value="$user.email" />
                         </div>
-                        #if $config['auth_type'] == "local"
                         <div>
-                            <label for="userPassword">Update Password:</label>
+                            <label for="userPassword">New Password:</label>
                             <input type="password" name="userPassword" id="userPassword" value="" />
                         </div>
                         <div>
                             <label for="userPasswordConfirm">Confirm Password:</label>
                             <input type="password" name="userPasswordConfirm" id="userPasswordConfirm" value="" />
                         </div>
-                        #end if
                         <div>
                             <div class="button" id="updateButton"><a href="javascript:Account.update('$user.id');" title="Save changes to your account settings" class="saveButton"><span>Update Account</span></a></div>
                         </div>
@@ -534,7 +540,7 @@
                         <table class="file_table" id="messageInboxTableSorter">
                             <thead>
                                 <tr>
-                                    <th class="selectAllCol"><input type="checkbox" name="selectAllMessageInbox" id="selectAllMessageInbox" onClick="selectAll('messageInbox');"/></th>
+                                    <th class="selectAllCol"><input type="checkbox" name="selectAllMessageInbox" id="selectAllMessageInbox" onChange="javascript:jQuery('.messageInboxSelectBox').prop('checked', jQuery(this).prop('checked'))"/></th>
                                     <th class="messageSenderCol pseudoLink">Sender</th>
                                     <th class="messageSubjectCol pseudoLink">Subject</th>
                                     <th class="messageDateCol pseudoLink">Date</th>
@@ -567,7 +573,7 @@
                         <table class="file_table" id="messageSentTableSorter">
                             <thead>
                                 <tr>
-                                    <th class="selectAllCol"><input type="checkbox" name="selectAllMessageSent" id="selectAllMessageSent" onClick="selectAll('messageSent');"/></th>
+                                    <th class="selectAllCol"><input type="checkbox" name="selectAllMessageSent" id="selectAllMessageSent" onChange="javascript:jQuery('.messageSentSelectBox').prop('checked', jQuery(this).prop('checked'))"/></th>
                                     <th class="messageRecipientCol pseudoLink">Recipient</th>
                                     <th class="messageSubjectCol pseudoLink">Subject</th>
                                     <th class="messageDateCol pseudoLink">Date</th>

@@ -170,7 +170,7 @@ class FileController(object):
         try:
             flFile = session.query(File).filter(File.id==fileId).one()
             if flFile.owner_id == user.id:
-                fMessages.append("You cannot take your owne file")
+                fMessages.append("You cannot take your own file")
             elif flFile.shared_with(user) or AccountController.user_has_permission(user, "admin"):
                 if (get_user_quota_usage_bytes(user) + flFile.size) >= (user.quota*1024*1024):
                     logging.warning("[%s] [take_file] [User has insufficient quota space remaining to check in file: %s]" % (user.id, flFile.name))

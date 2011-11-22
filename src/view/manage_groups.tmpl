@@ -11,7 +11,7 @@
           <table class="file_table" id="groupTableSorter">
             <thead>
                 <tr>
-                    <th class="selectAllCol"><input type="checkbox" name="selectAllGroups" id="selectAllGroups" onClick="selectAll('manage_groups');" /></th>
+                    <th class="selectAllCol"><input type="checkbox" name="selectAllGroups" id="selectAllGroups" onChange="javascript:jQuery('.groupSelectBox').prop('checked', jQuery(this).prop('checked'))" /></th>
                     <th class="groupNameCol pseudoLink">Name</th>
                     <th class="pseudoLink">Group Membership</th>
                     <th class="menuCol"></th>

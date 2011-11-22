@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="$rootURL/css?style=jquery-ui" />
     <link rel="shortcut icon" href="$rootURL/static/images/favicon.ico" />
 </head>
-<body class="greyBackground">
+<body class="greyBackground" onload="document.forms.login.username.focus()">
 <div id="background">
   <div id="wrapper_all">
     <!--header-->
@@ -28,7 +28,7 @@
                 #if $errorMessage is not None
                     <h3>$errorMessage</h3>
                 #end if
-                <form action="$loginPage" method="post">
+                <form action="$loginPage" method="post" name="login">
                 <input type="hidden" name="authType" value="$authType"/> 
                 <table>
                     <tr>
