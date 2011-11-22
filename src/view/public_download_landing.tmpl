@@ -17,60 +17,68 @@
                 </div>
                 <br />
                 <div>
-                    <input type="submit" value="Download"/>
+                    <input type="submit" value="View Share"/>
                 </div>
                 </form>
                 #else
-                <div class="file_list">
-                    <table class="file_table" id="fileTableSorter">
-                        <thead>
-                        <tr>
-                            <th class="selectAllCol"></th>
-                            <th class="nameCol pseudoLink">Name</th>
-                            <th class="sizeCol pseudoLink">Size</th>
-                            <th class="expiresCol pseudoLink">Expires</th>
-                            <th class="menuCol"></th>
-                        </tr>
-                        <tr>
-                            <td></td>
-                            <td colspan="4" class="dotted"></td>
-                        </tr>
-                        </thead>
-                        <tbody id="filesTable">
-                        #for $file in $publicShare.files
-                            #set $fsSuffix = "B"
-                            #set $fileSize = $file.size
+                <table class="file_table">
+                    <thead>
+                    <tr>
+                        <th class="selectAllCol"></th>
+                        <th class="nameCol pseudoLink">Name</th>
+                        <th class="sizeCol pseudoLink">Size</th>
+                        <th class="expiresCol pseudoLink">Expires</th>
+                        <th class="virusScanCol pseudoLink">Scanned?</th>
+                        <th class="menuCol"></th>
+                    </tr>
+                    <tr>
+                        <td></td>
+                        <td colspan="5" class="dotted"></td>
+                    </tr>
+                    </thead>
+                    <tbody id="filesTable">
+                    #for $file in $publicShare.files
+                        #set $fsSuffix = "B"
+                        #set $fileSize = $file.size
+                        #if $fileSize > 1024
+                            #set $fileSize = $fileSize / 1024
+                            #set $fsSuffix = "kB"
                             #if $fileSize > 1024
                                 #set $fileSize = $fileSize / 1024
-                                #set $fsSuffix = "kB"
+                                #set $fsSuffix = "MB"
                                 #if $fileSize > 1024
                                     #set $fileSize = $fileSize / 1024
-                                    #set $fsSuffix = "MB"
-                                    #if $fileSize > 1024
-                                        #set $fileSize = $fileSize / 1024
-                                        #set $fsSuffix = "GB"
-                                    #end if
+                                    #set $fsSuffix = "GB"
                                 #end if
                             #end if
-                            <tr id="file_$file.id" class="fileRow">
-                                <td></td>
-                                <td><span class="$file.document_type pseudoLink">
-                                    #if len($file.name) > 60
-                                        $file.name[0:45]...$file.name[-10:]
-                                    #else
-                                        $file.name
-                                    #end if
-                                </span></td>
-                                <td>$fileSize $fsSuffix</td>
-                                <td>$file.date_expires</td>
-                                <td></td>
-                            </tr>
-                        #end for
-                        </tbody>
-                        <tfoot id="progressBarSection">
-                        </tfoot>
-                    </table>
-                </div> <!-- End File List -->
+                        #end if
+                        <tr id="file_$file.id" class="fileRow">
+                            <td></td>
+                            <td>
+                                <span class="$file.document_type pseudoLink">
+                                <a href="/file/download?fileId=$file.id">
+                                #if len($file.name) > 60
+                                    $file.name[0:45]...$file.name[-10:]
+                                #else
+                                    $file.name
+                                #end if
+                                </a>
+                                </span>
+                            </td>
+                            <td>$fileSize $fsSuffix</td>
+                            #if $file.date_expires is not None
+                            <td>$file.date_expires.strftime("%m/%d/%Y")</td>
+                            #else
+                            <td>No expiration</td>
+                            #end if
+                            <td>$file.passed_avscan</td>
+                            <td></td>
+                        </tr>
+                    #end for
+                    </tbody>
+                    <tfoot id="progressBarSection">
+                    </tfoot>
+                </table> <!-- End File List -->
                 #end if
                 <br/>
             </div>
