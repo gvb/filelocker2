@@ -126,6 +126,13 @@ def daily_maintenance(config):
         session.delete(user)
         session.add(AuditLog("admin", "Delete User", "User %s was deleted due to inactivity. All files and shares associated with this user have been purged as well" % str(user.id)))
         session.commit()
+
+    for ps in session.query(PublicShare).all():
+        if len(ps.files) == 0:
+            session.delete(ps)
+            session.add(AuditLog("admin", "Delete Public Share", "Public share %s owned by %s had no files and was deleted by maintenance" % (ps.id, ps.owner_id if ps.role_owner_id is None else ps.role_owner_id)))
+    session.commit()
+
     vaultFileList = os.listdir(config['filelocker']['vault'] )
     for fileName in vaultFileList:
         try:

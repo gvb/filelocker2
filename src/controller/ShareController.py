@@ -20,9 +20,9 @@ class ShareController:
         userId = strip_tags(userId) if userId is not None and userId != "" else None
         notify = True if notify.lower() == "true" else False
         cc = True if cc.lower() == "true" else False
+        sharedFiles, recipients = [], []
         try:
             if userId is not None:
-                sharedFiles, recipients = [], []
                 for fileId in fileIds:
                     flFile = session.query(File).filter(File.id==fileId).one()
                     shareUser = AccountController.get_user(userId)
@@ -41,7 +41,7 @@ class ShareController:
                 if notify:
                     for recipient in recipients:
                         try:
-                            Mail.notify(get_template_file('share_notification.tmpl'),{'sender':user.email if role is None else role.email,'recipient':recipient.email, 'ownerId':user.id if role is None else role.id, 'ownerName':user.display_name if role is None else role.name, 'files':sharedFiles, 'filelockerURL': config['root_url']})
+                            Mail.notify(get_template_file('share_notification.tmpl'),{'sender':user.email if role is None else role.email,'recipient':recipient.email, 'ownerId':user.id if role is None else role.id, 'ownerName':user.display_name if role is None else role.name, 'sharedFiles':sharedFiles, 'filelockerURL': config['root_url']})
                             session.add(AuditLog(user.id, "Sent Email", "%s(%s) has been notified via email that you have shared a file with him or her." % (recipient.display_name, recipient.id), None, role.id if role is not None else None))
                         except Exception, e:
                             session.rollback()
@@ -250,6 +250,7 @@ class ShareController:
         config = cherrypy.request.app.config['filelocker']
         fileIds = split_list_sanitized(fileIds)
         cc = True if cc == "true" else False
+        print "CC is %s" % str(cc)
         try:
             try:
                 expiration = datetime.datetime(*(time.strptime(strip_tags(expiration), "%m/%d/%Y")[0:6]))
@@ -287,7 +288,7 @@ class ShareController:
             if cc:
                 notifyEmailList.append(user.email)
             for recipient in notifyEmailList:
-                Mail.notify(get_template_file('public_share_notification.tmpl'), {'sender':user.email if role is None else role.email, 'recipient':recipient, 'files':sharedFiles, 'ownerId':user.id if role is None else role.id, 'ownerName': user.display_name if role is None else role.name, 'shareId':ps.id, 'filelockerURL':config['root_url']})
+                Mail.notify(get_template_file('public_share_notification.tmpl'), {'sender':user.email if role is None else role.email, 'recipient':recipient, 'sharedFiles':sharedFiles, 'ownerId':user.id if role is None else role.id, 'ownerName': user.display_name if role is None else role.name, 'shareId':ps.id, 'filelockerURL':config['root_url']})
             if len(notifyEmailList) > 0:
                 session.add(AuditLog(user.id, "Email Sent", "Email notifications about a public share were sent to the following addresses: %s" % str(",".join(notifyEmailList)), None, role.id if role is not None else None))
             session.commit()
@@ -453,6 +454,3 @@ def get_files_shared_with_user_by_attribute(user):
                     attributeShareDictionary[attributeShare.attribute_id] = []
                 attributeShareDictionary[attributeShare.attribute_id].append(attributeShare.flFile)
     return attributeShareDictionary
-    
-if __name__ == "__main__":
-    print "Hello";

@@ -461,18 +461,18 @@ class FileController(object):
             try:
                 publicShare = session.query(PublicShare).filter(PublicShare.id == publicShareId).one()
                 requestedFile = session.query(File).filter(File.id == fileId).one()
-                if requestedFile not in publicShare.files:
-                    raise cherrypy.HTTPError(401)
-                else:
+                if requestedFile in publicShare.files:
                     serveFile = True
+                else:
+                    raise cherrypy.HTTPError(401)
             except sqlalchemy.orm.exc.NoResultFound, nrf:
                 raise cherrypy.HTTPError(404, "Could not find share or file")
         else:
             cherrypy.tools.requires_login()
-            user = cherrypy.session.get("user")
+            user, role = cherrypy.session.get("user"), cherrypy.session.get("current_role")
             try:
                 requestedFile = session.query(File).filter(File.id==fileId).one()
-                if requestedFile.owner_id == user.id or requestedFile.shared_with(user) or AccountController.user_has_permission(user, "admin"):
+                if (role is not None and requestedFile.role_owner_id == role.id) or requestedFile.owner_id == user.id or requestedFile.shared_with(user) or AccountController.user_has_permission(user, "admin"):
                     serveFile = True
             except sqlalchemy.orm.exc.NoResultFound, nrf:
                 raise cherrypy.HTTPError(404, "Could not find file")
@@ -679,7 +679,7 @@ def file_download_complete(user, fileId, publicShareId=None):
         if cherrypy.session.has_key("current_role"):
             role = cherrypy.session.get("current_role")
         flFile = session.query(File).filter(File.id==fileId).one()
-        if ((role is not None and flFile.role_owner_id != role.id) or user.id != flFile.owner_id) and flFile.notify_on_download:
+        if ((role is not None and flFile.role_owner_id != role.id) or user == None or user.id != flFile.owner_id) and flFile.notify_on_download:
             try:
                 owner = None
                 if role is not None: owner = session.query(User).filter(User.id==flFile.role_owner_id).one()
@@ -700,20 +700,21 @@ def file_download_complete(user, fileId, publicShareId=None):
                     if owner.email is not None and owner.email != "":
                         Mail.notify(get_template_file('public_download_notification.tmpl'),{'sender': None, 'recipient': owner.email, 'fileName': flFile.name})
                 except Exception, e:
-                    logging.error("[%s] [file_download_complete] [Unable to notify user %s of download completion: %s]" % (user.id, owner.id, str(e)))
+                    logging.error("[%s] [file_download_complete] [Unable to notify user %s of download completion: %s]" % ("admin", owner.id, str(e)))
             if publicShare.reuse == "single":
                 publicShare.files.remove(flFile)
                 session.commit()
+                publicShare = session.query(PublicShare).filter(PublicShare.id == publicShare.id).one()
                 if len(publicShare.files) == 0:
                     session.delete(publicShare)
-                    session.add(AuditLog(flFile.owner_id, "Delete Public Share", "File %s downloaded via single use public share. File is no longer publicly shared. [File ID: %s]" % (flFile.name, flFile.id), None, flFile.role_owner_id, flFile.id))
+                    session.add(AuditLog(flFile.owner_id, "Delete Public Share", "File %s downloaded via single use public share. File is no longer publicly shared." % (flFile.name, flFile.id), None, flFile.role_owner_id, flFile.id))
                     session.commit()
         else:
             log =AuditLog(user.id, "Download File", "File %s downloaded by user %s." % (flFile.name, user.id), flFile.owner_id, role.id if role is not None else None, flFile.id)
             session.add(log)
         session.commit()
     except Exception, e:
-        logging.error("[%s] [file_download_complete] [Unable to finish download completion: %s]" % (user.id, str(e)))
+        logging.error("[%s] [file_download_complete] [Unable to finish download completion: %s]" % ("admin", str(e)))
 
 def get_upload_ticket_by_password(ticketId, password):
     uploadRequest = session.query(UploadRequest).filter(UploadRequest.id == ticketId)
