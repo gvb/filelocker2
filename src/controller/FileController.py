@@ -449,27 +449,36 @@ class FileController(object):
             return fl_response(sMessages, fMessages, format)
 
     @cherrypy.expose
-    @cherrypy.tools.requires_login()
     def download(self, fileId, **kwargs):
+        serveFile, publicShareId, requestedFile = False, None, None
+        if cherrypy.session.has_key("public_share_id"):
+            publicShareId = cherrypy.session.get("public_share_id")
+            try:
+                publicShare = session.query(PublicShare).filter(PublicShare.id == publicShareId).one()
+                requestedFile = session.query(File).filter(File.id == fileId).one()
+                if requestedFile not in publicShare.files:
+                    raise cherrypy.HTTPError(401)
+                else:
+                    serveFile = True
+            except sqlalchemy.orm.exc.NoResultFound, nrf:
+                raise cherrypy.HTTPError(404, "Could not find share or file")
+        else:
+            cherrypy.tools.requires_login()
+            user = cherrypy.session.get("user")
+            try:
+                requestedFile = session.query(File).filter(File.id==fileId).one()
+                if requestedFile.owner_id == user.id or requestedFile.shared_with(user) or AccountController.user_has_permission(user, "admin"):
+                    serveFile = True
+            except sqlalchemy.orm.exc.NoResultFound, nrf:
+                raise cherrypy.HTTPError(404, "Could not find file")
+
         cherrypy.response.timeout = 36000
-        user = cherrypy.session.get("user")
         cherrypy.session.release_lock()
-        try:
-            flFile = session.query(File).filter(File.id==fileId).one()
-            if flFile.owner_id == user.id or flFile.shared_with(user) or AccountController.user_has_permission(user, "admin"):
-                return self.serve_file(flFile)
-            else:
-                raise cherrypy.HTTPError(403, "You do not have access to this file")
-            #if kwargs.has_key("encryptionKey") and kwargs['encryptionKey'] !="" and kwargs['encryptionKey'] is not None:
-                #flFile.fileEncryptionKey = kwargs['encryptionKey']
-            #if flFile.fileEncryptionKey is None:
-                #raise HTTPError(412, "This file requires you to supply an encryption key to decrypt the file.")
-        except sqlalchemy.orm.exc.NoResultFound, nrf:
-            raise cherrypy.HTTPError(404, "Couldn't find file with ID: %s" % str(fileId))
-        except Exception, e:
-            logging.error("[%s] [download] [Error while trying to initiate download: %s]" % (user.id, str(e)))
-            cherrypy.session['fMessages'].append("Unable to download: %s" % str(e))
-            raise cherrypy.HTTPError(404, "Unable to download: %s" % str(e))
+
+        if serveFile:
+            return self.serve_file(requestedFile, publicShareId=publicShareId)
+        else:
+            raise cherrypy.HTTPError(403, "You do not have access to this file")
 
     @cherrypy.expose
     @cherrypy.tools.requires_login()
@@ -671,9 +680,13 @@ def file_download_complete(user, fileId, publicShareId=None):
                         Mail.notify(get_template_file('public_download_notification.tmpl'),{'sender': None, 'recipient': owner.email, 'fileName': flFile.name})
                 except Exception, e:
                     logging.error("[%s] [file_download_complete] [Unable to notify user %s of download completion: %s]" % (user.id, owner.id, str(e)))
-            if publicShare.type == "single":
-                session.delete(publicShare)
-                session.add(AuditLog(flFile.owner_id, "Delete Public Share", "File %s downloaded via single use public share. File is no longer publicly shared. [File ID: %s]" % (flFile.name, flFile.id)))
+            if publicShare.reuse == "single":
+                publicShare.files.remove(flFile)
+                session.commit()
+                if len(publicShare.files) == 0:
+                    session.delete(publicShare)
+                    session.add(AuditLog(flFile.owner_id, "Delete Public Share", "File %s downloaded via single use public share. File is no longer publicly shared. [File ID: %s]" % (flFile.name, flFile.id)))
+                    session.commit()
         else:
             session.add(AuditLog(user.id, "Download File", "File %s downloaded by user %s. [File ID: %s]" % (flFile.name, user.id, flFile.id)))
         session.commit()
