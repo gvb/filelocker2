@@ -234,7 +234,7 @@ class RootController:
                 endDateFormatted = datetime.datetime(*time.strptime(strip_tags(endDate), "%m/%d/%Y")[0:5])
             else:
                 endDateFormatted = today + datetime.timedelta(days=1)
-            actionLogListAtt = session.query(AuditLog).filter(and_(AuditLog.date > startDateFormatted, AuditLog.date < endDateFormatted))
+            actionLogListAtt = session.query(AuditLog).filter(and_(AuditLog.date >= startDateFormatted, AuditLog.date <= endDateFormatted))
 
             if logAction is None or logAction == "":
                 logAction = "all_minus_login"

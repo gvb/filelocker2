@@ -46,7 +46,7 @@
         <div class="historyFilter">
             <h3>Filter Results</h3>
             <label for="logActions">Action:</label>
-            <select id="logActions" onChange="javascript:History.load('$user.id')">
+            <select id="logActions" onChange="History.load()">
             #if $logAction == "all"
                 <option value="all" selected>All</option>
             #else
@@ -68,9 +68,9 @@
                 #end for
             </select>
             <label for="historyStartDate">Start Date:</label>
-            <input type="text" id="historyStartDate" class="datePast" value="$startDateFormatted.strftime("%m/%d/%Y")" onchange="History.load('$user.id')" onselect="this.value=''" />
+            <input type="text" id="historyStartDate" class="datePast" value="$startDateFormatted.strftime("%m/%d/%Y")" onchange="History.load()" onselect="this.value=''" />
             <label for="historyEndDate">End Date:</label>
-            <input type="text" id="historyEndDate" class="datePast" value="$endDateFormatted.strftime("%m/%d/%Y")" onchange="History.load('$user.id')" onselect="this.value=''" />
+            <input type="text" id="historyEndDate" class="datePast" value="$endDateFormatted.strftime("%m/%d/%Y")" onchange="History.load()" onselect="this.value=''" />
         </div>
     </div> <!-- End Text_col2 -->
 </div> <!--End wrapper col 2 -->
