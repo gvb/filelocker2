@@ -10,7 +10,7 @@ from xml.dom.minidom import parse, parseString
 from Models import *
 import sqlalchemy
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import relationship, backref, sessionmaker, mapper
+from sqlalchemy.orm import sessionmaker
 from sqlalchemy import *
 from lib.SQLAlchemyTool import configure_session_for_app, session, _engines
 

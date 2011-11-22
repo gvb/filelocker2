@@ -2,6 +2,7 @@ import datetime
 import sys
 import time
 import StringIO
+import sqlalchemy
 import cherrypy
 sys.path.append("/usr/lib/python2.7/site-packages")
 try:
@@ -493,8 +494,18 @@ def drop_database_tables(dburi):
     except Exception, e:
         tables_list=['config' ,'user', 'deletion_queue', 'group_membership', 'group_permission', 'groups', 'permission',\
         'file', 'hidden_share', 'private_group_share','private_share', 'private_attribute_share', 'attribute', 'public_share',\
-        'upload_ticket', 'user_permission', 'audit_log', 'cli_key' ,'message','message_recipient', 'session']
-        conn.execute("""DROP TABLE IF EXISTS %s""" % ",".join(tables_list))
+        'upload_ticket', 'user_permission', 'audit_log', 'cli_key' ,'message','message_recipient', 'session', 'user_permissions',\
+        'role_membership','role_permissions', 'permissions', 'group_permissions',\
+        'hidden_shares', 'messages', 'message_shares', 'user_shares', 'group_shares',\
+        'public_share_files', 'public_shares', 'attribute_shares', 'upload_requests', 'attributes', 'audit_logs','files','users','roles']
+        redelete_tables = []
+        for table in tables_list:
+            try:
+                conn.execute("""DROP TABLE IF EXISTS %s""" % table)
+            except sqlalchemy.exc.IntegrityError:
+                redelete_tables.append(table)
+        for table in redelete_tables:
+            conn.execute("""DROP TABLE IF EXISTS %s""" % table)
     print "Dropped all"
 
 #Non database backended models
