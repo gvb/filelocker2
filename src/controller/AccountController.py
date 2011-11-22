@@ -25,7 +25,7 @@ class AccountController:
                 else:
                     raise Exception("Passwords do not match")
             session.add(newUser)
-            session.add(AuditLog(user.id, "Create User", "You created a new user with ID:\"%s\" on the system" % newUser.id, "admin"))
+            session.add(AuditLog(user.id, "Create User", "You created a new user with ID:\"%s\" on the system" % newUser.id, newUser.id))
             session.commit()
             sMessages.append("Created user %s (%s)" % (newUser.display_name, newUser.id))
         except ValueError:
@@ -53,6 +53,7 @@ class AccountController:
                     else:
                         fMessages.append("Passwords do not match, password has not be reset")
                 sMessages.append("Successfully updated user settings")
+                session.add(AuditLog(user.id, "User Update", "User account \"%s\" has been updated" % userId, userId))
                 session.commit()
             else:
                  fMessages.append("You do not have permission to update this user")
@@ -72,7 +73,7 @@ class AccountController:
                 try:
                     delUser = session.query(User).filter(User.id == userId).one()
                     session.delete(delUser)
-                    session.add(AuditLog(user.id, "Delete User", "You deleted user with ID: \"%s\" from the system" % delUser.id, "admin"))
+                    session.add(AuditLog(user.id, "Delete User", "User with ID: \"%s\" deleted from system" % delUser.id, "admin"))
                     sMessages.append("Successfully deleted user %s" % userId)
                 except sqlalchemy.orm.exc.NoResultFound:
                     fMessages.append("User with ID:%s does not exist" % userId)
@@ -284,6 +285,7 @@ class AccountController:
             existingRole.name = strip_tags(roleName)
             existingRole.email = strip_tags(email)
             existingRole.quota = int(quota)
+            session.add(user.id, 'Update Role', "Role \"%s\"(%s) has been updated" % (existingRole.name, existingRole.id))
             session.commit()
             sMessages.append("Successfully updated a role named %s." % str(roleName))
         except ValueError:

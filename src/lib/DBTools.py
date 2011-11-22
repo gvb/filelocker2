@@ -190,7 +190,11 @@ def import_db(importFile, dburi):
 							anode.getAttribute("action"), anode.getAttribute("affected_user_id"),\
 							anode.getAttribute("message"), anode.getAttribute("date"), \
 							anode.getAttribute("affected_role_id"), anode.getAttribute("file_id"), anode.getAttribute("id"))
-			session.add(log)
+			if log.action == "Create Private Share": log.action = "Create User Share"
+            if log.action == "Create Private Group Share": log.action== "Create Group Share"
+
+
+            session.add(log)
 		session.commit()
 	
     

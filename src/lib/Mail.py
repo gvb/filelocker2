@@ -28,6 +28,7 @@ def notify(template, varDict={}):
         server = get_server(config)
         sender = config['smtp_sender']
         tpl = Template(file=template, searchList=[locals(),globals()])
+        logging.error("Sending to %s" % varDict['recipient'])
         smtpresult = server.sendmail(config['smtp_sender'], varDict['recipient'], str(tpl))
         server.close()
 

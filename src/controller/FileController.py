@@ -19,6 +19,7 @@ from sqlalchemy import *
 from sqlalchemy.sql import select, delete, insert
 from lib.Models import *
 from lib.Formatters import *
+from lib import Mail
 from lib import Encryption
 import AccountController
 __author__="wbdavis"
@@ -499,7 +500,7 @@ class FileController(object):
                 fMessages.append("Max file size must be a positive number")
             scanFile = True if scanFile.lower()=="true" else False
             password = None if password == "" else password
-            emailAddresses = emailAddresses.replace(";", ",") if (emailAddresses is not None and emailAddresses != "") else []
+            emailAddresses = split_list_sanitized(emailAddresses.replace(";", ",")) if (emailAddresses is not None and emailAddresses != "") else []
             personalMessage = strip_tags(personalMessage)
             requestType = "multi" if requestType.lower() == "multi" else "single"
             uploadRequest = UploadRequest(date_expires=expiration, max_file_size=maxFileSize, scan_file=scanFile, type=requestType, owner_id=user.id)
@@ -513,7 +514,10 @@ class FileController(object):
                 if cc:
                     emailAddresses.append(user.email)
                 for recipient in emailAddresses:
-                    Mail.notify(get_template_file('upload_request_notification.tmpl'),{'sender': user.email, 'recipient': recipient, 'ownerId': user.id, 'ownerName': user.display_name, 'requestId': uploadRequest.id, 'requestType': uploadRequest.type, 'personalMessage': personalMessage, 'filelockerURL': config['root_url']})
+                    Mail.notify(get_template_file('upload_request_notification.tmpl'),\
+                    {'sender': user.email, 'recipient': recipient, 'ownerId': user.id, \
+                    'ownerName': user.display_name, 'requestId': uploadRequest.id, 'requestType': uploadRequest.type,\
+                    'personalMessage': personalMessage, 'filelockerURL': config['root_url']})
                 session.add(AuditLog(user.id, "Create Upload Request", "You created an upload request. As a result, the following email addresses were sent a file upload link: %s" % ",".join(emailAddresses), None))
                 session.commit()
                 uploadURL = config['root_url']+"/public_upload?ticketId=%s" % str(uploadRequest.id)
