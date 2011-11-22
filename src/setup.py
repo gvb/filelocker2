@@ -137,11 +137,11 @@ if __name__ == '__main__':
         backup_legacy_db(dburi, options.datafile, host, username, password, db)
     elif options.backup:
         backup_db(dburi, options.datafile)
-    elif options.restorebackup:
+    if options.restorebackup:
         restore_from_backup(dburi, options.datafile)
-    elif options.resetadmin:
+    if options.resetadmin:
         reset_admin(dburi)
-    else:
+    if options.initialize:
 #        setup_config()
         build_database(dburi)
         reset_admin(dburi)

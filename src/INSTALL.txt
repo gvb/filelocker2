@@ -12,10 +12,10 @@
     python-soappy
 
 ::Filelocker 2.6 Setup Instructions (For Yale and those living on the bleeding edge)::
-    1) Backup an current filelocker.conf file
+    1) Backup your current filelocker.conf file
     2) Unzip filelocker2.6.tar.gz over your current Filelocker instance or wherever you plan to install Filelocker (ex. /usr/filelocker)
     3) Copy your filelocker.conf file back to the /etc directory in the filelocker root folder (ex. /usr/filelocker/etc)
-    4) Add the following section to your config, substituting as appropriate for your database:
+    4) Add the following section to your config, substituting as appropriate for your database instance:
 
 ####
 [/]
@@ -36,12 +36,12 @@ python setup.py -r -f /backup/db_backup.xml
 
 python setup.py -a
 
+NOTE: These flags are actually chainable, so if your brave you could try to do this in one step using "python setup.py -u -r -a -f /backup/db_backup.xml"
 
 
-
-    3) To start Filelocker in daemonized mode, run Filelocker.py using the "-d" parameter. Running without the "-d" parameter will start Filelocker attached to the current terminal session.
-    4) To stop Filelocker when in daemonized mode, run Filelocker.py with the "-a stop" parameter. 
-    5) If you store the config file somewhere other than in the local conf directory, pass the -c [configpath] option to webFilelocker2.py on startup. Ex: python Filelocker.py -a start -c /etc/conf/filelocker2/filelocker.conf
+    8) To start Filelocker in daemonized mode, run Filelocker.py using the "-d" parameter. Running without the "-d" parameter will start Filelocker attached to the current terminal session.
+    9) To stop Filelocker when in daemonized mode, run Filelocker.py with the "-a stop" parameter.
+    10) If you store the config file somewhere other than in the local conf directory, pass the -c [configpath] option to webFilelocker2.py on startup. Ex: python Filelocker.py -a start -c /etc/conf/filelocker2/filelocker.conf
 
 At any time, if remote authentication (via CAS, LDAP, etc) stops working, you may revert back to local authentication by pointing your web browser to 
 http://$FILELOCKER_ROOT/local (where $FILELOCKER_ROOT is the URL you normally use to access Filelocker)
