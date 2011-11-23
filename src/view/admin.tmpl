@@ -112,7 +112,7 @@
                                     <div id="menu_row_$flRole.id" class="menuRoles hidden">
                                     <ul class="menu">
                                         <li><div class="button" style="width: 185px;"><a href="javascript:Admin.Role.promptUpdate('$flRole.id', '$flRole.name', '$flRole.email', $flRole.quota);" title="Edit account for '$flRole.id'" class="editButton"><span><center>Edit Role Account</center></span></a></div></li>
-                                        <li><div class="button" style="width: 185px;"><a href="javascript:Admin.Permission.load('$flRole.id');" title="Grant and revoke role permissions for '$flRole.id'" class="wandButton"><span><center>Edit Permissions</center></span></a></div></li>
+                                        <li><div class="button" style="width: 185px;"><a href="javascript:Admin.RolePermission.load('$flRole.id');" title="Grant and revoke role permissions for '$flRole.id'" class="wandButton"><span><center>Edit Permissions</center></span></a></div></li>
                                         <li><div class="button" style="width: 185px;"><a href="javascript:Admin.Role.prompt('$flRole.id');" title="Manage membership for '$flRole.name'" class="editButton"><span><center>Manage Membership</center></span></a></div></li>
                                     </ul>
                                 </div>

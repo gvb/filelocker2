@@ -28,7 +28,10 @@ Admin = function() {
         }, Defaults.smallDialog));
         $("#userUpdatePermissionsBox").dialog($.extend({
             title: "<span class='wand'>Edit Permissions</span>"
-        }, Defaults.smallDialog));
+        }, Defaults.largeDialog));
+        $("#roleUpdatePermissionsBox").dialog($.extend({
+            title: "<span class='wand'>Edit Permissions</span>"
+        }, Defaults.largeDialog));
         $("#systemStatisticsBox").dialog($.extend({
             title: "<span class='statistics'>View System Usage Statistics</span>"
         }, Defaults.largeDialog));
@@ -365,7 +368,7 @@ Admin = function() {
                     html += "<div id='menu_row_"+this.roleId+"' class='menuRoles hidden'>";
                     html += "<ul class='menu'>";
                     html += "<li><div class='button' style='width: 185px;'><a href='javascript:Admin.Role.promptUpdate(\""+this.roleId+"\", \""+this.roleFirstName+"\", \""+this.roleLastName+"\", \""+this.roleEmail+"\", "+this.roleQuota+", "+this.isRole.toString()+");' title='Edit role account for \""+this.roleId+"\"' class='editButton'><span><center>Edit Account</center></span></a></div></li>";
-                    html += "<li><div class='button' style='width: 185px;'><a href='javascript:Admin.Permission.load(\""+this.roleId+"\");' title='Grant and revoke role permissions for \""+this.roleId+"\"' class='wandButton'><span><center>Edit Permissions</center></span></a></div></li>";
+                    html += "<li><div class='button' style='width: 185px;'><a href='javascript:Admin.RolePermission.load(\""+this.roleId+"\");' title='Grant and revoke role permissions for \""+this.roleId+"\"' class='wandButton'><span><center>Edit Permissions</center></span></a></div></li>";
                     html += "</ul>";
                     html += "</div>";
                     html += "</td>";
@@ -657,6 +660,73 @@ Admin = function() {
         };
     }();
 
+    RolePermission = function() {
+        function load(roleId)
+        {
+            var action = "loading permissions";
+            Filelocker.request("/account/get_role_permissions", action, {roleId: roleId}, false, function(returnData) {
+                $("#rolePermissionsTable").empty();
+                for (var i=0;i<returnData.data.length;i++)
+                {
+                    //TODO clean this up...
+                    var checkedStatus = "";
+                    var disabled = "";
+                    if (returnData.data[i].inheritedFrom !== "")
+                    {
+                        checkedStatus = "checked";
+                        if (returnData.data[i].inheritedFrom.substr(0, 7) == "(group)")
+                            disabled = "disabled";
+                    }
+                    var permRow = returnData.data[i];
+                    $("#rolePermissionsTable").append("<tr id='rolePermission_"+permRow.permissionId+"' class='fileRow'><td><input type='checkbox' value='"+permRow.permissionId+"' id='checkbox_"+i+"' name='select_permission' class='permissionSelectBox' onChange=\"Admin.RolePermission.changed('"+roleId+"','"+permRow.permissionId+"', "+i+")\""+checkedStatus+" "+disabled+"/>"+permRow.permissionId+"</td><td>"+permRow.permissionName+"</td><td>"+permRow.inheritedFrom+"</td></tr>");
+                }
+                if ($("#rolePermissionsTable tr").length !== 0)
+                {
+                    $("#rolePermissionTableSorter").tablesorter({
+                        headers: {
+                            0: {sorter: 'text'},
+                            1: {sorter: 'text'},
+                            2: {sorter: 'text'}
+                        }
+                    });
+                    $("#rolePermissionTableSorter").trigger("update");
+                    $("#rolePermissionTableSorter").trigger("sorton",[[[0,0]]]);
+                    $("#roleUpdatePermissionsBox").dialog("open");
+                }
+                else
+                    StatusResponse.create(action, "No permissions were found.", false);
+            });
+        }
+        function grant(data)
+        {
+            Filelocker.request("/account/grant_role_permission", "granting permission", data, true, function() {
+                load(data.roleId);
+            });
+        }
+        function revoke(data)
+        {
+            Filelocker.request("/account/revoke_role_permission", "revoking permission", data, true, function() {
+                load(data.roleId);
+            });
+        }
+        function changed(roleId, permissionId, rowId)
+        {
+            var data = {
+                roleId: roleId,
+                permissionId: permissionId
+            };
+            if ($("#checkbox_"+rowId).prop("checked"))
+                grant(data);
+            else
+                revoke(data);
+        }
+
+        return {
+            load:load,
+            changed:changed
+        };
+    }();
+
     Template = function() {
         function load()
         {
@@ -893,6 +963,7 @@ Admin = function() {
         Role:Role,
         Attribute:Attribute,
         Permission:Permission,
+        RolePermission:RolePermission,
         Template:Template
     }
 }();
