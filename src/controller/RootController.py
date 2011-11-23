@@ -165,15 +165,11 @@ class RootController:
         if cherrypy.session.has_key("user") and cherrypy.session.get("user") is not None:
             user = cherrypy.session.get("user")
             if kwargs.has_key('action') and kwargs['action']=="sign":
-                try:
-                    attachedUser = session.query(User).filter(User.id == user.id).one()
-                    attachedUser.date_tos_accept = datetime.datetime.now()
-                    cherrypy.session['user'] = attachedUser.get_copy()
-                    session.commit()
-                    raise cherrypy.HTTPRedirect(config['root_url'])
-                except Exception, e:
-                    logging.error("[%s] [sign_tos] [Failed to sign TOS: %s]" % (user.id, str(e)))
-                    return "Failed to sign TOS: %s. The administrator has been notified of this error." % str(e)
+                attachedUser = session.query(User).filter(User.id == user.id).one()
+                attachedUser.date_tos_accept = datetime.datetime.now()
+                cherrypy.session['user'] = attachedUser.get_copy()
+                session.commit()
+                raise cherrypy.HTTPRedirect(config['root_url'])
             else:
                 currentYear = datetime.date.today().year
                 footerText = str(Template(file=get_template_file('footer_text.tmpl'), searchList=[locals(),globals()]))

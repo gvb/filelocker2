@@ -35,6 +35,7 @@ class ShareController:
                             if (shareUser.email is not None and shareUser.email != ""):
                                 recipients.append(shareUser)
                             session.add(AuditLog(user.id, "Create User Share", "You shared file %s(%s) with user %s" % (flFile.name, flFile.id, shareUser.id), shareUser.id, role.id if role is not None else None, flFile.id))
+                            session.commit()
                         else:
                             fMessages.append("File with ID:%s is already shared with user %s" % (fileId, userId))
                     else:
@@ -104,6 +105,7 @@ class ShareController:
                         else:
                             fMessages.append("You do not have permission to share file with ID: %s" % fileId)
                     sMessages.append("Shared file(s) successfully")
+                    session.add(AuditLog(user.id, "Create Group Share", "You shared %s files with group %s(%s)" % (len(fileIds), group.name, group.id), None, role.id if role is not None else None))
                 else:
                     fMessages.append("You do not have permission to share with this group")
                 session.commit()

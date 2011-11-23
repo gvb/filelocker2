@@ -535,6 +535,7 @@ class FileController(object):
             uploadRequest = session.query(UploadRequest).filter(UploadRequest.id == ticketId).one()
             if uploadRequest.owner_id == user.id or AccountController.user_has_permission(user, "admin"):
                 session.delete(uploadRequest)
+                session.add(AuditLog(user.id, "Delete Upload Request", "You deleted an upload request with ID:%" % uploadRequest.id))
                 session.commit()
                 sMessages.append("Upload request deleted")
             else:
