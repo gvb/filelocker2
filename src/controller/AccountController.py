@@ -610,7 +610,7 @@ class AccountController:
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def get_search_widget(self, context, **kwargs):
-        user, sMessages, fMessages = (cherrypy.session.get("user"), [], [])
+        user, sMessages, fMessages, config = (cherrypy.session.get("user"), [], [], cherrypy.request.app.config['filelocker'])
         groups = session.query(User).filter(User.id==user.id).one().groups
         userShareableAttributes = get_shareable_attributes_by_user(user)
         tpl = Template(file=get_template_file('search_widget.tmpl'), searchList=[locals(),globals()])

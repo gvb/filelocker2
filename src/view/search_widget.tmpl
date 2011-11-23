@@ -25,8 +25,8 @@
             <input type="radio" id="${context}_searchName" name="searchType" onClick="javascript:Account.Search.toggleType('${context}','name')" /><label for="${context}_searchName" style="width: 91px;">Name</label>
         </div>
         <div id="${context}_externalSearchSelector" class="hidden">
-        #if $cherrypy.request.app.config['filelocker']['auth_type'] != "local"
-            <br /><h4>Can't find who you're looking for?</h4><input type="checkbox" name="${context}_externalSearch" id="${context}_externalSearch" onclick="javascript:Account.Search.update('${context}');" /><span onclick="javascript:Utility.check('${context}_externalSearch');javascript:Account.Search.update('${context}');">Search the entire ${cherrypy.request.app.config['filelocker']['org_name']} directory.</span>
+        #if $config['auth_type'] != "local"
+            <br /><h4>Can't find who you're looking for?</h4><input type="checkbox" name="${context}_externalSearch" id="${context}_externalSearch" onclick="javascript:Account.Search.update('${context}');" /><span onclick="javascript:Utility.check('${context}_externalSearch');javascript:Account.Search.update('${context}');">Search the entire $config['org_name'] directory.</span>
         #end if
         </div>
         <div>
@@ -102,7 +102,7 @@
         </form>
     </div>
     #end if
-    #if $context != "messages" and $context != "manage_groups" and len($userShareableAttributes) > 0
+    #if $context != "messages" and $context != "manage_groups" and $len($userShareableAttributes) > 0
     <div id="${context}_attributes_tab">
         <h3>Your Attributes</h3><br/>
         <ul class="menu">

@@ -35,13 +35,12 @@ class RootController:
 
     @cherrypy.expose
     def login(self, **kwargs):
-        msg, errorMessage, authType, rootURL = ( None, None, cherrypy.request.app.config['filelocker']['auth_type'], cherrypy.request.app.config['filelocker']['root_url'])
-        orgURL, orgName = cherrypy.request.app.config['filelocker']['org_url'], cherrypy.request.app.config['filelocker']['org_name']
+        msg, errorMessage, authType, config = ( None, None, cherrypy.request.app.config['filelocker']['auth_type'], cherrypy.request.app.config['filelocker'])
         if kwargs.has_key("msg"):
             msg = kwargs['msg']
         if kwargs.has_key("authType"):
             authType = kwargs['authType']
-        loginPage = rootURL + "/process_login"
+        loginPage = config['root_url'] + "/process_login"
         if msg is not None and str(strip_tags(msg))=="1":
             errorMessage = "Invalid username or password"
         elif msg is not None and str(strip_tags(msg))=="2":
@@ -49,7 +48,7 @@ class RootController:
         elif msg is not None and str(strip_tags(msg))=="3":
             errorMessage = "Password cannot be blank"
         if authType is None:
-            authType = cherrypy.request.app.config['filelocker']['auth_type']
+            authType = config['auth_type']
         if authType == "cas":
             pass
         elif authType == "ldap" or authType == "local":
