@@ -127,7 +127,7 @@ class RootController:
         rootURL = cherrypy.request.app.config['filelocker']['root_url']
         cherrypy.response.headers['Content-Type'] = 'text/css'
         staticDir = os.path.join(rootURL,"static")
-        styleFile = "%s.css" % style
+        styleFile = str("%s.css" % style)
         return str(Template(file=get_template_file(styleFile), searchList=[locals(),globals()]))
 
     @cherrypy.expose

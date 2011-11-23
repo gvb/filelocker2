@@ -1,4 +1,5 @@
 import datetime
+import logging
 import sys
 import time
 import StringIO
@@ -37,7 +38,7 @@ try:
 except Exception, e:
     try:
         from sqlalchemy.databases.mysql import MSBigInteger
-        print "Exeption e: %s" % str(e)
+        logging.debug("Exeption e: %s" % str(e))
         BIGINT_ALIAS = MSBigInteger
     except Exception, e:
         logging.erro("Couldn't setup large integer storage: %s" % str(e))
