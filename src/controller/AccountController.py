@@ -25,7 +25,7 @@ class AccountController:
                 else:
                     raise Exception("Passwords do not match")
             session.add(newUser)
-            session.add(AuditLog(user.id, "Create User", "You created a new user with ID:\"%s\" on the system" % newUser.id, newUser.id))
+            session.add(AuditLog(user.id, "Create User", "%s created a new user with ID:\"%s\" on the system" % (user.id, newUser.id), newUser.id))
             session.commit()
             sMessages.append("Created user %s (%s)" % (newUser.display_name, newUser.id))
         except ValueError:
@@ -117,7 +117,7 @@ class AccountController:
                     group.members.append(member)
                 except sqlalchemy.orm.exc.NoResultFound:
                     fMessages.append("Could not find user with id:\"%s\" to add to group" % str(memberId))
-            session.add(AuditLog(user.id, "Create Group", "You created a group named \"%s\"" % group.name, None))
+            session.add(AuditLog(user.id, "Create Group", "%s created a group named \"%s\"(%s)" % (user.id, group.name, group.id), None))
             session.commit()
         except Exception, e:
             session.rollback()
@@ -136,7 +136,7 @@ class AccountController:
                 if group.owner_id == user.id or user_has_permission(user, "admin"):
                     session.delete(group)
                     sMessages.append("Group %s deleted successfully" % group.name)
-                    session.add(AuditLog(user.id, "Delete Group", "You deleted group \"%s\"" % group.name, None))
+                    session.add(AuditLog(user.id, "Delete Group", "%s deleted group \"%s\"(%s)" % (user.id, group.name, group.id), None))
             session.commit()
         except sqlalchemy.orm.exc.NoResultFound, nrf:
             fMessages.append("Could not find group with ID: %s" % str(groupId))
@@ -156,6 +156,7 @@ class AccountController:
             if group.owner_id == user.id or user_has_permission(user, "admin"):
                 group.name = strip_tags(groupName) if strip_tags(groupName) is not None else group.name
                 group.scope = strip_tags(groupScope.lower()) if groupScope is not None else group.scope
+                session.add(AuditLog(user.id, "Update Group", "Group \"%s\"(%s) has been updated" % (group.name, group.id)))
                 session.commit()
                 sMessages.append("Group updated")
             else:
@@ -180,6 +181,7 @@ class AccountController:
                 for userId in userIds:
                     user = get_user(userId)
                     group.members.remove(user)
+                session.add(AuditLog(user.id, "Update Group", "%s user(s) removed from group \"%s\"(%s)" % (len(userIds), group.name, group.id)))
                 session.commit()
                 sMessages.append("Group members removed successfully")
             else:
@@ -206,6 +208,7 @@ class AccountController:
                 try:
                     user = get_user(userId)
                     group.members.append(user)
+                    session.add(AuditLog(user.id, "Update Group", "User %s added to group \"%s\"(%s)" % (user.id, group.name, group.id)))
                     session.commit()
                 except sqlalchemy.orm.exc.NoResultFound, nrf:
                     fMessages.append("Invalid user ID: %s, not added to group" % str(userId))
@@ -262,7 +265,7 @@ class AccountController:
                 quota = int(quota)
                 newRole = Role(id=roleId, name=roleName, email=email, quota=quota)
                 session.add(newRole)
-                session.add(AuditLog(user.id, "Add Role", "You added a role to the system named \"%s\"" % newRole.name, None))
+                session.add(AuditLog(user.id, "Create Role", "%s added a role to the system named \"%s\"" % (user.id, newRole.name), None))
                 session.commit()
                 sMessages.append("Successfully created a role named %s. Other users who are added to this role may act on behalf of this role now." % str(roleName))
             else:
@@ -294,7 +297,7 @@ class AccountController:
             fMessages.append("Role with ID:%s could not be found to update." % str(roleId))
         except Exception, e:
             session.rollback()
-            logging.error("[%s] [create_role] [Problem creating role: %s]" % (user.id, str(e)))
+            logging.error("[%s] [update_role] [Problem creating role: %s]" % (user.id, str(e)))
             fMessages.append("Problem creating role: %s" % str(e))
         return fl_response(sMessages, fMessages, format)
 
@@ -333,7 +336,7 @@ class AccountController:
                 try:
                     role = session.query(Role).filter(Role.id == roleId).one()
                     session.delete(role)
-                    session.add(AuditLog(user.id, "Delete Role", "You deleted role \"%s\" from the system" % role.name, None))
+                    session.add(AuditLog(user.id, "Delete Role", "%s deleted role \"%s\"(%s) from the system" % (user.id, role.name, role.id), None))
                 except sqlalchemy.orm.exc.NoResultFound:
                     fMessages.append("The role ID: %s does not exist" % str(roleId))
             session.commit()
