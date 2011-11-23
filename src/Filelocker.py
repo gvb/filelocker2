@@ -158,18 +158,21 @@ def daily_maintenance(config):
 
 def update_config(config):
     config['filelocker']['version'] = __version__
-    parameters = session.query(ConfigParameter).all()
-    for parameter in parameters:
-        value = None
-        if parameter.type == "boolean":
-            value = (parameter.value in ['true','yes','True','Yes'])
-        elif parameter.type == "number":
-            value = int(parameter.value)
-        elif parameter.type == "text":
-            value = parameter.value
-        elif parameter.type == "datetime":
-            value = datetime.datetime.strptime(parameter.value, "%m/%d/%Y %H:%M:%S")
-        config['filelocker'][parameter.name] = value
+    try:
+        parameters = session.query(lib.Models.ConfigParameter).all()
+        for parameter in parameters:
+            value = None
+            if parameter.type == "boolean":
+                value = (parameter.value in ['true','yes','True','Yes'])
+            elif parameter.type == "number":
+                value = int(parameter.value)
+            elif parameter.type == "text":
+                value = parameter.value
+            elif parameter.type == "datetime":
+                value = datetime.datetime.strptime(parameter.value, "%m/%d/%Y %H:%M:%S")
+            config['filelocker'][parameter.name] = value
+    except Exception, e:
+        logging.error("Could not update config: %s" % str(e))
 
 
 def midnightloghandler(fn, level, backups):

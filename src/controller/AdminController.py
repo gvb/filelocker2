@@ -6,7 +6,7 @@ from lib.SQLAlchemyTool import session
 import sqlalchemy
 from lib.Models import *
 import FileController
-from lib.Formatters import *
+from lib.Formatters import strip_tags, split_list_sanitized, fl_response, get_template_file
 from Cheetah.Template import Template
 __author__="wbdavis"
 __date__ ="$Sep 25, 2011 9:36:30 PM$"
@@ -60,7 +60,7 @@ class AdminController:
 
     @cherrypy.expose
     @cherrypy.tools.requires_login(permission="admin")
-    def download_user_data(self):
+    def download_user_data(self, **kwargs):
         user = cherrypy.session.get("user")
         try:
             userList = session.query(User).all()

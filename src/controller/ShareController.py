@@ -40,6 +40,7 @@ class ShareController:
                     else:
                         fMessages.append("You do not have permission to share file with ID: %s" % str(flFile.id))
                 if notify:
+                    cherrypy.session.release_lock()
                     for recipient in recipients:
                         try:
                             Mail.notify(get_template_file('share_notification.tmpl'),{'sender':user.email if role is None else role.email,'recipient':recipient.email, 'ownerId':user.id if role is None else role.id, 'ownerName':user.display_name if role is None else role.name, 'sharedFiles':sharedFiles, 'filelockerURL': config['root_url']})
@@ -107,6 +108,7 @@ class ShareController:
                     fMessages.append("You do not have permission to share with this group")
                 session.commit()
                 if notify:
+                    cherrypy.session.release_lock()
                     for groupMember in group.members:
                         try:
                             Mail.notify(get_template_file('share_notification.tmpl'),{'sender':user.email if role is not None else role.email,'recipient':groupMember.email, 'ownerId':user.id, 'ownerName':user.display_name, 'files':sharedFiles, 'filelockerURL': config['root_url']})
@@ -294,6 +296,7 @@ class ShareController:
                     notifyEmailList.append(user.email)
                 else:
                     fMessages.append("You elected to receive a carbon copy of the share notification, however your account does not have an email address set.")
+            cherrypy.session.release_lock()
             for recipient in notifyEmailList:
                 if recipient is not None and recipient != "":
                     Mail.notify(get_template_file('public_share_notification.tmpl'), {'sender':user.email if role is None else role.email, 'recipient':recipient, 'sharedFiles':sharedFiles, 'ownerId':user.id if role is None else role.id, 'ownerName': user.display_name if role is None else role.name, 'shareId':ps.id, 'filelockerURL':config['root_url']})

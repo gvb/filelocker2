@@ -4,7 +4,6 @@ import time
 import StringIO
 import sqlalchemy
 import cherrypy
-sys.path.append("/usr/lib/python2.7/site-packages")
 try:
     import cPickle as pickle
 except ImportError:
