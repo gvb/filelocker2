@@ -53,7 +53,7 @@ class AccountController:
                     else:
                         fMessages.append("Passwords do not match, password has not be reset")
                 sMessages.append("Successfully updated user settings")
-                session.add(AuditLog(user.id, "User Update", "User account \"%s\" has been updated" % userId, userId))
+                session.add(AuditLog(user.id, "Update User", "User account \"%s\" has been updated" % userId, userId))
                 session.commit()
             else:
                  fMessages.append("You do not have permission to update this user")

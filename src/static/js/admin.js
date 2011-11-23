@@ -260,7 +260,6 @@ Admin = function() {
             $("#createUserId").val("");
             $("#createUserFirstName").val("");
             $("#createUserLastName").val("");
-            $("#createUserQuota").val("");
             $("#createUserEmail").val("");
             $("#createUserPassword").val("");
             $("#createUserPasswordConfirm").val("");
