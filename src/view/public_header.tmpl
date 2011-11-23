@@ -8,6 +8,12 @@
     <link rel="stylesheet" href="$config['root_url']/css?style=filelocker" />
     <link rel="stylesheet" href="$config['root_url']/css?style=jquery-ui" />
     <link rel="shortcut icon" href="$config['root_url']/static/images/favicon.ico" />
+    <script>
+        function download(fileId)
+        {
+            window.location.href = window.location.protocol + "//" + window.location.host + "/file/download?fileId=" + fileId + "&_=" + (new Date).getTime();
+        }
+    </script>
 </head>
 <body class="greyBackground">
 <div id="background">

@@ -56,7 +56,7 @@
                             <td></td>
                             <td>
                                 <span class="$file.document_type pseudoLink">
-                                <a href="/file/download?fileId=$file.id">
+                                <a href="javascript:download('$file.id')">
                                 #if len($file.name) > 60
                                     $file.name[0:45]...$file.name[-10:]
                                 #else

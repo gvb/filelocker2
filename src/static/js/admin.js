@@ -149,6 +149,10 @@ Admin = function() {
             load(Defaults.adminConfigTabIndex);
         });
     }
+    function downloadUserData()
+    {
+        window.location.href = window.location.protocol + "//" + window.location.host + "/admin/download_user_data?_=" + $.now();
+    }
     
     User = function() {
         function load(length)
@@ -292,7 +296,8 @@ Admin = function() {
             var data = {
                 userId:userId,
                 startDate:$("#userHistoryStartDate").val(),
-                endDate:$("#userHistoryEndDate").val()
+                endDate:$("#userHistoryEndDate").val(),
+                format:'json'
             }
             Filelocker.request("/history", "loading user history", data, false, function(returnData) {
                 $.each(returnData.data, function() {
@@ -958,6 +963,7 @@ Admin = function() {
         load:load,
         getVaultUsage:getVaultUsage,
         updateConfig:updateConfig,
+        downloadUserData:downloadUserData,
         User:User,
         Role:Role,
         Attribute:Attribute,

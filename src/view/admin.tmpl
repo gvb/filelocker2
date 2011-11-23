@@ -80,7 +80,7 @@
                 #else
                 <li><span id="usersLoadedNow">50</span> of $totalUserCount users loaded. <a href="javascript:User.load($totalUserCount);" title="Load all Filelocker users into the above table.">Load all users...</a></li>
                 #end if
-                <li><div class="itemTitleWide"><span class="excel"><a href="${config['root_url']}/admin/download_user_data" title="Download a CSV file with all Filelocker user data.">Download all Filelocker user data</a></span></div></li>
+                <li><div class="itemTitleWide"><span class="excel"><a href="javascript:Admin.downloadUserData();" title="Download a CSV file with all Filelocker user data.">Download all Filelocker user data</a></span></div></li>
             </ul>
         </div>
 

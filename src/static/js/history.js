@@ -1,7 +1,7 @@
 History = function() {
     function init()
     {
-        $("input.datePast").datepicker({dateFormat: 'mm/dd/yy', maxDate: 0});
+        $("input.datePast").datepicker("destroy").datepicker({dateFormat: 'mm/dd/yy', maxDate: 0});
         if($("#historyTableSorter tr").length>2) // Accounts for header and dotted line row
         {
             $("#historyTableSorter").tablesorter({

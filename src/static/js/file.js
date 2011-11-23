@@ -181,6 +181,10 @@ FLFile = function() {
         else
             StatusResponse.create("deleting files", "Select file(s) for deletion.", false);
     }
+    function download(fileId)
+    {
+        window.location.href = window.location.protocol + "//" + window.location.host + "/file/download?fileId=" + fileId + "&_=" + $.now();
+    }
     function take(fileId)
     {
         $("#takeOwnership_"+fileId).removeClass("take_ownership");
@@ -431,6 +435,7 @@ FLFile = function() {
         init:init,
         load:load,
         del:del,
+        download:download,
         take:take,
         prompt:prompt,
         toggleNotify:toggleNotify,

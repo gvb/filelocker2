@@ -1096,7 +1096,10 @@ ul.menu li {
 .windows            { background:url($staticDir/images/icons/application_xp.png) top left no-repeat; }
 
 /* Audit/History Rows */
-.audit_login, .audit_install_user, .audit_create_user, .audit_delete_user, .audit_create_group, .audit_update_group, .audit_delete_group, .audit_check_in_file, .audit_download_file, .audit_delete_file, .audit_create_private_share, .audit_delete_private_share, .audit_create_private_group_share, .audit_delete_private_group_share, .audit_create_public_share, .audit_delete_public_share, .audit_create_upload_request, .audit_upload_requested_file, .audit_delete_upload_request, .audit_read_message, .audit_delete_message, .audit_sent_email, .audit_failure_to_send_email { 
+.audit_login, .audit_install_user, .audit_create_user, .audit_delete_user, .audit_create_group, .audit_update_group, .audit_delete_group, .audit_check_in_file,
+.audit_download_file, .audit_delete_file, .audit_create_user_share, .audit_delete_user_share, .audit_create_group_share, .audit_delete_group_share,
+.audit_create_public_share, .audit_delete_public_share, .audit_create_upload_request, .audit_upload_requested_file, .audit_delete_upload_request,
+.audit_send_message, .audit_read_message, .audit_delete_message, .audit_sent_email, .audit_failure_to_send_email {
     text-indent: 20px; 
 }
 .audit_login                        { background:url($staticDir/images/icons/user_silhouette.gif) 0px 4px no-repeat; }
@@ -1109,15 +1112,16 @@ ul.menu li {
 .audit_check_in_file                { background:url($staticDir/images/icons/document_add.gif) 0px 4px no-repeat; }
 .audit_download_file                { background:url($staticDir/images/icons/disk.gif) 0px 4px no-repeat; }
 .audit_delete_file                  { background:url($staticDir/images/icons/document_delete.gif) 0px 4px no-repeat; }
-.audit_create_private_share         { background:url($staticDir/images/icons/user_arrow.gif) 0px 4px no-repeat; }
-.audit_delete_private_share         { background:url($staticDir/images/icons/user_arrow_delete.gif) 0px 4px no-repeat; }
-.audit_create_private_group_share   { background:url($staticDir/images/icons/group_arrow.gif) 0px 4px no-repeat; }
-.audit_delete_private_group_share   { background:url($staticDir/images/icons/group_arrow_delete.gif) 0px 4px no-repeat; }
+.audit_create_user_share            { background:url($staticDir/images/icons/user_arrow.gif) 0px 4px no-repeat; }
+.audit_delete_user_share            { background:url($staticDir/images/icons/user_arrow_delete.gif) 0px 4px no-repeat; }
+.audit_create_group_share           { background:url($staticDir/images/icons/group_arrow.gif) 0px 4px no-repeat; }
+.audit_delete_group_share           { background:url($staticDir/images/icons/group_arrow_delete.gif) 0px 4px no-repeat; }
 .audit_create_public_share          { background:url($staticDir/images/icons/world.png) 0px 4px no-repeat; }
 .audit_delete_public_share          { background:url($staticDir/images/icons/world_delete.gif) 0px 4px no-repeat; }
 .audit_create_upload_request        { background:url($staticDir/images/icons/document_alert_add.gif) 0px 4px no-repeat; }
 .audit_upload_requested_file        { background:url($staticDir/images/icons/document_alert.gif) 0px 4px no-repeat; }
 .audit_delete_upload_request        { background:url($staticDir/images/icons/document_alert_delete.gif) 0px 4px no-repeat; }
+.audit_send_message                 { background:url($staticDir/images/icons/email.png) 0px 4px no-repeat; }
 .audit_read_message                 { background:url($staticDir/images/icons/email_open.png) 0px 4px no-repeat; }
 .audit_delete_message               { background:url($staticDir/images/icons/email_delete.gif) 0px 4px no-repeat; }
 .audit_sent_email                   { background:url($staticDir/images/icons/email_go.png) 0px 4px no-repeat; }
