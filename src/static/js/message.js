@@ -1,7 +1,14 @@
 Message = function() {
     function load()
     {
-        Filelocker.request("/message/get_messages", "retrieving messages", "{}", false, function(returnData) {
+        var action = "retrieving messages";
+        Filelocker.request("/message/get_messages", action, "{}", false, function(returnData) {
+            if(returnData.data.length == 0)
+            {
+                StatusResponse.create(action, "No messages found.", false);
+                return false;
+            }
+
             var recvhtml = "";
             $.each(returnData.data[0], function(index, value) {
                 var unreadMessage = (value.viewedDatetime === null) ? "unreadMessage" : "";
@@ -17,7 +24,7 @@ Message = function() {
             {
                 recvhtml = "<tr><td></td><td><i>No messages.</i></td><td></td><td></td><td></td></tr>";
                 $("#messageSubject").html("");
-                $("#messageBody").html("<a href='javascript:Help.view(\"help_message\");' class='helpLink'>Learn more about Filelocker Messaging.</a>");
+                $("#messageBody").html("<a href='javascript:Help.prompt(\"help_message\");' class='helpLink'>Learn more about Filelocker Messaging.</a>");
             }
             $("#messageInboxTable").append(recvhtml);
 
@@ -35,7 +42,7 @@ Message = function() {
             {
                 senthtml = "<tr><td></td><td><i>No messages.</i></td><td></td><td></td><td></td></tr>";
                 $("#messageSubject").html("");
-                $("#messageBody").html("<a href='javascript:Help.view(\"help_message\");' class='helpLink'>Learn more about Filelocker Messaging.</a>");
+                $("#messageBody").html("<a href='javascript:Help.prompt(\"help_message\");' class='helpLink'>Learn more about Filelocker Messaging.</a>");
             }
             $("#messageSentTable").append(senthtml);
 
@@ -48,6 +55,7 @@ Message = function() {
             $("#messagesBoxTitle").addClass("messagesTitle");
             $("#messagesBoxTitle").html("Messages");
             Utility.tipsyfy();
+            return true;
         });
     }
 
@@ -199,6 +207,7 @@ Message = function() {
         create:create,
         read:read,
         del:del,
+        delShare:delShare,
         prompt:prompt,
         promptCreate:promptCreate,
         promptCreateReply:promptCreateReply,

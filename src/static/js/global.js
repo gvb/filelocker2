@@ -228,6 +228,8 @@ Utility = function() {
             $("#confirmBox").html("Are you sure you want to delete this file?");
         else if(func == "Message.del")
             $("#confirmBox").html("Are you sure you want to delete this message?");
+        else if(func == "Message.delShare")
+            $("#confirmBox").html("Are you sure you want to unshare this message?");
         else if(func == "UploadRequest.del")
             $("#confirmBox").html("Are you sure you want to delete this upload request?");
         $("#confirmBox").dialog("open").data("funcData", { "func":func, "params":paramStr }).dialog("open");
