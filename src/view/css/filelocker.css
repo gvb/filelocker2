@@ -1126,7 +1126,6 @@ ul.menu li {
 .audit_read_message                 { background:url($staticDir/images/icons/email_open.png) 0px 4px no-repeat; }
 .audit_delete_message               { background:url($staticDir/images/icons/email_delete.gif) 0px 4px no-repeat; }
 .audit_send_email                   { background:url($staticDir/images/icons/email_go.png) 0px 4px no-repeat; }
-.audit_failure_to_send_email        { background:url($staticDir/images/icons/email_delete.gif) 0px 4px no-repeat; }
 
 /* Table Column Widths */
 .timestampCol                   { width:90px; }

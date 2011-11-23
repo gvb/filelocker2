@@ -474,7 +474,6 @@ Admin = function() {
         {
             $("#createRoleId").val("");
             $("#createRoleName").val("");
-            $("#createRoleQuota").val("");
             $("#createRoleEmail").val("");
             $("#roleCreateBox").dialog("open");
         }
