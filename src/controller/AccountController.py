@@ -566,9 +566,12 @@ class AccountController:
             permission = session.query(Permission).filter(Permission.id == permissionId).one()
             try:
                 flUser = session.query(User).filter(User.id == userId).one()
-                flUser.permissions.remove(permission)
-                session.commit()
-                sMessages.append("User %s no longer has permission %s" % (userId, permissionId))
+                if (flUser.id == user.id and permission.id == "admin"):
+                    fMessages.append("You cannot remove admin permissions from your own account")
+                else:
+                    flUser.permissions.remove(permission)
+                    session.commit()
+                    sMessages.append("User %s no longer has permission %s" % (userId, permissionId))
             except sqlalchemy.orm.exc.NoResultFound:
                 fMessages.append("User with ID: %s does not exist" % str(userId))
         except sqlalchemy.orm.exc.NoResultFound:

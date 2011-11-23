@@ -112,7 +112,7 @@ if __name__ == '__main__':
                  help="reset admin account")
     p.add_option('-f', '--file', dest='datafile', default=os.path.join(os.getcwd(), "FL_Data_Export.xml"),
                  help="store the process id in the given file")
-    p.add_option('-i', '--initialize', dest='initialize',
+    p.add_option('-i', '--initialize', dest='initialize', action="store_true",
                  help="Install - initialize database and set admin account")
     options, args = p.parse_args()
 
