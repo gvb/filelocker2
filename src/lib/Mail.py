@@ -28,8 +28,14 @@ def notify(template, varDict={}):
         server = get_server(config)
         sender = config['smtp_sender']
         tpl = Template(file=template, searchList=[locals(),globals()])
-        smtpresult = server.sendmail(config['smtp_sender'], varDict['recipient'], str(tpl))
-        server.close()
+        try:
+            smtpresult = server.sendmail(config['smtp_sender'], varDict['recipient'], str(tpl))
+            server.close()
+        except Exception, e:
+            server.close()
+            logging.error("[admin] [notify] [Unable to send email to %s: %s]" % (varDict['recipient'],str(e)))
+            raise Exception("Mail server failed to send email to %s. Administrator has been notified." % varDict['recipient'])
+        
 
 def make_unclickable(link):
     return link.replace(".", " . ").replace("http://", "").replace("https://", "")
