@@ -28,7 +28,7 @@
         #for $actionLog in $actionLogList
         <tr>
             <td>$actionLog.date.strftime("%m/%d/%Y %H:%M")</td>
-            <td class="$actionLog.display_class">$actionLog.action</td>
+            <td class="$actionLog.display_class audit_action">$actionLog.action</td>
             <td>$actionLog.message</td>
         </tr>
         #end for

@@ -301,7 +301,7 @@ Admin = function() {
             }
             Filelocker.request("/history", "loading user history", data, false, function(returnData) {
                 $.each(returnData.data, function() {
-                    $("#userHistory").append("<tr><td>"+this.actionDatetime+"</td><td class='"+this.displayClass+"'>"+this.action+"</td><td>"+this.message+"</td></tr>");
+                    $("#userHistory").append("<tr><td>"+this.actionDatetime+"</td><td class='"+this.displayClass+" audit_action'>"+this.action+"</td><td>"+this.message+"</td></tr>");
                 });
                 if($("#userHistory").html() === "")
                     $("#userHistory").append("<tr><td colspan='3'><i>This user has no history of interactions with Filelocker.</i></td></tr>");
