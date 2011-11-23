@@ -299,7 +299,9 @@ class RootController:
         if msg is not None and int(msg) == 2: messages.append("Unable to load upload request")
         if msg is not None and int(msg) == 3: messages.append("Invalid password")
         requestId = strip_tags(requestId)
-        if requestId is not None:
+        if cherrypy.session.has_key("uploadRequest"):
+            raise cherrypy.HTTPRedirect(config['root_url']+'/upload_request_uploader?requestId=%s' % requestId)
+        elif requestId is not None:
             try:
                 uploadRequest = session.query(UploadRequest).filter(UploadRequest.id == requestId).one()
                 if (uploadRequest.type == "single" and uploadRequest.password == None):
@@ -320,6 +322,7 @@ class RootController:
         if requestId is not None:
             if cherrypy.session.has_key("uploadRequest"):
                 if cherrypy.session.get("uploadRequest").id != requestId:
+                    #TODO session check deletion
                     del(cherrypy.session['uploadRequest'])
             if cherrypy.session.has_key("uploadRequest"): #Their requestId and the session uploadTicket's ID matched, let them keep the session
                 uploadRequestId = cherrypy.session.get("uploadRequest").id
@@ -336,17 +339,13 @@ class RootController:
                 except Exception, e:
                     messages.append(str(e))
             elif password is not None and password!="": # if they do have a password and requestId, try to load the whole upload ticket
-                try:
-                    uploadRequest = session.query(UploadRequest).filter(UploadRequest.id == requestId).one()
-                    if Encryption.compare_password_hash(password, uploadRequest.password):
-                        cherrypy.session['uploadRequest'] = uploadRequest.get_copy()
-                        requestOwner = session.query(User).filter(User.id == uploadRequest.owner_id).one()
-                    else:
-                        uploadRequest = None
-                        raise cherrypy.HTTPRedirect(config['root_url']+'/upload_request?requestId=%s&msg=3' % requestId)
-                except Exception, e:
-                    logging.warning("Unable to load upload request: %s" % str(e))
-                    messages.append("Unable to load upload request: %s " % str(e))
+                uploadRequest = session.query(UploadRequest).filter(UploadRequest.id == requestId).one()
+                if Encryption.compare_password_hash(password, uploadRequest.password):
+                    cherrypy.session['uploadRequest'] = uploadRequest.get_copy()
+                    requestOwner = session.query(User).filter(User.id == uploadRequest.owner_id).one()
+                else:
+                    uploadRequest = None
+                    raise cherrypy.HTTPRedirect(config['root_url']+'/upload_request?requestId=%s&msg=3' % requestId)
         elif cherrypy.session.has_key("uploadRequest"):
             uploadRequest = cherrypy.session.get("uploadRequest")
             requestOwner = session.query(User).filter(User.id == uploadRequest.owner_id).one()
