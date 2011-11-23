@@ -135,7 +135,7 @@ Group = function() {
     }
     
     function addGroupIfEnter(event) { if (event.keyCode == 13) create(); }
-    function editGroupIfEnter(event, groupId) { if (event.keyCode == 13) updateGroup(groupId); }
+    function editGroupIfEnter(event, groupId) { if (event.keyCode == 13) update(groupId); }
     function rowClick(groupId)
     {
         $(".menuGroups").each(function() { $(this).addClass("hidden");}); // Hide other menus

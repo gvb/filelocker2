@@ -1096,7 +1096,7 @@ ul.menu li {
 .windows            { background:url($staticDir/images/icons/application_xp.png) top left no-repeat; }
 
 /* Audit/History Rows */
-.audit_login, .audit_install_user, .audit_create_user, .audit_delete_user, .audit_create_group, .audit_update_group, .audit_delete_group, .audit_check_in_file,
+.audit_login, .audit_install_user, .audit_create_user, .audit_update_user, .audit_delete_user, .audit_create_group, .audit_update_group, .audit_delete_group, .audit_check_in_file,
 .audit_download_file, .audit_delete_file, .audit_create_user_share, .audit_delete_user_share, .audit_create_group_share, .audit_delete_group_share,
 .audit_create_public_share, .audit_delete_public_share, .audit_create_upload_request, .audit_upload_requested_file, .audit_delete_upload_request,
 .audit_send_message, .audit_read_message, .audit_delete_message, .audit_send_email, .audit_failure_to_send_email {
@@ -1105,6 +1105,7 @@ ul.menu li {
 .audit_login                        { background:url($staticDir/images/icons/user_silhouette.gif) 0px 4px no-repeat; }
 .audit_install_user                 { background:url($staticDir/images/icons/user.gif) 0px 4px no-repeat; }
 .audit_create_user                  { background:url($staticDir/images/icons/user_add.gif) 0px 4px no-repeat; }
+.audit_update_user                  { background:url($staticDir/images/icons/user_edit.gif) 0px 4px no-repeat; }
 .audit_delete_user                  { background:url($staticDir/images/icons/user_delete.gif) 0px 4px no-repeat; }
 .audit_create_group                 { background:url($staticDir/images/icons/group_add.gif) 0px 4px no-repeat; }
 .audit_update_group                 { background:url($staticDir/images/icons/group_edit.gif) 0px 4px no-repeat; }
