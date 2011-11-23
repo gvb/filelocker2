@@ -482,6 +482,26 @@ class AccountController:
 
     @cherrypy.expose
     @cherrypy.tools.requires_login(permission="admin")
+    def get_role_permissions(self, roleId, format="json", **kwargs):
+        sMessages, fMessages, permissionData = ([], [], [])
+        try:
+            roleId = strip_tags(roleId)
+            role = session.query(Role).filter(Role.id == roleId).one()
+            permissions = session.query(Permission).all()
+            for permission in permissions:
+                if permission in role.permissions:
+                    permissionData.append({'permissionId': permission.id, 'permissionName': permission.name, 'inheritedFrom': "role"})
+                else:
+                    permissionData.append({'permissionId': permission.id, 'permissionName': permission.name, 'inheritedFrom': ""})
+        except sqlalchemy.orm.exc.NoResultFound:
+            fMessages.append("The role ID: %s does not exist" % str(roleId))
+        except Exception, e:
+            logging.error("[%s] [get_role_permissions] [Couldn't get permissions for role %s: %s]" % (user.id, roleId, str(e)))
+            fMessages.append("Could not get permissions: %s" % str(e))
+        return fl_response(sMessages, fMessages, format, data=permissionData)
+
+    @cherrypy.expose
+    @cherrypy.tools.requires_login(permission="admin")
     def get_permissions(self, format="json", **kwargs):
         user, sMessages, fMessages, permissionData = (cherrypy.session.get("user"),[], [], [])
         try:
@@ -499,6 +519,7 @@ class AccountController:
     def grant_user_permission(self, userId, permissionId, format="json", **kwargs):
         user, sMessages, fMessages = (cherrypy.session.get("user"), [], [])
         try:
+            userId = strip_tags(userId)
             permission = session.query(Permission).filter(Permission.id == permissionId).one()
             try:
                 flUser = session.query(User).filter(User.id == userId).one()
@@ -513,6 +534,28 @@ class AccountController:
             session.rollback()
             logging.error("[%s] [grant_user_permission] [Problem granting user a permission: %s]" % (user.id, str(e)))
             fMessages.append("Problem granting a user permission: %s" % str(e))
+        return fl_response(sMessages, fMessages, format)
+
+    @cherrypy.expose
+    @cherrypy.tools.requires_login(permission="admin")
+    def grant_role_permission(self, roleId, permissionId, format="json", **kwargs):
+        user, sMessages, fMessages = (cherrypy.session.get("user"), [], [])
+        try:
+            roleId = strip_tags(roleId)
+            permission = session.query(Permission).filter(Permission.id == permissionId).one()
+            try:
+                role = session.query(Role).filter(Role.id == roleId).one()
+                role.permissions.append(permission)
+                session.commit()
+                sMessages.append("Role %s granted permission %s" % (roleId, permissionId))
+            except sqlalchemy.orm.exc.NoResultFound:
+                fMessages.append("Role with ID: %s does not exist" % str(roleId))
+        except sqlalchemy.orm.exc.NoResultFound:
+            fMessages.append("Permission with ID: %s does not exist" % str(permissionId))
+        except Exception, e:
+            session.rollback()
+            logging.error("[%s] [grant_role_permission] [Problem granting role a permission: %s]" % (user.id, str(e)))
+            fMessages.append("Problem granting a role permission: %s" % str(e))
         return fl_response(sMessages, fMessages, format)
 
     @cherrypy.expose
@@ -534,6 +577,28 @@ class AccountController:
             session.rollback()
             logging.error("[%s] [revoke_user_permission] [Problem revoking a user permission: %s]" % (user.id, str(e)))
             fMessages.append("Problem revoking a user permission: %s" % str(e))
+        return fl_response(sMessages, fMessages, format)
+
+    @cherrypy.expose
+    @cherrypy.tools.requires_login()
+    def revoke_role_permission(self, roleId, permissionId, format="json", **kwargs):
+        user, sMessages, fMessages = (cherrypy.session.get("user"), [], [])
+        try:
+            roleId = strip_tags(roleId)
+            permission = session.query(Permission).filter(Permission.id == permissionId).one()
+            try:
+                role = session.query(Role).filter(Role.id == roleId).one()
+                role.permissions.remove(permission)
+                session.commit()
+                sMessages.append("Role %s no longer has permission %s" % (roleId, permissionId))
+            except sqlalchemy.orm.exc.NoResultFound:
+                fMessages.append("Role with ID: %s does not exist" % str(roleId))
+        except sqlalchemy.orm.exc.NoResultFound:
+            fMessages.append("Permission with ID: %s does not exist" % str(permissionId))
+        except Exception, e:
+            session.rollback()
+            logging.error("[%s] [revoke_role_permission] [Problem revoking a role permission: %s]" % (user.id, str(e)))
+            fMessages.append("Problem revoking a role permission: %s" % str(e))
         return fl_response(sMessages, fMessages, format)
 
     @cherrypy.expose
