@@ -45,7 +45,7 @@ class ShareController:
                     for recipient in recipients:
                         try:
                             Mail.notify(get_template_file('share_notification.tmpl'),{'sender':user.email if role is None else role.email,'recipient':recipient.email, 'ownerId':user.id if role is None else role.id, 'ownerName':user.display_name if role is None else role.name, 'sharedFiles':sharedFiles, 'filelockerURL': config['root_url']})
-                            session.add(AuditLog(user.id, "Sent Email", "%s(%s) has been notified via email that you have shared a file with him or her." % (recipient.display_name, recipient.id), None, role.id if role is not None else None))
+                            session.add(AuditLog(user.id, "Send Email", "%s(%s) has been notified via email that you have shared a file with him or her." % (recipient.display_name, recipient.id), None, role.id if role is not None else None))
                         except Exception, e:
                             session.rollback()
                             fMessages.append("Problem sending email notification to %s: %s" % (recipient.display_name, str(e)))
@@ -114,7 +114,7 @@ class ShareController:
                     for groupMember in group.members:
                         try:
                             Mail.notify(get_template_file('share_notification.tmpl'),{'sender':user.email if role is not None else role.email,'recipient':groupMember.email, 'ownerId':user.id, 'ownerName':user.display_name, 'sharedFiles':sharedFiles, 'filelockerURL': config['root_url']})
-                            session.add(AuditLog(user.id, "Sent Email", "%s has been notified via email that you have shared a file with him or her." % (groupMember.email), None, role.id if role is not None else None))
+                            session.add(AuditLog(user.id, "Send Email", "%s has been notified via email that you have shared a file with him or her." % (groupMember.email), None, role.id if role is not None else None))
                             session.commit()
                         except Exception, e:
                             session.rollback()
@@ -123,7 +123,7 @@ class ShareController:
                         if (user.email is not None and user.email != ""):
                             try:
                                 Mail.notify(get_template_file('share_notification.tmpl'),{'sender':user.email if role is None else role.email,'recipient':user.email if role is None else role.email, 'ownerId':user.id if role is None else role.id, 'ownerName':user.display_name if role is not None else role.name, 'files':sharedFiles, 'filelockerURL': config['root_url']})
-                                session.add(AuditLog(user.id, "Sent Email", "You have been carbon copied via email on the notification that was sent out as a result of your file share."))
+                                session.add(AuditLog(user.id, "Send Email", "You have been carbon copied via email on the notification that was sent out as a result of your file share."))
                                 session.commit()
                             except Exception, e:
                                 session.rollback()
@@ -303,7 +303,7 @@ class ShareController:
                 if recipient is not None and recipient != "":
                     Mail.notify(get_template_file('public_share_notification.tmpl'), {'sender':user.email if role is None else role.email, 'recipient':recipient, 'sharedFiles':sharedFiles, 'ownerId':user.id if role is None else role.id, 'ownerName': user.display_name if role is None else role.name, 'shareId':ps.id, 'filelockerURL':config['root_url']})
             if len(notifyEmailList) > 0:
-                session.add(AuditLog(user.id, "Sent Email", "Email notifications about a public share were sent to the following addresses: %s" % ",".join(notifyEmailList), None, role.id if role is not None else None))
+                session.add(AuditLog(user.id, "Send Email", "Email notifications about a public share were sent to the following addresses: %s" % ",".join(notifyEmailList), None, role.id if role is not None else None))
             session.commit()
             shareId = ps.id
             sMessages.append("Files shared successfully")
