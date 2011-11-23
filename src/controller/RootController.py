@@ -216,7 +216,6 @@ class RootController:
     def history(self, userId=None, startDate=None, endDate=None, logAction=None, format="html", **kwargs):
         sMessages, fMessages, user, role= ([],[],cherrypy.session.get("user"),cherrypy.session.get("current_role"))
         config = cherrypy.request.app.config['filelocker']
-        print "startdate: %s endDate: %s" % (startDate, endDate)
         userId = strip_tags(userId) if strip_tags(userId) != None else user.id
         if (userId != user.id and AccountController.user_has_permission(user, "admin")==False):
             raise cherrypy.HTTPError(403)
@@ -232,16 +231,19 @@ class RootController:
             else:
                 startDateFormatted = sevenDaysAgo
             if endDate is not None:
-                endDateFormatted = datetime.datetime(*time.strptime(strip_tags(endDate), "%m/%d/%Y")[0:5])
+                endDateFormatted = datetime.datetime(*time.strptime(strip_tags(endDate), "%m/%d/%Y")[0:5]) + datetime.timedelta(days=1)
             else:
                 endDateFormatted = today + datetime.timedelta(days=1)
             actionLogListAtt = session.query(AuditLog).filter(and_(AuditLog.date >= startDateFormatted, AuditLog.date <= endDateFormatted)).filter(or_(AuditLog.initiator_user_id==userId, AuditLog.affected_user_id==userId))
 
-            if logAction is None or logAction == "":
+            if logAction is None or logAction == "" or logAction == "all_minus_login":
                 logAction = "all_minus_login"
                 actionLogListAtt = actionLogListAtt.filter(AuditLog.action != "Login")
+            else:
+                logAction = strip_tags(logAction)
+                actionLogListAtt = actionLogListAtt.filter(AuditLog.action == logAction)
 
-            for log in actionLogListAtt:
+            for log in actionLogListAtt.all():
                 log.display_class = "%s_%s" % ("audit", log.action.replace(" ", "_").lower())
                 log.display_class = re.sub('_\(.*?\)', '', log.display_class) # Removes (You) and (Recipient) from Read Message actions
                 actionLogList.append(log)
