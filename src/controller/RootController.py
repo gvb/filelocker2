@@ -196,7 +196,7 @@ class RootController:
         currentUploads = len(cherrypy.file_uploads)
         logsFile = open(cherrypy.config["log.error_file"])
         logs = tail(logsFile, 50)
-        attributes = ShareController.get_user_shareable_attributes(user)
+        attributes = AccountController.get_shareable_attributes_by_user(user)
         currentUserIds = []
         sessionCache = {}
         sessionCache = cherrypy.session.cache
@@ -273,7 +273,7 @@ class RootController:
             attributeFilesDict = ShareController.get_files_shared_with_user_by_attribute(user)
             sharedFiles = ShareController.get_files_shared_with_user(user)
         else:
-            userShareableAttributes = AccountController.get_role_shareable_attributes(role)
+            userShareableAttributes = AccountController.get_shareable_attributes_by_role(role)
         tpl = Template(file=get_template_file('files.tmpl'), searchList=[locals(),globals()])
         return str(tpl)
 
