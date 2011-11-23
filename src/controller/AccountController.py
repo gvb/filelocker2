@@ -53,7 +53,7 @@ class AccountController:
                     else:
                         fMessages.append("Passwords do not match, password has not be reset")
                 sMessages.append("Successfully updated user settings")
-                session.add(AuditLog(user.id, "Update User", "User account \"%s\" has been updated" % userId, userId))
+                session.add(AuditLog(user.id, "Update User", "%s updated user account \"%s\"" % (user.id, userId), userId))
                 session.commit()
             else:
                  fMessages.append("You do not have permission to update this user")
@@ -288,7 +288,7 @@ class AccountController:
             existingRole.name = strip_tags(roleName)
             existingRole.email = strip_tags(email)
             existingRole.quota = int(quota)
-            session.add(AuditLog(user.id, 'Update Role', "Role \"%s\"(%s) has been updated" % (existingRole.name, existingRole.id), None, existingRole.id))
+            session.add(AuditLog(user.id, 'Update Role', "%s updated role \"%s\"(%s)" % (user.id, existingRole.name, existingRole.id), None, existingRole.id))
             session.commit()
             sMessages.append("Successfully updated a role named %s." % str(roleName))
         except ValueError:
