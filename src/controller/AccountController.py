@@ -285,7 +285,7 @@ class AccountController:
             existingRole.name = strip_tags(roleName)
             existingRole.email = strip_tags(email)
             existingRole.quota = int(quota)
-            session.add(user.id, 'Update Role', "Role \"%s\"(%s) has been updated" % (existingRole.name, existingRole.id))
+            session.add(AuditLog(user.id, 'Update Role', "Role \"%s\"(%s) has been updated" % (existingRole.name, existingRole.id), None, existingRole.id))
             session.commit()
             sMessages.append("Successfully updated a role named %s." % str(roleName))
         except ValueError:
