@@ -426,23 +426,6 @@ def get_files_shared_with_user(user):
                 sharedFiles.append(share.flFile)
     return sharedFiles
 
-def get_user_shareable_attributes(user):
-    """
-    This function gets the attributes that a user has permission to share with.
-
-    Examples of this would be a teacher for a class being able to share with all users
-    who have the class as an attribute"""
-    attributeList = []
-    allAttributes = session.query(Attribute).all()
-    if AccountController.user_has_permission(user, "admin"):
-        attributeList = allAttributes
-    else:
-        for attribute in allAttributes:
-            attributePermissionId = "(attr)%s" % attribute.attributeId
-            if AccountController.user_has_permission(user, attributePermissionId):
-                attributeList.append(attribute)
-    return attributeList
-
 def get_files_shared_with_user_by_attribute(user):
     """Builds a dictionary keyed by attribute id with values that are lists of files shared by this attribute"""
     attributeShareDictionary = {}

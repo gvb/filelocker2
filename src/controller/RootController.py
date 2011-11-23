@@ -216,6 +216,7 @@ class RootController:
     def history(self, userId=None, startDate=None, endDate=None, logAction=None, format="html", **kwargs):
         sMessages, fMessages, user, role= ([],[],cherrypy.session.get("user"),cherrypy.session.get("current_role"))
         config = cherrypy.request.app.config['filelocker']
+        print "startdate: %s endDate: %s" % (startDate, endDate)
         userId = strip_tags(userId) if strip_tags(userId) != None else user.id
         if (userId != user.id and AccountController.user_has_permission(user, "admin")==False):
             raise cherrypy.HTTPError(403)
@@ -234,7 +235,7 @@ class RootController:
                 endDateFormatted = datetime.datetime(*time.strptime(strip_tags(endDate), "%m/%d/%Y")[0:5])
             else:
                 endDateFormatted = today + datetime.timedelta(days=1)
-            actionLogListAtt = session.query(AuditLog).filter(and_(AuditLog.date >= startDateFormatted, AuditLog.date <= endDateFormatted))
+            actionLogListAtt = session.query(AuditLog).filter(and_(AuditLog.date >= startDateFormatted, AuditLog.date <= endDateFormatted)).filter(or_(AuditLog.initiator_user_id==userId, AuditLog.affected_user_id==userId))
 
             if logAction is None or logAction == "":
                 logAction = "all_minus_login"
@@ -268,11 +269,11 @@ class RootController:
         if role is None:
             uploadRequests = session.query(UploadRequest).filter(UploadRequest.owner_id==user.id).all()
             userFiles = self.file.get_user_file_list(format="list")
-            userShareableAttributes = ShareController.get_user_shareable_attributes(user)
+            userShareableAttributes = AccountController.get_shareable_attributes_by_user(user)
             attributeFilesDict = ShareController.get_files_shared_with_user_by_attribute(user)
             sharedFiles = ShareController.get_files_shared_with_user(user)
         else:
-            userShareableAttributes = ShareController.get_role_shareable_attributes(role)
+            userShareableAttributes = AccountController.get_role_shareable_attributes(role)
         tpl = Template(file=get_template_file('files.tmpl'), searchList=[locals(),globals()])
         return str(tpl)
 
