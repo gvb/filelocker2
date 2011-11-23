@@ -5,7 +5,7 @@ import datetime
 import time
 import json
 import cherrypy
-from lib.Models import *
+
 JSON_WRITE = None
 
 try: #This bit here is to handle backwards compatibility with python-json modules. The .write and .dumps methods work analagously as far as I can tell
@@ -33,15 +33,16 @@ def get_template_file(fileName):
 
 class FL_Object_Encoder(json.JSONEncoder):
     def default(self, obj):
-        if isinstance(obj, User):
+        import Models
+        if isinstance(obj, Models.User):
             return obj.get_dict()
-        elif isinstance(obj, Group):
+        elif isinstance(obj, Models.Group):
             return obj.get_dict()
-        elif isinstance(obj, File):
+        elif isinstance(obj, Models.File):
             return obj.get_dict()
-        elif isinstance(obj, Role):
+        elif isinstance(obj, Models.Role):
             return obj.get_dict()
-        elif isinstance(obj, PublicShare):
+        elif isinstance(obj, Models.PublicShare):
             return obj.get_dict()
         return json.JSONEncoder.default(self, obj)
 

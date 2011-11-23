@@ -32,7 +32,8 @@ class ShareController:
                             flFile.user_shares.append(UserShare(user_id=userId, file_id=fileId))
                             session.commit()
                             sharedFiles.append(flFile)
-                            recipients.append(shareUser)
+                            if (shareUser.email is not None and shareUser.email != ""):
+                                recipients.append(shareUser)
                             session.add(AuditLog(user.id, "Create User Share", "You shared file %s(%s) with user %s" % (flFile.name, flFile.id, shareUser.id), shareUser.id, role.id if role is not None else None, flFile.id))
                         else:
                             fMessages.append("File with ID:%s is already shared with user %s" % (fileId, userId))
@@ -115,13 +116,16 @@ class ShareController:
                             session.rollback()
                             fMessages.append("Problem sending email notification to %s: %s" % (groupMember.display_name, str(e)))
                     if cc:
-                        try:
-                            Mail.notify(get_template_file('share_notification.tmpl'),{'sender':user.email if role is None else role.email,'recipient':user.email if role is None else role.email, 'ownerId':user.id if role is None else role.id, 'ownerName':user.display_name if role is not None else role.name, 'files':sharedFiles, 'filelockerURL': config['root_url']})
-                            session.add(AuditLog(user.id, "Sent Email", "You have been carbon copied via email on the notification that was sent out as a result of your file share."))
-                            session.commit()
-                        except Exception, e:
-                            session.rollback()
-                            fMessages.append("Problem carbon copying email notification: %s" % (str(e)))
+                        if (user.email is not None and user.email != ""):
+                            try:
+                                Mail.notify(get_template_file('share_notification.tmpl'),{'sender':user.email if role is None else role.email,'recipient':user.email if role is None else role.email, 'ownerId':user.id if role is None else role.id, 'ownerName':user.display_name if role is not None else role.name, 'files':sharedFiles, 'filelockerURL': config['root_url']})
+                                session.add(AuditLog(user.id, "Sent Email", "You have been carbon copied via email on the notification that was sent out as a result of your file share."))
+                                session.commit()
+                            except Exception, e:
+                                session.rollback()
+                                fMessages.append("Problem carbon copying email notification: %s" % (str(e)))
+                        else:
+                            fMessages.append("You elected to receive a carbon copy of the share notification, however your account does not have an email address set.")
         except Exception, e:
             session.rollback
             fMessages.append(str(e))
@@ -286,9 +290,13 @@ class ShareController:
             session.add(AuditLog(user.id, "Create Public Share", "%s file(s) publicly shared." % len(ps.files), None, role.id if role is not None else None))
             notifyEmailList = split_list_sanitized(notifyEmails)
             if cc:
-                notifyEmailList.append(user.email)
+                if (user.email is not None and user.email != ""):
+                    notifyEmailList.append(user.email)
+                else:
+                    fMessages.append("You elected to receive a carbon copy of the share notification, however your account does not have an email address set.")
             for recipient in notifyEmailList:
-                Mail.notify(get_template_file('public_share_notification.tmpl'), {'sender':user.email if role is None else role.email, 'recipient':recipient, 'sharedFiles':sharedFiles, 'ownerId':user.id if role is None else role.id, 'ownerName': user.display_name if role is None else role.name, 'shareId':ps.id, 'filelockerURL':config['root_url']})
+                if recipient is not None and recipient != "":
+                    Mail.notify(get_template_file('public_share_notification.tmpl'), {'sender':user.email if role is None else role.email, 'recipient':recipient, 'sharedFiles':sharedFiles, 'ownerId':user.id if role is None else role.id, 'ownerName': user.display_name if role is None else role.name, 'shareId':ps.id, 'filelockerURL':config['root_url']})
             if len(notifyEmailList) > 0:
                 session.add(AuditLog(user.id, "Email Sent", "Email notifications about a public share were sent to the following addresses: %s" % ",".join(notifyEmailList), None, role.id if role is not None else None))
             session.commit()
