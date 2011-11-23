@@ -231,10 +231,10 @@ class RootController:
             else:
                 startDateFormatted = sevenDaysAgo
             if endDate is not None:
-                endDateFormatted = datetime.datetime(*time.strptime(strip_tags(endDate), "%m/%d/%Y")[0:5]) + datetime.timedelta(days=1)
+                endDateFormatted = datetime.datetime(*time.strptime(strip_tags(endDate), "%m/%d/%Y")[0:5])
             else:
-                endDateFormatted = today + datetime.timedelta(days=1)
-            actionLogListAtt = session.query(AuditLog).filter(and_(AuditLog.date >= startDateFormatted, AuditLog.date <= endDateFormatted)).filter(or_(AuditLog.initiator_user_id==userId, AuditLog.affected_user_id==userId))
+                endDateFormatted = today
+            actionLogListAtt = session.query(AuditLog).filter(and_(AuditLog.date >= startDateFormatted, AuditLog.date <= (endDateFormatted + datetime.timedelta(days=1)))).filter(or_(AuditLog.initiator_user_id==userId, AuditLog.affected_user_id==userId))
 
             if logAction is None or logAction == "" or logAction == "all_minus_login":
                 logAction = "all_minus_login"
