@@ -111,7 +111,7 @@ class ShareController:
                     cherrypy.session.release_lock()
                     for groupMember in group.members:
                         try:
-                            Mail.notify(get_template_file('share_notification.tmpl'),{'sender':user.email if role is not None else role.email,'recipient':groupMember.email, 'ownerId':user.id, 'ownerName':user.display_name, 'files':sharedFiles, 'filelockerURL': config['root_url']})
+                            Mail.notify(get_template_file('share_notification.tmpl'),{'sender':user.email if role is not None else role.email,'recipient':groupMember.email, 'ownerId':user.id, 'ownerName':user.display_name, 'sharedFiles':sharedFiles, 'filelockerURL': config['root_url']})
                             session.add(AuditLog(user.id, "Sent Email", "%s has been notified via email that you have shared a file with him or her." % (groupMember.email), None, role.id if role is not None else None))
                             session.commit()
                         except Exception, e:

@@ -69,7 +69,7 @@ class AdminController:
                 mycsv = mycsv + str(flUser.id) + ", " + str(flUser.first_name) + ", " + str(flUser.last_name) + ", " + str(flUser.email) + "\n"
             response = cherrypy.response
             response.headers['Cache-Control'] = "no-cache"
-            response.headers['Content-Disposition'] = '%s; filename="%s"' % ("attachment", "FileockerUsers.csv")
+            response.headers['Content-Disposition'] = '%s; filename="%s"' % ("attachment", "FilelockerUsers.csv")
             response.headers['Content-Type'] = "application/x-download"
             response.headers['Pragma']="no-cache"
             response.body = mycsv

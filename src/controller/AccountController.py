@@ -16,7 +16,7 @@ class AccountController:
     @cherrypy.expose
     @cherrypy.tools.requires_login(permission="admin")
     def create_user(self, userId, firstName, lastName, email, quota, format="json", **kwargs):
-        sMessages, fMessages = ([], [])
+        user, sMessages, fMessages = (cherrypy.session.get("user"), [], [])
         try:
             newUser = User(id=strip_tags(userId), first_name=strip_tags(firstName), last_name=strip_tags(lastName), email=strip_tags(email), quota=int(quota))
             if kwargs.has_key("password") and kwargs.has_key("confirmPassword"):
