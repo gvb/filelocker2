@@ -297,6 +297,7 @@ class RootController:
         messages, uploadRequest, requestId, config = [], None, strip_tags(requestId), cherrypy.request.app.config['filelocker']
         if msg is not None and int(msg) == 1: messages.append("You must supply a valid ID and password to upload files for this request")
         if msg is not None and int(msg) == 2: messages.append("Unable to load upload request")
+        if msg is not None and int(msg) == 3: messages.append("Invalid password")
         requestId = strip_tags(requestId)
         if requestId is not None:
             try:
@@ -340,6 +341,9 @@ class RootController:
                     if Encryption.compare_password_hash(password, uploadRequest.password):
                         cherrypy.session['uploadRequest'] = uploadRequest.get_copy()
                         requestOwner = session.query(User).filter(User.id == uploadRequest.owner_id).one()
+                    else:
+                        uploadRequest = None
+                        raise cherrypy.HTTPRedirect(config['root_url']+'/upload_request?requestId=%s&msg=3' % requestId)
                 except Exception, e:
                     logging.warning("Unable to load upload request: %s" % str(e))
                     messages.append("Unable to load upload request: %s " % str(e))
