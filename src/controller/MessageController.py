@@ -5,10 +5,10 @@ from lib import Encryption
 from Cheetah.Template import Template
 from Cheetah.Filters import WebSafe
 from lib.SQLAlchemyTool import session
-from sqlalchemy import *
+import sqlalchemy
 
 import AccountController
-from lib.Encryption import *
+from lib import Encryption
 from lib.Formatters import *
 from lib.Models import *
 __author__="wbdavis"
@@ -38,7 +38,7 @@ class MessageController:
                 rUser = AccountController.get_user(recipientId)
                 if rUser is not None:
                     newMessage.message_shares.append(MessageShare(message_id=newMessage.id, recipient_id=rUser.id))
-                    session.add(AuditLog(user.id, "Send Message", "You sent a message with subject: \"%s\" to %s(%s)" % (newMessage.subject, rUser.display_name, rUser.id), rUser.id, None))
+                    session.add(AuditLog(user.id, "Send Message", "%s sent a message with subject: \"%s\" to %s(%s)" % (user.id, newMessage.subject, rUser.display_name, rUser.id), rUser.id, None))
                 else:
                     fMessages.append("Could not send to user with ID:%s - Invalid user ID" % str(recipientId))
             session.commit()
@@ -59,7 +59,7 @@ class MessageController:
                 rUser = AccountController.get_user(recipientId)
                 if rUser is not None:
                     session.add(MessageShare(message_id=newMessage.id, recipient_id=rUser.id))
-                    session.add(AuditLog(user.id, "Send Message", "You sent a message with subject: \"%s\" to %s(%s)" % (newMessage.subject, rUser.display_name, rUser.id), rUser.id, None))
+                    session.add(AuditLog(user.id, "Send Message", "%s sent a message with subject: \"%s\" to %s(%s)" % (user.id, newMessage.subject, rUser.display_name, rUser.id), rUser.id, None))
                 else:
                     fMessages.append("Could not send to user with ID:%s - Invalid user ID" % str(recipientId))
             session.commit()
@@ -109,15 +109,14 @@ class MessageController:
     def read_message(self, messageId, format="json", **kwargs):
         user, sMessages, fMessages = cherrypy.session.get("user"), [], []
         try:
-            message = session.query(MessageShare).filter(MessageShare.message_id == messageId).one()
-            if message.recipient_id == user.id:
-                message.date_viewed = datetime.datetime.now()
-                session.add(AuditLog(user.id, "Your Read a Message", "You read message with subject \"%s\"" % (message.subject)))
-                session.add(AuditLog(message.owner_id, "Message Read", "User %s has read your message with subject: %s" % (user.id, message.message.subject), None))
+            messageShare = session.query(MessageShare).filter(MessageShare.message_id == messageId).one()
+            if messageShare.recipient_id == user.id:
+                messageShare.date_viewed = datetime.datetime.now()
+                session.add(AuditLog(user.id, "Read Message", "%s read message sent by %s with subject \"%s\"" % (user.id, messageShare.message.owner_id, messageShare.message.subject), messageShare.message.owner_id))
             else:
                 fMessages.append("You do not have permission to read this message")
             session.commit()
-        except sqlalchemy.exc.orm.NoResultFound, nrf:
+        except sqlalchemy.orm.exc.NoResultFound:
             fMessages.append("Invalid message id")
         except Exception, e:
             logging.error("[%s] [read_message] [Could not mark message as read: %s]" % (user.id, str(e)))
@@ -170,13 +169,14 @@ def decrypt_message(message):
         path = os.path.join(config['vault'],"m"+str(message.id))
         bodyfile = open(path, 'rb')
         salt = bodyfile.read(16)
-        decrypter = new_decrypter(message.encryption_key, salt)
+        decrypter = Encryption.new_decrypter(message.encryption_key, salt)
         endOfFile = False
         readData = bodyfile.read(1024 * 8)
         data = decrypter.decrypt(readData)
         #If the data is less than one block long, just process it and send it out
         if len(data) < (1024*8):
-            padding = int(str(data[-1:]),16) 
+            padding = int(str(data[-1:]),16)
+
             #A 0 represents that the file had a multiple of 16 bytes, and 16 bytes of padding were added
             if padding==0: 
                 padding=16
@@ -209,10 +209,9 @@ def decrypt_message(message):
 def encrypt_message(message):
     config = cherrypy.request.app.config['filelocker']
     try:
-        print "Encrypting message %s " % os.path.join(config['vault'],"m%s" % str(message.id))
-        message.encryption_key = generatePassword()
+        message.encryption_key = Encryption.generatePassword()
         f = open(os.path.join(config['vault'],"m%s" % str(message.id)), "wb")
-        encrypter, salt = new_encrypter(message.encryption_key)
+        encrypter, salt = Encryption.new_encrypter(message.encryption_key)
         padding, endOfFile = (0, False)
         newFile = StringIO.StringIO(message.body)
         f.write(salt)
