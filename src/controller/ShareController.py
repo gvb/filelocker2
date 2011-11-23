@@ -37,8 +37,6 @@ class ShareController:
                             if role is not None: session.add(AuditLog(user.id, "Create User Share", "Role %s shared file %s(%s) with %s" % (role.id, flFile.name, flFile.id, shareUser.id), shareUser.id, role.id))
                             else: session.add(AuditLog(user.id, "Create User Share", "%s shared file %s(%s) with %s" % (user.id, flFile.name, flFile.id, shareUser.id), shareUser.id))
                             session.commit()
-                        else:
-                            fMessages.append("File with ID:%s is already shared with user %s" % (fileId, userId))
                     else:
                         fMessages.append("You do not have permission to share file with ID: %s" % str(flFile.id))
                 if notify:

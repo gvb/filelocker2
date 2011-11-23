@@ -301,6 +301,8 @@ class RootController:
         if requestId is not None:
             try:
                 uploadRequest = session.query(UploadRequest).filter(UploadRequest.id == requestId).one()
+                if (uploadRequest.reuse == "single" and uploadRequest.password == None):
+                    raise cherrypy.HTTPRedirect(config['root_url']+'/upload_request_uploader?requestId=%s' % requestId)
             except sqlalchemy.orm.exc.NoResultFound, nrf:
                 message.append("Invalid upload request ID")
         currentYear = datetime.date.today().year
