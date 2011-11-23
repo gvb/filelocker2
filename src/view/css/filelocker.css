@@ -1099,7 +1099,7 @@ ul.menu li {
 .audit_login, .audit_install_user, .audit_create_user, .audit_delete_user, .audit_create_group, .audit_update_group, .audit_delete_group, .audit_check_in_file,
 .audit_download_file, .audit_delete_file, .audit_create_user_share, .audit_delete_user_share, .audit_create_group_share, .audit_delete_group_share,
 .audit_create_public_share, .audit_delete_public_share, .audit_create_upload_request, .audit_upload_requested_file, .audit_delete_upload_request,
-.audit_send_message, .audit_read_message, .audit_delete_message, .audit_sent_email, .audit_failure_to_send_email {
+.audit_send_message, .audit_read_message, .audit_delete_message, .audit_send_email, .audit_failure_to_send_email {
     text-indent: 20px; 
 }
 .audit_login                        { background:url($staticDir/images/icons/user_silhouette.gif) 0px 4px no-repeat; }
@@ -1124,7 +1124,7 @@ ul.menu li {
 .audit_send_message                 { background:url($staticDir/images/icons/email.png) 0px 4px no-repeat; }
 .audit_read_message                 { background:url($staticDir/images/icons/email_open.png) 0px 4px no-repeat; }
 .audit_delete_message               { background:url($staticDir/images/icons/email_delete.gif) 0px 4px no-repeat; }
-.audit_sent_email                   { background:url($staticDir/images/icons/email_go.png) 0px 4px no-repeat; }
+.audit_send_email                   { background:url($staticDir/images/icons/email_go.png) 0px 4px no-repeat; }
 .audit_failure_to_send_email        { background:url($staticDir/images/icons/email_delete.gif) 0px 4px no-repeat; }
 
 /* Table Column Widths */
