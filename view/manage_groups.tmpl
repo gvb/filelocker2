@@ -1,0 +1,99 @@
+<div id="wrapper_col1">
+    <div class="section_title">
+        <h1 class="manage_groups_title">Manage Groups</h1>
+    </div>
+    <div class="toolbar">
+        <div class="button"><a href="javascript:StatusResponse.hide();javascript:FLFile.load();" title="Take me back to 'My Files'" class="back_to_files"><span>Back to Files</span></a></div>
+        <div class="button"><a href="javascript:Group.promptAdd();" title="Add a new group of Filelocker users" class="groupNewButton"><span>Add New Group</span></a></div>
+        <div class="button"><a href="javascript:Group.del();" title="Delete the selected groups" class="deleteButton"><span>Delete Selected</span></a></div>
+    </div>
+    <div class="file_list"> <!--file area-->
+          <table class="file_table" id="groupTableSorter">
+            <thead>
+                <tr>
+                    <th class="selectAllCol"><input type="checkbox" name="selectAllGroups" id="selectAllGroups" onChange="javascript:jQuery('.groupSelectBox').prop('checked', jQuery(this).prop('checked'))" /></th>
+                    <th class="groupNameCol pseudoLink">Name</th>
+                    <th class="pseudoLink">Group Membership</th>
+                    <th class="menuCol"></th>
+                </tr>
+                <tr>
+                    <td></td>
+                    <td colspan="3" class="dotted"></td>
+                </tr>
+            </thead>
+            <tbody id="groupsTable">
+            #for $group in $groups
+                <tr id="group_$group.id" class="groupRow" onclick="javascript:Group.rowClick($group.id)">
+                    <td id="groupNameElement_$group.id" class="groupNameElement">
+                        <input type="checkbox" value="$group.id" onclick="javascript:Group.rowClick($group.id)" class="groupSelectBox" />
+                        <div class="posrel">
+                        <div id="menu_group_$group.id" class="menuGroups hidden">
+                            <ul class="menu">
+                                #if len($group.members) == 0
+                                    <li><i>This group contains no members.</i></li>
+                                #else if len($group.members) <= 5
+                                    #for $member in $group.members
+                                        <li><div class="itemTitle"><span class="ownerItem memberTitle groupMember" title="$member.display_name">$member.id</span></div>
+                                        <a class="deleteLink" href="javascript:Group.Member.remove('$member.id','$group.id', 'rollout')" title="Remove '$member.id' from '$group.name'">Remove</a></li>
+                                    #end for
+                                #else
+                                    #set rowCounter = 0
+                                    #for $member in $group.members
+                                        #if rowCounter < 5
+                                            <li><div class="itemTitle"><span class="ownerItem memberTitle groupMember" title="$member.display_name">$member.id</span></div>
+                                            <a class="deleteLink" href="javascript:Group.Member.remove('$member.id','$group.id', 'rollout')" title="Remove '$member.id' from '$group.name'">Remove</a></li>
+                                            #set rowCounter = rowCounter + 1
+                                        #else
+                                            #break
+                                        #end if
+                                    #end for
+                                    <li><i><a href="javascript:Group.prompt($group.id);" class="viewLink">View all members</a></i></li>
+                                #end if
+                                <hr />
+                                <li><div class="button" style="width: 185px;"><a href="javascript:Group.promptEdit($group.id, '$group.name');" title="Rename this group" class="editButton"><span><center>Rename Group</center></span></a></div></li>
+                                <li><div class="button" style="width: 185px;"><a href="javascript:Group.prompt($group.id);" title="Manage membership for '$group.name'" class="editButton"><span><center>Manage Group</center></span></a></div></li>
+                            </ul>
+                        </div>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="groupLink pseudoLink">
+                            #if len($group.name) > 50
+                                $group.name[0:28]...$group.name[-15:]
+                            #else
+                                $group.name
+                            #end if
+                        </span>
+                    </td>
+                    <td>
+                        #set $memberPlural = "s"
+                        #set $memberCount = len($group.members)
+                        #if $memberCount == 1
+                            #set $memberPlural = " "
+                        #end if
+                        $memberCount Member$memberPlural
+                    </td>
+                    <td class="dropdownArrow rightborder"></td>
+                </tr>
+            #end for
+            </tbody>
+          </table>
+    </div>
+</div>
+<div id="wrapper_col2">
+    <div class="text_col2">
+        <a href="$config['org_url']" target="_blank" title="Take me to the $config['org_name'] home page"><img src="$config['root_url']/static/images/logos/logo.gif" alt="$config['org_name']" class="orgLogo" /></a>
+        <img src="$config['root_url']/static/images/page_elements/horizontal_rule.gif" alt="" class="horizontal_rule" />
+        <p><span class="strong">Manage Groups</span> <br/> This area allows you to create, edit, and delete groups of users in your organization.</p>
+        <img src="$config['root_url']/static/images/page_elements/horizontal_rule.gif" alt="" class="horizontal_rule" />
+        <p><strong>Quick Help</strong></p>
+         <ul>
+            <li><a href="javascript:Help.prompt('help_upload');" class="helpLink">How do I upload a file?</a></li>
+            <li><a href="javascript:Help.prompt('help_share');" class="helpLink">How do I share a file?</a></li>
+            <li><a href="javascript:Help.prompt('help_message');" class="helpLink">How do I send a message?</a></li>
+            <li><a href="javascript:Help.prompt();" class="helpLink">Show all...</a></li>
+        </ul>
+        <p><strong>Quick Tip</strong></p>
+        <span id="randomTip"></span> <a href="javascript:Help.prompt('help_just_the_tips');" class="helpLink">Show all...</a>
+    </div>
+</div>

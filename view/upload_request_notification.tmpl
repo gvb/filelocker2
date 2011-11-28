@@ -1,0 +1,29 @@
+To: $varDict['recipient']
+From: $sender
+Reply-to: $varDict['sender']
+Subject: $varDict['ownerName'] has requested a file from you via Filelocker 
+
+$varDict['ownerName'] ($varDict['ownerId']) has requested that you upload a file to their account in Filelocker. 
+
+#if $linksObscured
+This file can be uploaded by copying and pasting the following URL into your browser's address bar and removing any spaces.
+#else
+This file can be uploaded by visiting the URL below:
+#end if
+
+$varDict['filelockerURL']/public_upload?requestId=$varDict['requestId']
+
+#if $varDict['personalMessage'] is not None and $varDict['personalMessage'] != "":
+The requestor also attached this personal message to the file request: 
+"$varDict['personalMessage']"
+#end if
+
+#if $varDict['requestType'] == "single"
+This link will expire once you have successfully uploaded a file
+#end if
+
+#if $linksObscured
+::Why are links made to be non-clickable?::
+Clickable links in emails can be unsafe, as they can take you to pages other than what the text of the link suggests. 
+Copying the text of a link and pasting it directly into the browser address bar is a more secure way to make sure your browser is going to the page you expect.
+#end if

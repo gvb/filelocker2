@@ -1,0 +1,27 @@
+<div class="popup_wrapper">
+    <div class="popup_large">
+        <table class="manage_role_table">
+        <tr>
+            <td style="width: 310px;">
+                <input type="hidden" id="manage_roles_selectedRoleId" value="$role.id"/>
+                <div id="current_role_members">
+                    <h3><a href="#">Members in $role.name</a></h3>
+                    <div>
+                        <ul class="menu">
+                        #if len($role.members) == 0
+                            <li><i>This role contains no members.</i></li>
+                        #else
+                            #for $member in $role.members
+                                <li><span class="itemTitleMedium"><span class="ownerItem memberTitle">$member.display_name</span></span>
+                                <a href="javascript:Admin.Role.Member.remove('$member.id', '$role.id', 'viewRoleBox');" title='Remove $member.id from $role.name' class='deleteLink'>Remove</a></li>
+                            #end for
+                        #end if
+                        </ul>
+                    </div>
+                </div>
+            </td>
+            <td id="manage_roles_searchContainer">$searchWidget</td>
+        </tr>
+        </table>
+    </div>
+</div>

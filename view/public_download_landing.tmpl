@@ -1,0 +1,93 @@
+
+        <div id="wrapper_col1">
+            <div class="section_title">
+                <h1 class="files_title">Download a Publicly Shared File</h1>
+            </div>
+            <div class="login">
+                #if $message is not None
+                    <h2 class="errorMessage">$message</h2>
+                #end if
+
+                #if $publicShare is None
+                <form action="$config['root_url']/public_download" method="POST">
+                <input type="hidden" value="$shareId" name="shareId"/>
+                <div>
+                    <label for="publicSharePassword">Password:</label>
+                    <input type="password" id="publicSharePassword" name="password" value=""/>
+                </div>
+                <br />
+                <div>
+                    <input type="submit" value="View Share"/>
+                </div>
+                </form>
+                #else
+                <table class="file_table">
+                    <thead>
+                    <tr>
+                        <th class="selectAllCol"></th>
+                        <th class="nameCol pseudoLink">Name</th>
+                        <th class="sizeCol pseudoLink">Size</th>
+                        <th class="expiresCol pseudoLink">Expires</th>
+                        <th class="virusScanCol pseudoLink">Scanned?</th>
+                        <th class="menuCol"></th>
+                    </tr>
+                    <tr>
+                        <td></td>
+                        <td colspan="5" class="dotted"></td>
+                    </tr>
+                    </thead>
+                    <tbody id="filesTable">
+                    #for $file in $publicShare.files
+                        #set $fsSuffix = "B"
+                        #set $fileSize = $file.size
+                        #if $fileSize > 1024
+                            #set $fileSize = $fileSize / 1024
+                            #set $fsSuffix = "kB"
+                            #if $fileSize > 1024
+                                #set $fileSize = $fileSize / 1024
+                                #set $fsSuffix = "MB"
+                                #if $fileSize > 1024
+                                    #set $fileSize = $fileSize / 1024
+                                    #set $fsSuffix = "GB"
+                                #end if
+                            #end if
+                        #end if
+                        <tr id="file_$file.id" class="fileRow">
+                            <td></td>
+                            <td>
+                                <span class="$file.document_type pseudoLink">
+                                <a href="javascript:download('$file.id')">
+                                #if len($file.name) > 60
+                                    $file.name[0:45]...$file.name[-10:]
+                                #else
+                                    $file.name
+                                #end if
+                                </a>
+                                </span>
+                            </td>
+                            <td>$fileSize $fsSuffix</td>
+                            #if $file.date_expires is not None
+                            <td>$file.date_expires.strftime("%m/%d/%Y")</td>
+                            #else
+                            <td>No expiration</td>
+                            #end if
+                            <td>$file.passed_avscan</td>
+                            <td></td>
+                        </tr>
+                    #end for
+                    </tbody>
+                    <tfoot id="progressBarSection">
+                    </tfoot>
+                </table> <!-- End File List -->
+                #end if
+                <br/>
+            </div>
+        </div>
+        <div id="wrapper_col2">
+            <div class="text_col2"><a href="$config.org_url" target="_blank" title="Take me to the $config.org_name home page"><img src="$config['root_url']/static/images/logos/logo.gif" alt="$config.org_name" class="orgLogo" /></a>
+            <img src="$config['root_url']/static/images/page_elements/horizontal_rule.gif" alt="" class="horizontal_rule" />
+                <p><span class="strong">Filelocker</span> allows you to share files with other people both inside and outside of $config.org_name. It is a temporary and secure storage system for sharing files and data.</p>
+                <img src="$config['root_url']/static/images/page_elements/horizontal_rule.gif" alt="" class="horizontal_rule" />
+            </div>
+        </div>
+    

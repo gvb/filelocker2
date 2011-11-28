@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="description" content="Developed at Purdue University, Filelocker allows you to share files with other people both inside and outside of your organization. It is a temporary and secure storage system for sharing files and data."/> 
+    <meta name="keywords" content="filelocker, encryption, security application, enterprise, auditing, secure storage, information security, online storage, file sharing, share files, online backup, sharing, collaboration" /> 
+    <title>Filelocker</title>
+    <link rel="stylesheet" href="$config['root_url']/css?style=jquery-ui" />
+    <link rel="stylesheet" href="$config['root_url']/css?style=filelocker" />
+    <link rel="shortcut icon" href="$config['root_url']/static/images/favicon.ico" />
+    <script type="text/javascript" src="$config['root_url']/static/js/lib/jquery-1.6.4.js"></script>
+    <script type="text/javascript" src="$config['root_url']/static/js/lib/jquery-ui-1.8.11.js"></script>
+    <script type="text/javascript" src="$config['root_url']/static/js/lib/jquery.tablesorter.js"></script>
+    <script type="text/javascript" src="$config['root_url']/static/js/lib/jquery.tipsy.js"></script>
+    <script type="text/javascript" src="$config['root_url']/static/js/lib/fileuploader.js"></script>
+    <script type="text/javascript" src="$config['root_url']/static/js/global.js"></script>
+    <script type="text/javascript" src="$config['root_url']/static/js/public.js"></script>
+    <script type="text/javascript">
+        var FILELOCKER_ROOT = "$config['root_url']";
+    </script>
+</head>
+<body class="greyBackground">
+<div id="background">
+    <div id="wrapper_all">
+        <div id="wrapper_header">
+            <div class="logo"><a href="$config['root_url']"><img src="$config['root_url']/static/images/logos/filelocker_logo.png" alt="Filelocker" /></a></div>
+        </div>
+        <div id="statusMessageWrapper"><div id="statusMessage" class="ui-widget ui-state-error hidden"></div></div>
+        <div id="wrapper_2col">
+            <div id="wrapper_col1">
+                <div class="section_title">
+                #if $uploadRequest is not None
+                    <h1 class="files_title">Upload a file for $uploadRequest.owner.display_name</h1>
+                #else
+                    <h1 class="files_title">Upload a file for a Filelocker user</h1>
+                #end if
+                </div>
+
+                <div class="login">
+                    #for $message in $messages
+                    <h2 class="errorMessage">$message</h2>
+                    #end for
+                    <form action="$config['root_url']/upload_request_uploader" name="form" method="POST" id="verifyTicketForm">
+                        <div>
+                            #if $requestId is None or $requestId == ""
+                            <label for="requestId">Request ID: </label>
+                            <input type="text" name="requestId" value=""/>
+                            #else
+                            <p>Request ID: <b>$requestId</b></p>
+                            <input type="hidden" name="requestId" value="$requestId" />
+                            #end if
+                        </div>
+                        <div>
+                            #if $uploadRequest is None or $uploadRequest.password is not None
+                            <label for="password">Password:</label>
+                            <input type="password" name="password" id="password" />
+                            #else
+                            <input type="test" disabled="disabled" name="password" id="password" value="No password required" />
+                            #end if
+                        </div>
+                        <div>
+                            <div class="button"><a href="#" onClick="document.forms['verifyTicketForm'].submit();" title="Verify password for upload request" class="uploadButton"><span>Verify Password</span></a></div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            <div id="wrapper_col2">
+                <div class="text_col2">
+                    <a href="$config['org_url']" target="_blank" title="Take me to the $config['org_name'] home page"><img src="$config['root_url']/static/images/logos/logo.gif" alt="$config['org_name']" class="orgLogo" /></a>
+                    <img src="$config['root_url']/static/images/page_elements/horizontal_rule.gif" alt="" class="horizontal_rule" />
+                    <p><span class="strong">Public Upload</span> <br/> This area allows you to upload files for a user who has requested them. Once a file is uploaded, it will be available to the requestor on their Files page.</p>
+                    <img src="$config['root_url']/static/images/page_elements/horizontal_rule.gif" alt="" class="horizontal_rule" />
+                </div>
+            </div>
+		</div><!--end content area-->
+        
+        <!--footer area-->
+        <div id="footer">$footerText</div>
+    </div>
+</div>
+
+<div id="helpBox" class="hidden">
+    <div class="popup_wrapper">
+        <div class="popup_large">
+            <table id="help">
+            <tr>
+                <td>
+                    <table class="file_table" style="width: 180px;">
+                        <thead>
+                            <tr>
+                                <th class="spacerCol"></th>
+                                <th class="helpTableOfContentsCol pseudoLink">Topic</th>
+                            </tr>
+                            <tr>
+                                <td></td>
+                                <td class="dotted"></td>
+                            </tr>
+                        </thead>
+                        <tbody id="helpTableOfContents"></tbody>
+                    </table>
+                </td>
+                <td id="helpViewer"></td>
+            </tr>
+            </table>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<cli_response>
+    <messages>
+        #for $sMessage in $sMessages
+        <info>$sMessage</info>
+        #end for
+        #for $fMessage in $fMessages
+        <error>$fMessage</error>
+        #end for
+    </messages>
+    <data>
+        $data
+    </data>
+</cli_response>
