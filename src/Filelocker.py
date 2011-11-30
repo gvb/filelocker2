@@ -75,8 +75,9 @@ def requires_login(permissionId=None, **kwargs):
 
 def error(status, message, traceback, version):
     currentYear = datetime.date.today().year
-    rootURL = cherrypy.request.app.config['filelocker']['root_url']
-    orgURL, orgName = cherrypy.request.app.config['filelocker']['org_url'], cherrypy.request.app.config['filelocker']['org_name']
+    config = cherrypy.request.app.config['filelocker']
+    rootURL = config['root_url']
+    orgURL, orgName = config['org_url'], config['org_name']
     footerText = str(Template(file=get_template_file('footer_text.tmpl'), searchList=[locals(),globals()]))
     tpl = str(Template(file=get_template_file('error.tmpl'), searchList=[locals(),globals()]))
     return tpl
@@ -422,17 +423,17 @@ if __name__ == '__main__':
     options, args = p.parse_args()
 
     dburi = None
-    config = ConfigParser.SafeConfigParser()
+    configParser = ConfigParser.SafeConfigParser()
     if options.configfile is not None:
-        config.read(options.configfile)
+        configParser.read(options.configfile)
     else:
         configfile = os.path.join(os.getcwd(),"etc","filelocker.conf")
         if os.path.exists(configfile)==False:
             configfile = os.path.join("/","etc","filelocker.conf")
         if os.path.exists(configfile)==False:
             raise Exception("Could not find config file, please specify one using the -c option")
-        config.read(configfile)
-    dburi = config.get("/","tools.SATransaction.dburi").replace("\"", "").replace("'","")
+        configParser.read(configfile)
+    dburi = configParser.get("/","tools.SATransaction.dburi").replace("\"", "").replace("'","")
 
     if options.action:
         if options.action == "stop":
