@@ -267,7 +267,6 @@ class RootController:
         config = cherrypy.request.app.config['filelocker']
         user, role, defaultExpiration, uploadRequests, userFiles, userShareableAttributes,attributeFilesDict,sharedFiles = (cherrypy.session.get("user"), cherrypy.session.get("current_role"), None, [], [], [], {}, [])
         defaultExpiration = datetime.date.today() + (datetime.timedelta(days=cherrypy.request.app.config['filelocker']['max_file_life_days']))
-        userFiles = self.file.get_user_file_list(format="list")
         if role is None:
             uploadRequests = session.query(UploadRequest).filter(UploadRequest.owner_id==user.id).all()
             userFiles = self.file.get_user_file_list(format="list")
