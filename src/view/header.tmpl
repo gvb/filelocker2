@@ -1,4 +1,3 @@
-#set $config = $cherrypy.request.app.config['filelocker']
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -63,7 +62,7 @@
         <tr>
         <td id="nameRoleContainer">
     #if $cherrypy.session.get("current_role") == None
-        #if len($roles) == 0
+        #if $len($roles) == 0
             <div class="userLoggedIn">$user.display_name ($user.id)</div>
         #else
             <div class="userLoggedInMultiple pseudoLink" title="Switch to a role" onclick="javascript:Account.toggleRoles()">$user.display_name ($user.id)</div>
