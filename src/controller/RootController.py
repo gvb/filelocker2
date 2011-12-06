@@ -280,6 +280,7 @@ class RootController:
 
     @cherrypy.expose
     def help(self, **kwargs):
+        config = cherrypy.request.app.config['filelocker']
         tpl = Template(file=get_template_file('halp.tmpl'), searchList=[locals(),globals()])
         return str(tpl)
 
@@ -405,7 +406,8 @@ class RootController:
         sMessages, fMessages = [], []
         if cherrypy.session.has_key("sMessages") and cherrypy.session.has_key("fMessages"):
             for message in cherrypy.session.get("sMessages"):
-                if message not in sMessages: #Interestingly, either the browser or the ajax upload script tries to re-submit a rejected file a few times resulting in duplicate messages
+                if message not in sMessages: 
+                    #Interestingly, either the browser or the ajax upload script tries to re-submit a rejected file a few times resulting in duplicate messages
                     sMessages.append(message)
             for message in cherrypy.session.get("fMessages"):
                 if message not in fMessages:

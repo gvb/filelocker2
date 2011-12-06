@@ -922,15 +922,15 @@ def get_vault_usage():
     return freeSpaceMB, totalSizeMB
 
 def get_user_quota_usage_bytes(userId):
-    quotaUsage = session.query(func.sum(File.size)).select_from(File).filter(File.owner_id==userId).scalar()
-    if quotaUsage is None:
+    usage = session.query(func.sum(File.size)).filter(File.owner_id==userId).scalar()
+    if usage is None:
         return 0
     else:
-        return int(quotaUsage)
+        return int(usage)
 
 def get_role_quota_usage_bytes(roleId):
-    quotaUsage = session.query(func.sum(File.size)).select_from(File).filter(File.role_owner_id==roleId).scalar()
-    if quotaUsage is None:
+    usage = session.query(func.sum(File.size)).filter(File.role_owner_id==roleId).scalar()
+    if usage is None:
         return 0
     else:
-        return int(quotaUsage)
+        return int(usage)
