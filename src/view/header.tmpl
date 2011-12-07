@@ -9,7 +9,7 @@
     <script type="text/javascript">
 //TODO To global constants
         var FILELOCKER_ROOT = "$config['root_url']";
-        #if $cherrypy.session.has_key("user")
+        #if $user is not None
         var USER_QUOTA = $user.quota;
         var DEFAULT_EXPIRATION = "$defaultExpiration.strftime('%m/%d/%Y')";
         var HOST_IP = "$cherrypy.request.remote.ip";
@@ -44,7 +44,7 @@
     <script src="$config['root_url']/static/js/global.js"></script>
     <script src="$config['root_url']/static/js/main.js"></script>
     <script src="$config['root_url']/static/js/public.js"></script>
-    #if $cherrypy.session.has_key("user")
+    #if $user is not None
     <script src="$config['root_url']/static/js/account.js"></script>
     <script src="$config['root_url']/static/js/file.js"></script>
     <script src="$config['root_url']/static/js/group.js"></script>
@@ -63,7 +63,7 @@
     <!--header-->
     <div id="wrapper_header">
         <div class="logo"><a href="$config['root_url']"><img src="$config['root_url']/static/images/logos/filelocker_logo.png" alt="Filelocker" /></a></div>
-        #if $cherrypy.session.has_key("user")
+        #if $user is not None
                 <table>
                 <tr>
                 <td id="nameRoleContainer">

@@ -299,6 +299,7 @@ class RootController:
 
     @cherrypy.expose
     def upload_request(self, requestId=None, msg=None, **kwargs):
+        user = None
         messages, uploadRequest, requestId, config = [], None, strip_tags(requestId), cherrypy.request.app.config['filelocker']
         if msg is not None and int(msg) == 1: messages.append("You must supply a valid ID and password to upload files for this request")
         if msg is not None and int(msg) == 2: messages.append("Unable to load upload request")
@@ -323,6 +324,7 @@ class RootController:
 
     @cherrypy.expose
     def upload_request_uploader(self, requestId=None, password=None, **kwargs):
+        user = None
         requestOwner, uploadRequest, tpl, messages, config = (None, None, None, [], cherrypy.request.app.config['filelocker'])
         defaultExpiration = datetime.date.today() + (datetime.timedelta(days=config['max_file_life_days']))
         requestFiles = []
@@ -382,6 +384,7 @@ class RootController:
 
     @cherrypy.expose
     def public_download(self, shareId, **kwargs):
+        user = None
         message, publicShare, config = None, None, cherrypy.request.app.config['filelocker']
         cherrypy.response.timeout = 36000
         shareId = strip_tags(shareId)

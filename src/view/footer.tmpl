@@ -1,7 +1,7 @@
 <!--footer area-->
 
     </div><!--End Wrapper 2 col - Content Area -->
-#if $cherrypy.session.has_key("user")
+#if $user is not None
 $lightboxen
 #end if
 <div id="footer">$footerText</div>

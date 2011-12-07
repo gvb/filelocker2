@@ -87,13 +87,13 @@ def daily_maintenance(config):
     expiredFiles = session.query(File).filter(File.date_expires < datetime.datetime.now())
     for flFile in expiredFiles:
         try:
-            for share in flFile.private_shares:
+            for share in flFile.user_shares:
                 session.delete(share)
-            for share in flFile.private_group_shares:
+            for share in flFile.group_shares:
                 session.delete(share)
             for share in flFile.public_shares:
                 session.delete(share)
-            for share in flFile.private_attribute_shares:
+            for share in flFile.attribute_shares:
                 session.delete(share)
             FileController.queue_for_deletion(flFile.id)
             session.add(AuditLog("admin", "Delete File", "File %s (ID:%s) has expired and has been purged by the system." % (flFile.name, flFile.id), flFile.owner_id))
