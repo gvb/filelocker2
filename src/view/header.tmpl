@@ -43,7 +43,7 @@
 
     <script src="$config['root_url']/static/js/global.js"></script>
     <script src="$config['root_url']/static/js/main.js"></script>
-    <script src="$config['root_url']/static/js/public.js"></script>
+    
     #if $user is not None
     <script src="$config['root_url']/static/js/account.js"></script>
     <script src="$config['root_url']/static/js/file.js"></script>
@@ -55,6 +55,8 @@
         #if $AccountController.user_has_permission($user, "admin")
         <script src="$config['root_url']/static/js/admin.js"></script>
         #end if
+    #else
+    <script src="$config['root_url']/static/js/public.js"></script>
     #end if
 </head>
 <body class="greyBackground">
