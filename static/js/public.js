@@ -11,31 +11,27 @@ PublicUpload = function() {
                 listElement: $("#progressBarSection")[0],
                 action: FILELOCKER_ROOT+'/file/upload',
                 params: {},
-                sizeLimit: 2147483647,
+                //sizeLimit: 2147483647,
                 onSubmit: function(id, fileName){
-                    var uploadOptions = {};
-                    uploadOptions.scanFile = $("#puScanFile").prop("checked");
-                    uploadOptions.fileNotes= $("#fileNotes").val();
-                    uploadOptions.expiration = $("#puExpiration").val();
-                    uploadOptions.uploadIndex = id;
-                    uploadOptions.fileName = fileName;
-                    uploader.setParams(uploadOptions);
+                    uploader.setParams({
+                        scanFile: $("#puScanFile").prop("checked"),
+                        fileNotes: $("#fileNotes").val(),
+                        expiration: $("#puExpiration").val(),
+                        uploadIndex: id,
+                        fileName: fileName
+                    });
                     $("#uploadBox").dialog("close");
                     continuePolling = true;
                     if(pollerId === "")
                         pollerId = setInterval(function() { poll(); }, 1000);
                 },
-                onProgress: function(id, fileName, loaded, total){
-                    Filelocker.checkMessages("uploading file");
-                },
                 onComplete: function(id, fileName, response){
-                    var hasServerMsg = Filelocker.checkMessages("uploading file");
-                    if(!hasServerMsg)
-                        StatusResponse.show(response, "uploading file");
-                    load();
+                    //Filelocker.checkMessages("uploading file");
+                    //load();
+                    location.reload(true);
                 },
                 onCancel: function(id, fileName){
-                    StatusResponse.create("cancelling upload", "File upload cancelled by user.", true);
+                    StatusResponse.create("cancelling upload", "File upload of " + fileName + " cancelled by user.", true);
                 },
                 messages: {
                     sizeError: "sizeError"

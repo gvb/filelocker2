@@ -77,6 +77,7 @@ class RootController:
 
     @cherrypy.expose
     def logout_cas(self):
+        config = cherrypy.request.app.config['filelocker']
         from lib.CAS import CAS
         orgURL = cherrypy.response.cookie['filelocker']['org_url']
         orgName = cherrypy.response.cookie['filelocker']['org_name']
@@ -88,6 +89,7 @@ class RootController:
 
     @cherrypy.expose
     def process_login(self, username, password, **kwargs):
+        print "Processing login"
         authType, rootURL = cherrypy.request.app.config['filelocker']['auth_type'], cherrypy.request.app.config['filelocker']['root_url']
         if kwargs.has_key("authType"):
             authType = kwargs['authType']
@@ -105,6 +107,7 @@ class RootController:
                         if currentUser.authorized == False:
                             raise cherrypy.HTTPError(403, "You do not have permission to access this system")
                         session.add(AuditLog(cherrypy.session.get("user").id, "Login", "User %s logged in successfully from IP %s" % (currentUser.id, cherrypy.request.remote.ip)))
+                        print "User has been authenticated"
                         session.commit()
                         raise cherrypy.HTTPRedirect(rootURL)
                     else: #This should only happen in the case of a user existing in the external directory, but having never logged in before
@@ -132,6 +135,7 @@ class RootController:
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def index(self, **kwargs):
+        config = cherrypy.request.app.config['filelocker']
         user, originalUser, maxDays = (cherrypy.session.get("user"),  cherrypy.session.get("original_user"), cherrypy.request.app.config['filelocker']['max_file_life_days'])
         roles = session.query(User).filter(User.id == user.id).one().roles
         currentYear = datetime.date.today().year
@@ -145,6 +149,7 @@ class RootController:
         endDateFormatted = today
         messageSearchWidget = self.account.get_search_widget("messages")
         header = Template(file=get_template_file('header.tmpl'), searchList=[locals(),globals()])
+        lightboxen = str(Template(file=get_template_file('lightboxen.tmpl'), searchList=[locals(),globals()]))
         footerText = str(Template(file=get_template_file('footer_text.tmpl'), searchList=[locals(),globals()]))
         footer = Template(file=get_template_file('footer.tmpl'), searchList=[locals(),globals()])
         filesSection = self.files()
@@ -260,9 +265,9 @@ class RootController:
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def files(self, **kwargs):
+        config = cherrypy.request.app.config['filelocker']
         user, role, defaultExpiration, uploadRequests, userFiles, userShareableAttributes,attributeFilesDict,sharedFiles = (cherrypy.session.get("user"), cherrypy.session.get("current_role"), None, [], [], [], {}, [])
         defaultExpiration = datetime.date.today() + (datetime.timedelta(days=cherrypy.request.app.config['filelocker']['max_file_life_days']))
-        userFiles = self.file.get_user_file_list(format="list")
         if role is None:
             uploadRequests = session.query(UploadRequest).filter(UploadRequest.owner_id==user.id).all()
             userFiles = self.file.get_user_file_list(format="list")
@@ -276,6 +281,7 @@ class RootController:
 
     @cherrypy.expose
     def help(self, **kwargs):
+        config = cherrypy.request.app.config['filelocker']
         tpl = Template(file=get_template_file('halp.tmpl'), searchList=[locals(),globals()])
         return str(tpl)
 
@@ -293,6 +299,7 @@ class RootController:
 
     @cherrypy.expose
     def upload_request(self, requestId=None, msg=None, **kwargs):
+        user = None
         messages, uploadRequest, requestId, config = [], None, strip_tags(requestId), cherrypy.request.app.config['filelocker']
         if msg is not None and int(msg) == 1: messages.append("You must supply a valid ID and password to upload files for this request")
         if msg is not None and int(msg) == 2: messages.append("Unable to load upload request")
@@ -308,12 +315,16 @@ class RootController:
             except sqlalchemy.orm.exc.NoResultFound, nrf:
                 message.append("Invalid upload request ID")
         currentYear = datetime.date.today().year
+        headerHTML = str(Template(file=get_template_file('header.tmpl'), searchList=[locals(),globals()]))
         footerText = str(Template(file=get_template_file('footer_text.tmpl'), searchList=[locals(),globals()]))
-        tpl = str(Template(file=get_template_file('upload_request.tmpl'), searchList=[locals(),globals()]))
-        return str(tpl)
+        footerHTML = str(Template(file=get_template_file('footer.tmpl'), searchList=[locals(),globals()]))
+        tpl = str(Template(file=get_template_file('public_upload_request.tmpl'), searchList=[locals(),globals()]))
+        uploadRequestHTML = headerHTML+tpl+footerHTML
+        return uploadRequestHTML
 
     @cherrypy.expose
     def upload_request_uploader(self, requestId=None, password=None, **kwargs):
+        user = None
         requestOwner, uploadRequest, tpl, messages, config = (None, None, None, [], cherrypy.request.app.config['filelocker'])
         defaultExpiration = datetime.date.today() + (datetime.timedelta(days=config['max_file_life_days']))
         requestFiles = []
@@ -325,7 +336,10 @@ class RootController:
                     del(cherrypy.session['uploadRequest'])
             if cherrypy.session.has_key("uploadRequest"): #Their requestId and the session uploadTicket's ID matched, let them keep the session
                 uploadRequestId = cherrypy.session.get("uploadRequest").id
-                uploadRequest = session.query(UploadRequest).filter(UploadRequest.id == uploadRequestId).one()
+                uploadRequest = session.query(UploadRequest).filter(UploadRequest.id == uploadRequestId).scalar()
+                if uploadRequest is None: #Expired request, but they still have a valid session to view file
+                    uploadRequest = cherrypy.session.get("uploadRequest")
+                    uploadRequest.expired = True
             elif password is None or password =="": #If they come in with a ticket - fill it in a prompt for password
                 try:
                     uploadRequest = session.query(UploadRequest).filter(UploadRequest.id == requestId).one()
@@ -359,13 +373,18 @@ class RootController:
             tpl = ""
             currentYear = datetime.date.today().year
             footerText = str(Template(file=get_template_file('footer_text.tmpl'), searchList=[locals(),globals()]))
-            tpl = Template(file=get_template_file('upload_request_uploader.tmpl'), searchList=[locals(),globals()])
+            tpl = str(Template(file=get_template_file('public_upload_request_uploader.tmpl'), searchList=[locals(),globals()]))
         else:
              raise cherrypy.HTTPRedirect("%s/upload_request?msg=2" % (config['root_url']))
-        return str(tpl)
+        headerHTML = str(Template(file=get_template_file('header.tmpl'), searchList=[locals(),globals()]))
+        footerText = str(Template(file=get_template_file('footer_text.tmpl'), searchList=[locals(),globals()]))
+        footerHTML = str(Template(file=get_template_file('footer.tmpl'), searchList=[locals(),globals()]))
+        uploadRequestUploaderHTML = headerHTML+tpl+footerHTML
+        return uploadRequestUploaderHTML
 
     @cherrypy.expose
     def public_download(self, shareId, **kwargs):
+        user = None
         message, publicShare, config = None, None, cherrypy.request.app.config['filelocker']
         cherrypy.response.timeout = 36000
         shareId = strip_tags(shareId)
@@ -390,18 +409,20 @@ class RootController:
         except Exception, e:
             message = "Unable to access download page: %s " % str(e)
         currentYear = datetime.date.today().year
-        publicHeaderHTML = str(Template(file=get_template_file('public_header.tmpl'), searchList=[locals(),globals()]))
+        headerHTML = str(Template(file=get_template_file('header.tmpl'), searchList=[locals(),globals()]))
         footerText = str(Template(file=get_template_file('footer_text.tmpl'), searchList=[locals(),globals()]))
-        publicFooterHTML = str(Template(file=get_template_file('public_footer.tmpl'), searchList=[locals(),globals()]))
-        body = str(Template(file=get_template_file('public_download_landing.tmpl'), searchList=[locals(),globals()]))
-        return publicHeaderHTML+body+publicFooterHTML
+        footerHTML = str(Template(file=get_template_file('footer.tmpl'), searchList=[locals(),globals()]))
+        tpl = str(Template(file=get_template_file('public_download_landing.tmpl'), searchList=[locals(),globals()]))
+        publicDownloadHTML = headerHTML+tpl+footerHTML
+        return publicDownloadHTML
 
     @cherrypy.expose
     def get_server_messages(self, format="json", **kwargs):
         sMessages, fMessages = [], []
         if cherrypy.session.has_key("sMessages") and cherrypy.session.has_key("fMessages"):
             for message in cherrypy.session.get("sMessages"):
-                if message not in sMessages: #Interestingly, either the browser or the ajax upload script tries to re-submit a rejected file a few times resulting in duplicate messages
+                if message not in sMessages: 
+                    #Interestingly, either the browser or the ajax upload script tries to re-submit a rejected file a few times resulting in duplicate messages
                     sMessages.append(message)
             for message in cherrypy.session.get("fMessages"):
                 if message not in fMessages:

@@ -634,7 +634,7 @@ jQuery(document).ready(function() {
     }
 
     $("#statusMessage").ajaxError(function(e, xhr, settings, exception) {
-        console.error(exception);
+        //console.error(exception);
         var message = (xhr.status >= 400) ? "Server returned code "+xhr.status : "No details.";
         clearInterval(Filelocker.messagePoller);
         StatusResponse.create("requesting data", message, false);
