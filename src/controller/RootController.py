@@ -330,7 +330,10 @@ class RootController:
                     del(cherrypy.session['uploadRequest'])
             if cherrypy.session.has_key("uploadRequest"): #Their requestId and the session uploadTicket's ID matched, let them keep the session
                 uploadRequestId = cherrypy.session.get("uploadRequest").id
-                uploadRequest = session.query(UploadRequest).filter(UploadRequest.id == uploadRequestId).one()
+                uploadRequest = session.query(UploadRequest).filter(UploadRequest.id == uploadRequestId).scalar()
+                if uploadRequest is None: #Expired request, but they still have a valid session to view file
+                    uploadRequest = cherrypy.session.get("uploadRequest")
+                    uploadRequest.expired = True
             elif password is None or password =="": #If they come in with a ticket - fill it in a prompt for password
                 try:
                     uploadRequest = session.query(UploadRequest).filter(UploadRequest.id == requestId).one()
