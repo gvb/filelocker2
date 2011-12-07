@@ -149,6 +149,7 @@ class RootController:
         endDateFormatted = today
         messageSearchWidget = self.account.get_search_widget("messages")
         header = Template(file=get_template_file('header.tmpl'), searchList=[locals(),globals()])
+        lightboxen = str(Template(file=get_template_file('lightboxen.tmpl'), searchList=[locals(),globals()]))
         footerText = str(Template(file=get_template_file('footer_text.tmpl'), searchList=[locals(),globals()]))
         footer = Template(file=get_template_file('footer.tmpl'), searchList=[locals(),globals()])
         filesSection = self.files()
@@ -313,9 +314,12 @@ class RootController:
             except sqlalchemy.orm.exc.NoResultFound, nrf:
                 message.append("Invalid upload request ID")
         currentYear = datetime.date.today().year
+        headerHTML = str(Template(file=get_template_file('header.tmpl'), searchList=[locals(),globals()]))
         footerText = str(Template(file=get_template_file('footer_text.tmpl'), searchList=[locals(),globals()]))
-        tpl = str(Template(file=get_template_file('upload_request.tmpl'), searchList=[locals(),globals()]))
-        return str(tpl)
+        footerHTML = str(Template(file=get_template_file('footer.tmpl'), searchList=[locals(),globals()]))
+        tpl = str(Template(file=get_template_file('public_upload_request.tmpl'), searchList=[locals(),globals()]))
+        uploadRequestHTML = headerHTML+tpl+footerHTML
+        return uploadRequestHTML
 
     @cherrypy.expose
     def upload_request_uploader(self, requestId=None, password=None, **kwargs):
@@ -367,10 +371,14 @@ class RootController:
             tpl = ""
             currentYear = datetime.date.today().year
             footerText = str(Template(file=get_template_file('footer_text.tmpl'), searchList=[locals(),globals()]))
-            tpl = Template(file=get_template_file('upload_request_uploader.tmpl'), searchList=[locals(),globals()])
+            tpl = str(Template(file=get_template_file('public_upload_request_uploader.tmpl'), searchList=[locals(),globals()]))
         else:
              raise cherrypy.HTTPRedirect("%s/upload_request?msg=2" % (config['root_url']))
-        return str(tpl)
+        headerHTML = str(Template(file=get_template_file('header.tmpl'), searchList=[locals(),globals()]))
+        footerText = str(Template(file=get_template_file('footer_text.tmpl'), searchList=[locals(),globals()]))
+        footerHTML = str(Template(file=get_template_file('footer.tmpl'), searchList=[locals(),globals()]))
+        uploadRequestUploaderHTML = headerHTML+tpl+footerHTML
+        return uploadRequestUploaderHTML
 
     @cherrypy.expose
     def public_download(self, shareId, **kwargs):
@@ -398,11 +406,12 @@ class RootController:
         except Exception, e:
             message = "Unable to access download page: %s " % str(e)
         currentYear = datetime.date.today().year
-        publicHeaderHTML = str(Template(file=get_template_file('public_header.tmpl'), searchList=[locals(),globals()]))
+        headerHTML = str(Template(file=get_template_file('header.tmpl'), searchList=[locals(),globals()]))
         footerText = str(Template(file=get_template_file('footer_text.tmpl'), searchList=[locals(),globals()]))
-        publicFooterHTML = str(Template(file=get_template_file('public_footer.tmpl'), searchList=[locals(),globals()]))
-        body = str(Template(file=get_template_file('public_download_landing.tmpl'), searchList=[locals(),globals()]))
-        return publicHeaderHTML+body+publicFooterHTML
+        footerHTML = str(Template(file=get_template_file('footer.tmpl'), searchList=[locals(),globals()]))
+        tpl = str(Template(file=get_template_file('public_download_landing.tmpl'), searchList=[locals(),globals()]))
+        publicDownloadHTML = headerHTML+tpl+footerHTML
+        return publicDownloadHTML
 
     @cherrypy.expose
     def get_server_messages(self, format="json", **kwargs):

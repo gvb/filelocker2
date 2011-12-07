@@ -9,9 +9,12 @@
     <script type="text/javascript">
 //TODO To global constants
         var FILELOCKER_ROOT = "$config['root_url']";
+        #if $cherrypy.session.has_key("user")
         var USER_QUOTA = $user.quota;
-        var HOST_IP = "$cherrypy.request.remote.ip";
         var DEFAULT_EXPIRATION = "$defaultExpiration.strftime('%m/%d/%Y')";
+        var HOST_IP = "$cherrypy.request.remote.ip";
+        #end if
+        
         #if $config['geotagging']
         var GEOTAGGING = true;
         #else
@@ -39,17 +42,19 @@
     #end if
 
     <script src="$config['root_url']/static/js/global.js"></script>
+    <script src="$config['root_url']/static/js/main.js"></script>
+    <script src="$config['root_url']/static/js/public.js"></script>
+    #if $cherrypy.session.has_key("user")
     <script src="$config['root_url']/static/js/account.js"></script>
     <script src="$config['root_url']/static/js/file.js"></script>
     <script src="$config['root_url']/static/js/group.js"></script>
     <script src="$config['root_url']/static/js/history.js"></script>
     <script src="$config['root_url']/static/js/message.js"></script>
-    <script src="$config['root_url']/static/js/public.js"></script>
     <script src="$config['root_url']/static/js/share.js"></script>
-    <script src="$config['root_url']/static/js/main.js"></script>
 
-    #if $AccountController.user_has_permission($user, "admin")
-    <script src="$config['root_url']/static/js/admin.js"></script>
+        #if $AccountController.user_has_permission($user, "admin")
+        <script src="$config['root_url']/static/js/admin.js"></script>
+        #end if
     #end if
 </head>
 <body class="greyBackground">
@@ -58,42 +63,44 @@
     <!--header-->
     <div id="wrapper_header">
         <div class="logo"><a href="$config['root_url']"><img src="$config['root_url']/static/images/logos/filelocker_logo.png" alt="Filelocker" /></a></div>
-        <table>
-        <tr>
-        <td id="nameRoleContainer">
-    #if $cherrypy.session.get("current_role") == None
-        #if $len($roles) == 0
-            <div class="userLoggedIn">$user.display_name ($user.id)</div>
-        #else
-            <div class="userLoggedInMultiple pseudoLink" title="Switch to a role" onclick="javascript:Account.toggleRoles()">$user.display_name ($user.id)</div>
-            <span id="availableRoles">
-            #for $role in $roles
-                <div class="roleLoggedIn pseudoLink" title="Switch to '$role.id'" onclick="javascript:Account.switchRoles('$role.id');" style="display: none;">$role.name ($role.id)</div><br/>
-            #end for
-            </span>
-        #end if
-    #else
-        <div class="roleLoggedInMultiple pseudoLink" title="Switch back to a user" onclick="javascript:Account.toggleRoles()">$cherrypy.session.get("current_role").name ($cherrypy.session.get("current_role").id)</div>
-        <span id="availableRoles">
-            <div class="userLoggedIn pseudoLink" title="Switch back to '$user.id'" onclick="javascript:Account.switchRoles();" style="display: none;">$user.display_name ($user.id)</div>
-        </span>
+        #if $cherrypy.session.has_key("user")
+                <table>
+                <tr>
+                <td id="nameRoleContainer">
+            #if $cherrypy.session.get("current_role") == None
+                #if $len($roles) == 0
+                    <div class="userLoggedIn">$user.display_name ($user.id)</div>
+                #else
+                    <div class="userLoggedInMultiple pseudoLink" title="Switch to a role" onclick="javascript:Account.toggleRoles()">$user.display_name ($user.id)</div>
+                    <span id="availableRoles">
+                    #for $role in $roles
+                        <div class="roleLoggedIn pseudoLink" title="Switch to '$role.id'" onclick="javascript:Account.switchRoles('$role.id');" style="display: none;">$role.name ($role.id)</div><br/>
+                    #end for
+                    </span>
+                #end if
+            #else
+                <div class="roleLoggedInMultiple pseudoLink" title="Switch back to a user" onclick="javascript:Account.toggleRoles()">$cherrypy.session.get("current_role").name ($cherrypy.session.get("current_role").id)</div>
+                <span id="availableRoles">
+                    <div class="userLoggedIn pseudoLink" title="Switch back to '$user.id'" onclick="javascript:Account.switchRoles();" style="display: none;">$user.display_name ($user.id)</div>
+                </span>
+            #end if
+                </td>
+                <td><div id="historyLink" class="history"><a href="javascript:StatusResponse.hide();javascript:History.load();" title="View your interactions with Filelocker">History</a></div></td>
+                #if $AccountController.user_has_permission($user, "admin")
+                    <td id="adminBackLink"><div id="adminLink" class="settings"><a href="javascript:Admin.load()" title="Launch the admin panel">Admin</a></div></td>
+                #else if $cherrypy.session.get("current_role") == None
+                    <td><div id="accountLink" class="settings"><a href="javascript:StatusResponse.hide();javascript:Account.prompt()" title="Edit your account settings">Account</a></div></td>
+                #end if
+              </tr>
+              <tr>
+                <td><div class="quotaText">User Quota:&nbsp;</div><span id="quotaProgressBar" class="quota"></span></td>
+            #if $cherrypy.session.get("current_role") == None
+                <td><div id="messagesLink" class="messages"><a href="javascript:Message.prompt();">Messages</a></div></td>
+            #end if
+                <td><div class="logout"><a href="$config['root_url']/logout" title="Logout of Filelocker">Logout</a></div></td>
+              </tr>
+              </table>
     #end if
-        </td>
-        <td><div id="historyLink" class="history"><a href="javascript:StatusResponse.hide();javascript:History.load();" title="View your interactions with Filelocker">History</a></div></td>
-        #if $AccountController.user_has_permission($user, "admin")
-            <td id="adminBackLink"><div id="adminLink" class="settings"><a href="javascript:Admin.load()" title="Launch the admin panel">Admin</a></div></td>
-        #else if $cherrypy.session.get("current_role") == None
-            <td><div id="accountLink" class="settings"><a href="javascript:StatusResponse.hide();javascript:Account.prompt()" title="Edit your account settings">Account</a></div></td>
-        #end if
-      </tr>
-      <tr>
-        <td><div class="quotaText">User Quota:&nbsp;</div><span id="quotaProgressBar" class="quota"></span></td>
-    #if $cherrypy.session.get("current_role") == None
-        <td><div id="messagesLink" class="messages"><a href="javascript:Message.prompt();">Messages</a></div></td>
-    #end if
-        <td><div class="logout"><a href="$config['root_url']/logout" title="Logout of Filelocker">Logout</a></div></td>
-      </tr>
-      </table>
     </div>
     
     <!--content area-->
