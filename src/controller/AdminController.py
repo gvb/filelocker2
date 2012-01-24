@@ -5,6 +5,7 @@ import logging
 from lib.SQLAlchemyTool import session
 import sqlalchemy
 from lib.Models import *
+from lib.Constants import Actions
 import FileController
 from lib.Formatters import strip_tags, split_list_sanitized, fl_response, get_template_file
 from Cheetah.Template import Template
@@ -92,6 +93,35 @@ class AdminController:
             fMessages.append("Could not get vault usage: %s" % str(e))
         return fl_response(sMessages, fMessages, format, data={'vaultCapacityMB': vaultCapacityMB , 'vaultUsedMB': vaultUsedMB})
 
+    @cherrypy.expose
+    @cherrypy.tools.requires_login(permission="admin")
+    def get_hourly_statistics(self, format="json", **kwargs):
+        logging.error("get hourly stats")
+        user, sMessages, fMessages = (cherrypy.session.get("user"), [], [])
+        uploadAveragesDict = {'0':0,'1':0,'2':0,'3':0,'4':0,'5':0,'6':0,'7':0,'8':0,'9':0,'10':0,'11':0,'12':0,'13':0,'14':0,'15':0,'16':0,'17':0,'18':0,'19':0,'20':0,'21':0,'22':0,'23':0}
+        downloadAveragesDict = {'0':0,'1':0,'2':0,'3':0,'4':0,'5':0,'6':0,'7':0,'8':0,'9':0,'10':0,'11':0,'12':0,'13':0,'14':0,'15':0,'16':0,'17':0,'18':0,'19':0,'20':0,'21':0,'22':0,'23':0}
+        try:
+            thirtyDaysAgo = datetime.date.today() - datetime.timedelta(days=30)
+            thirtyDayDownloadSum = session.query(func.count(AuditLog.date)).filter(and_(AuditLog.date > thirtyDaysAgo,AuditLog.action==Actions.DOWNLOAD)).scalar()
+            downloadSums = session\
+            .query(func.count(AuditLog.id), func.hour(AuditLog.date))\
+            .group_by(func.hour(AuditLog.date))\
+            .filter(and_(AuditLog.action==Actions.DOWNLOAD, AuditLog.date > thirtyDaysAgo)).all()
+            for d in downloadSums:
+                downloadAveragesDict[str(d[1])] = 0 if d[0]==0 or thirtyDayDownloadSum==0 else int((float(d[0])/float(thirtyDayDownloadSum))*100)
+
+            thirtyDayUploadSum = session.query(func.count(AuditLog.date)).filter(and_(AuditLog.date > thirtyDaysAgo,AuditLog.action==Actions.UPLOAD)).scalar()
+            uploadSums = session\
+            .query(func.count(AuditLog.id), func.hour(AuditLog.date))\
+            .group_by(func.hour(AuditLog.date))\
+            .filter(and_(AuditLog.action==Actions.UPLOAD, AuditLog.date > thirtyDaysAgo)).all()
+            for u in uploadSums:
+                uploadAveragesDict[str(u[1])] = 0 if u[0]==0 or thirtyDayUploadSum==0 else int((float(u[0])/float(thirtyDayUploadSum))*100)
+            sMessages.append("Success")
+        except Exception, e:
+            fMessages.append("Unable to get statistics: %s" % str(e))
+            logging.error("[%s] [get_hourly_statistics] [%s]" % (user.id, str(e)))
+        return fl_response(sMessages, fMessages, format, data={"downloads":downloadAveragesDict, "uploads":uploadAveragesDict})
 
     @cherrypy.expose
     @cherrypy.tools.requires_login(permission="admin")
