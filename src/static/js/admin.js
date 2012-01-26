@@ -771,19 +771,16 @@ Admin = function() {
     Statistics = function() {
         function load()
         {
-            getHourlyStatistics().success(function() {
-                getDailyStatistics().success(function() {
-                    getMonthlyStatistics().success(function() {
-                        $("#systemStatistics").tabs().dialog("open");
-                    });
-                });
-            });
+            getHourlyStatistics();
+            getDailyStatistics();
+            getMonthlyStatistics();
+            $("#systemStatistics").tabs().dialog("open");
         }
         
         function getHourlyStatistics()
         {
             $("#hourly").empty();
-            return Filelocker.request("/admin/get_hourly_statistics", "retrieving hourly statistics", null, false, function(returnData) {
+            Filelocker.request("/admin/get_hourly_statistics", "retrieving hourly statistics", null, false, function(returnData) {
                 var hourlyTable = "<div class='statisticsTableWrapper'><table id='hourlyStatisticsTable' class='statisticsTable'><colgroup><col class='colHead' /></colgroup><caption>% of Total Usage by Hour (Last 30 Days)</caption><thead><tr><td class='rowHead'>Hour</td>";
                 var hourlyHeaders = "";
                 var hourlyDownloadData = "";
@@ -839,7 +836,7 @@ Admin = function() {
         function getDailyStatistics()
         {
             $("#daily").empty();
-            return Filelocker.request("/admin/get_daily_statistics", "retrieving daily statistics", null, false, function(returnData) {
+            Filelocker.request("/admin/get_daily_statistics", "retrieving daily statistics", null, false, function(returnData) {
                 var dailyTable = "<div class='statisticsTableWrapper'><table id='dailyStatisticsTable' class='statisticsTable'><colgroup><col class='colHead' /></colgroup><caption>Total Usage by Day (Last 30 Days)</caption><thead><tr><td class='rowHead'>Hour</td>";
                 var dailyHeaders = "";
                 var dailyDownloadData = "";
@@ -899,7 +896,7 @@ Admin = function() {
         function getMonthlyStatistics()
         {
             $("#monthly").empty();
-            return Filelocker.request("/admin/get_monthly_statistics", "retrieving monthly statistics", null, false, function(returnData) {
+            Filelocker.request("/admin/get_monthly_statistics", "retrieving monthly statistics", null, false, function(returnData) {
                 var monthlyTable = "<div class='statisticsTableWrapper'><table id='monthlyStatisticsTable' class='statisticsTable'><colgroup><col class='colHead' /></colgroup><caption>Total Usage by Month (Last 12 Months)</caption><thead><tr><td class='rowHead'>Month</td>";
                 var monthlyHeaders = "";
                 var monthlyDownloadData = "";
