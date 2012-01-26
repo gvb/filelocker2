@@ -121,7 +121,7 @@ def daily_maintenance(config):
         except Exception, e:
             logging.error("[system] [daily_maintenance] [Error while deleting expired upload request: %s]" % (str(e)))
     maxUserDays = config['filelocker']['user_inactivity_expiration']
-    expiredUsers = session.query(User).filter(User.date_last_login < (datetime.date.today() - datetime.timedelta(days=maxUserDays)))
+    expiredUsers = session.query(User).filter(and_(User.date_last_login < (datetime.date.today() - datetime.timedelta(days=maxUserDays)), User.id!= "admin"))
     for user in expiredUsers:
         print "Trying to delete %s" % user.id
         session.delete(user)

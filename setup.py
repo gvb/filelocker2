@@ -100,7 +100,7 @@ if __name__ == '__main__':
     from optparse import OptionParser
 
     p = OptionParser()
-    p.add_option('-c', '--config', dest='configfile', action="store_true",
+    p.add_option('-c', '--config', dest='configfile', 
                  help="specify config file (defaults to etc/filelocker.conf)")
     p.add_option('-b', '--backup-db', dest="backup", action="store_true",
                  help="backup the database")
