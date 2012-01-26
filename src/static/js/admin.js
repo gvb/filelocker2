@@ -769,19 +769,21 @@ Admin = function() {
     }();
 
     Statistics = function() {
-        function show()
+        function load()
         {
-            getHourlyStatistics();
-            getDailyStatistics();
-            getMonthlyStatistics();
-            $("#systemStatistics").tabs();
-            setTimeout(function(){ $("#systemStatisticsBox").dialog("open"); }, 300);
+            getHourlyStatistics().success(function() {
+                getDailyStatistics().success(function() {
+                    getMonthlyStatistics().success(function() {
+                        $("#systemStatistics").tabs().dialog("open");
+                    });
+                });
+            });
         }
+        
         function getHourlyStatistics()
         {
             $("#hourly").empty();
-            $.post(FILELOCKER_ROOT+'/file/get_hourly_statistics?format=json&ms=' + new Date().getTime(), {},
-            function(returnData) {
+            return Filelocker.request("/admin/get_hourly_statistics", "retrieving hourly statistics", null, false, function(returnData) {
                 var hourlyTable = "<div class='statisticsTableWrapper'><table id='hourlyStatisticsTable' class='statisticsTable'><colgroup><col class='colHead' /></colgroup><caption>% of Total Usage by Hour (Last 30 Days)</caption><thead><tr><td class='rowHead'>Hour</td>";
                 var hourlyHeaders = "";
                 var hourlyDownloadData = "";
@@ -831,13 +833,13 @@ Admin = function() {
                 }
                 else
                     $("#hourly").append("<i>Your browser does not support the canvas element of HTML5.</i>");
-            }, 'json');
+            });
         }
+        
         function getDailyStatistics()
         {
             $("#daily").empty();
-            $.post(FILELOCKER_ROOT+'/file/get_daily_statistics?format=json&ms=' + new Date().getTime(), {},
-            function(returnData) {
+            return Filelocker.request("/admin/get_daily_statistics", "retrieving daily statistics", null, false, function(returnData) {
                 var dailyTable = "<div class='statisticsTableWrapper'><table id='dailyStatisticsTable' class='statisticsTable'><colgroup><col class='colHead' /></colgroup><caption>Total Usage by Day (Last 30 Days)</caption><thead><tr><td class='rowHead'>Hour</td>";
                 var dailyHeaders = "";
                 var dailyDownloadData = "";
@@ -891,13 +893,13 @@ Admin = function() {
                 }
                 else
                     $("#daily").append("<i>Your browser does not support the canvas element of HTML5.</i>");
-            }, 'json');
+            });
         }
+        
         function getMonthlyStatistics()
         {
             $("#monthly").empty();
-            $.post(FILELOCKER_ROOT+'/file/get_monthly_statistics?format=json&ms=' + new Date().getTime(), {},
-            function(returnData) {
+            return Filelocker.request("/admin/get_monthly_statistics", "retrieving monthly statistics", null, false, function(returnData) {
                 var monthlyTable = "<div class='statisticsTableWrapper'><table id='monthlyStatisticsTable' class='statisticsTable'><colgroup><col class='colHead' /></colgroup><caption>Total Usage by Month (Last 12 Months)</caption><thead><tr><td class='rowHead'>Month</td>";
                 var monthlyHeaders = "";
                 var monthlyDownloadData = "";
@@ -954,7 +956,11 @@ Admin = function() {
                 }
                 else
                     $("#monthly").append("<i>Your browser does not support the canvas element of HTML5.</i>");
-            }, 'json');
+            });
+        }
+        
+        return {
+            load:load
         }
     }();
     
@@ -968,7 +974,8 @@ Admin = function() {
         Attribute:Attribute,
         Permission:Permission,
         RolePermission:RolePermission,
-        Template:Template
+        Template:Template,
+        Statistics: Statistics
     }
 }();
 
