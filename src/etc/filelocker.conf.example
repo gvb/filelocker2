@@ -19,6 +19,7 @@ server.socket_host="0.0.0.0"
 
 [/]
 tools.SATransaction.on = True
+#It should be noted that with SQLAlchemy v0.5 variants, you'll need to remove the +mysqldb part of the URI below
 tools.SATransaction.dburi = "mysql+mysqldb://filelocker:l0ck;files@localhost/filelocker_sqlalchemy"
 tools.SATransaction.echo = False
 
