@@ -63,7 +63,7 @@ def requires_login(permissionId=None, **kwargs):
                     raise cherrypy.HTTPError(403, "Invalid CAS Ticket. If you copied and pasted the URL for this server, you might need to remove the 'ticket' parameter from the URL.")
             else:
                 if format == None:
-                    raise cherrypy.HTTPRedirect(CAS.login_url(rootURL))
+                    raise cherrypy.HTTPRedirect(lib.CAS.login_url(rootURL))
                 else:
                     raise cherrypy.HTTPError(401)
         else:
