@@ -13,6 +13,8 @@ from cherrypy.process import plugins, servers
 from Cheetah.Template import Template
 from lib.SQLAlchemyTool import configure_session_for_app, session
 import sqlalchemy
+import lib
+from lib.CAS import CAS
 from lib.Models import *
 from lib.Formatters import *
 
@@ -37,9 +39,10 @@ def requires_login(permissionId=None, **kwargs):
         else:
             pass
     else:
-        if cherrypy.request.app.config['filelocker']['auth_type'] == "cas":
+        if True:#cherrypy.request.app.config['filelocker']['auth_type'] == "cas":
+            casConnector = CAS(cherrypy.request.app.config['filelocker']['cas_url'])
             if cherrypy.request.params.has_key("ticket"):
-                valid_ticket, userId = lib.CAS.validate_ticket(rootURL, cherrypy.request.params['ticket'])
+                valid_ticket, userId = casConnector.validate_ticket(rootURL, cherrypy.request.params['ticket'])
                 if valid_ticket:
                     currentUser = AccountController.get_user(currentUser.id, True)
                     if currentUser is None:
@@ -63,7 +66,7 @@ def requires_login(permissionId=None, **kwargs):
                     raise cherrypy.HTTPError(403, "Invalid CAS Ticket. If you copied and pasted the URL for this server, you might need to remove the 'ticket' parameter from the URL.")
             else:
                 if format == None:
-                    raise cherrypy.HTTPRedirect(CAS.login_url(rootURL))
+                    raise cherrypy.HTTPRedirect(casConnector.login_url(rootURL))
                 else:
                     raise cherrypy.HTTPError(401)
         else:
