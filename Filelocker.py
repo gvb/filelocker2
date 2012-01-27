@@ -125,11 +125,13 @@ def daily_maintenance(config):
             logging.error("[system] [daily_maintenance] [Error while deleting expired upload request: %s]" % (str(e)))
     maxUserDays = config['filelocker']['user_inactivity_expiration']
     expiredUsers = session.query(User).filter(and_(User.date_last_login < (datetime.date.today() - datetime.timedelta(days=maxUserDays)), User.id!= "admin"))
+    from controller import AccountController
     for user in expiredUsers:
-        print "Trying to delete %s" % user.id
-        session.delete(user)
-        session.add(AuditLog("admin", "Delete User", "User %s was deleted due to inactivity. All files and shares associated with this user have been purged as well" % str(user.id)))
-        session.commit()
+        if AccountController.user_has_permissions(user, "admin") == False and AccountController.user_has_permission(user, "expiration_exempt") == False:
+            print "Purging user %s" % user.id
+            session.delete(user)
+            session.add(AuditLog("admin", "Delete User", "User %s was deleted due to inactivity. All files and shares associated with this user have been purged as well" % str(user.id)))
+            session.commit()
 
     for ps in session.query(PublicShare).all():
         if len(ps.files) == 0:
