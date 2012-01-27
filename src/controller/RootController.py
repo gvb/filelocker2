@@ -35,6 +35,7 @@ class RootController:
 
     @cherrypy.expose
     def login(self, **kwargs):
+        logging.error( "login")
         msg, errorMessage, authType, config = ( None, None, cherrypy.request.app.config['filelocker']['auth_type'], cherrypy.request.app.config['filelocker'])
         if kwargs.has_key("msg"):
             msg = kwargs['msg']
@@ -55,6 +56,7 @@ class RootController:
             currentYear = datetime.date.today().year
             footerText = str(Template(file=get_template_file('footer_text.tmpl'), searchList=[locals(),globals()]))
             tpl = Template(file=get_template_file('login.tmpl'), searchList=[locals(),globals()])
+            logging.error("returning template")
             return str(tpl)
         else:
             logging.error("[system] [login] [No authentication variable set in config]")
@@ -89,7 +91,7 @@ class RootController:
 
     @cherrypy.expose
     def process_login(self, username, password, **kwargs):
-        print "Processing login"
+        logging.error("process login")
         authType, rootURL = cherrypy.request.app.config['filelocker']['auth_type'], cherrypy.request.app.config['filelocker']['root_url']
         if kwargs.has_key("authType"):
             authType = kwargs['authType']
@@ -98,8 +100,10 @@ class RootController:
             pass
         else:
             if password is None or password == "":
+                logging.error("Password is non - redirecting to login")
                 raise cherrypy.HTTPRedirect("%s/login?msg=3&authType=%s" % (rootURL, authType))
             else:
+                logging.error("password not none - instantiating directory and checking password")
                 directory = AccountController.ExternalDirectory(cherrypy.request.app.config['filelocker'])
                 if directory.authenticate(username, password):
                     currentUser = AccountController.get_user(username, True) #if they are authenticated and local, this MUST return a user object
@@ -107,8 +111,8 @@ class RootController:
                         if currentUser.authorized == False:
                             raise cherrypy.HTTPError(403, "You do not have permission to access this system")
                         session.add(AuditLog(cherrypy.session.get("user").id, "Login", "User %s logged in successfully from IP %s" % (currentUser.id, cherrypy.request.remote.ip)))
-                        print "User has been authenticated"
                         session.commit()
+                        logging.error("User found, authenticated, redirecting")
                         raise cherrypy.HTTPRedirect(rootURL)
                     else: #This should only happen in the case of a user existing in the external directory, but having never logged in before
                         try:

@@ -34,7 +34,7 @@ def requires_login(permissionId=None, **kwargs):
         if user.date_tos_accept == None:
             raise cherrypy.HTTPRedirect(rootURL+"/sign_tos")
         elif permissionId is not None:
-            if AccountController.user_has_permission(user, permissionId)==False:
+            if lib.AccountController.user_has_permission(user, permissionId)==False:
                 raise HTTPError(403)
         else:
             pass
@@ -44,13 +44,13 @@ def requires_login(permissionId=None, **kwargs):
             if cherrypy.request.params.has_key("ticket"):
                 valid_ticket, userId = casConnector.validate_ticket(rootURL, cherrypy.request.params['ticket'])
                 if valid_ticket:
-                    currentUser = AccountController.get_user(currentUser.id, True)
+                    currentUser = lib.AccountController.get_user(currentUser.id, True)
                     if currentUser is None:
                         currentUser = User(id=userId, display_name="Guest user", first_name="Unknown", last_name="Unknown")
                         logging.error("[%s] [requires_login] [User authenticated, but not found in directory - installing with defaults]"%str(userId))
                         session.add(currentUser)
                         session.commit()
-                        currentUser = AccountController.get_user(currentUser.id, True) #To populate attributes
+                        currentUser = lib.AccountController.get_user(currentUser.id, True) #To populate attributes
                     if currentUser.authorized == False:
                         raise cherrypy.HTTPError(403, "Your user account does not have access to this system.")
                     session.add(AuditLog(currentUser.id, "Login", "User %s logged in successfully from IP %s" % (currentUser.id, cherrypy.request.remote.ip)))
@@ -125,9 +125,8 @@ def daily_maintenance(config):
             logging.error("[system] [daily_maintenance] [Error while deleting expired upload request: %s]" % (str(e)))
     maxUserDays = config['filelocker']['user_inactivity_expiration']
     expiredUsers = session.query(User).filter(and_(User.date_last_login < (datetime.date.today() - datetime.timedelta(days=maxUserDays)), User.id!= "admin"))
-    from controller import AccountController
     for user in expiredUsers:
-        if AccountController.user_has_permissions(user, "admin") == False and AccountController.user_has_permission(user, "expiration_exempt") == False:
+        if lib.AccountController.user_has_permission(user, "admin") == False and lib.AccountController.user_has_permission(user, "expiration_exempt") == False:
             print "Purging user %s" % user.id
             session.delete(user)
             session.add(AuditLog("admin", "Delete User", "User %s was deleted due to inactivity. All files and shares associated with this user have been purged as well" % str(user.id)))
