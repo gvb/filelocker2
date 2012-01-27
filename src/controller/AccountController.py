@@ -7,7 +7,7 @@ from lib.SQLAlchemyTool import session
 from Cheetah.Template import Template
 from lib.Formatters import *
 from lib.Models import *
-from directory import *
+import directory
 import plugins
 __author__="wbdavis"
 __date__ ="$Sep 25, 2011 9:37:17 PM$"
@@ -657,6 +657,7 @@ class ExternalDirectory(object):
     def __init__(self, config):
         directoryType = config['directory_type']
         if directoryType == "ldap":
+            from directory import LDAPDirectory
             self.directory = LDAPDirectory.LDAPDirectory(config)
         elif directoryType == "local":
             from directory import LocalDirectory
