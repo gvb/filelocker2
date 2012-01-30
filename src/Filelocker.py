@@ -39,7 +39,7 @@ def requires_login(permissionId=None, **kwargs):
         else:
             pass
     else:
-        if True:#cherrypy.request.app.config['filelocker']['auth_type'] == "cas":
+        if cherrypy.request.app.config['filelocker']['auth_type'] == "cas":
             casConnector = CAS(cherrypy.request.app.config['filelocker']['cas_url'])
             if cherrypy.request.params.has_key("ticket"):
                 valid_ticket, userId = casConnector.validate_ticket(rootURL, cherrypy.request.params['ticket'])

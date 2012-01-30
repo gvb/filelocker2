@@ -31,7 +31,7 @@ class RootController:
 
     @cherrypy.expose
     def local(self, **kwargs):
-        return self.login(authType="local")
+        raise cherrypy.HTTPRedirect(["%s/login" % cherrypy.request.app.config['filelocker']['root_url'], "authType=local"], 301)
 
     @cherrypy.expose
     def login(self, **kwargs):
@@ -91,7 +91,6 @@ class RootController:
 
     @cherrypy.expose
     def process_login(self, username, password, **kwargs):
-        logging.error("process login")
         authType, rootURL = cherrypy.request.app.config['filelocker']['auth_type'], cherrypy.request.app.config['filelocker']['root_url']
         if kwargs.has_key("authType"):
             authType = kwargs['authType']
