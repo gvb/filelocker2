@@ -47,7 +47,7 @@
                                 </div>
                             </td>
 
-                            #if $AccountController.user_has_permission($flUser, "admin") is False:
+                            #if $AccountService.user_has_permission($flUser, "admin") is False:
                             <td><a href="javascript:User.promptViewHistory('$flUser.id');" class="clock" title="View Filelocker interactions for '$flUser.id'">$flUser.id</a></td>
                             #else
                             <td><a href="javascript:User.promptViewHistory('$flUser.id');" class="admin" title="View Filelocker interactions for '$flUser.id' (admin)">$flUser.id</a></td>
@@ -56,7 +56,7 @@
                             <td onClick="Admin.User.rowClick('$flUser.id')">$flUser.first_name</td>
                             <td onClick="Admin.User.rowClick('$flUser.id')">$flUser.email</td>
                         #if float($flUser.quota) > 0:
-                            #set $percentUsed = int(round(float($FileController.get_user_quota_usage_bytes(flUser))/float($flUser.quota)*100,0))
+                            #set $percentUsed = int(round(float($FileService.get_user_quota_usage_bytes(flUser))/float($flUser.quota)*100,0))
                         #else
                             #set $percentUsed = 0
                         #end if
@@ -121,11 +121,11 @@
                             <td onClick="Admin.Role.rowClick('$flRole.id')">$flRole.name</td>
                             <td onClick="Admin.Role.rowClick('$flRole.id')">$flRole.email</td>
                         #if float($flRole.quota) > 0:
-                            #set $percentUsed = int(round(float($FileController.get_user_quota_usage_bytes(flRole))/float($flRole.quota)*100,0))
+                            #set $percentUsed = int(round(float($FileService.get_user_quota_usage_bytes(flRole))/float($flRole.quota)*100,0))
                         #else
                             #set $percentUsed = 0
                         #end if
-                        #set $quotaUsedMB = int(round($FileController.get_role_quota_usage_bytes($flRole),0)) * 1024 * 1024
+                        #set $quotaUsedMB = int(round($FileService.get_role_quota_usage_bytes($flRole),0)) * 1024 * 1024
                         #if $flRole.quota >= 1024
                             #set $quotaInGB = round(float($flRole.quota)/1024,2)
                             <td onClick="Admin.Role.rowClick('$flRole.id')"><span class="roleQuotaUsage pseudoLink" title="${percentUsed}% ($quotaUsedMB MB) used">$quotaInGB GB</span></td>

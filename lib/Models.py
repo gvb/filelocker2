@@ -9,7 +9,6 @@ try:
     import cPickle as pickle
 except ImportError:
     import pickle
-    
 try:
     from hashlib import md5
 except ImportError, ie:
@@ -19,7 +18,7 @@ from sqlalchemy.orm import relation, backref, sessionmaker, mapper
 from sqlalchemy import *
 from lib.SQLAlchemyTool import configure_session_for_app, session, _engines
 from lib.Encryption import hash_password
-from Filelocker import __version__
+
 __author__="wbdavis"
 __date__ ="$Sep 27, 2011 8:48:55 PM$"
 Base = declarative_base()
@@ -417,8 +416,9 @@ def create_database_tables(dburi):
     Base.metadata.create_all(engine)
     Session = sessionmaker(bind=engine)
     session = Session()
+    import Filelocker.__version__ as version
     initialConfigList = [("org_name", "Name of your organization.", "text", "My Company"),
-    ("version", "Currently running version of Filelocker", "text", str(__version__)),
+    ("version", "Currently running version of Filelocker", "text", str(version)),
     ("org_url", "Home page of your organization.", "text", "http://www.mycompany.com"),
     ("admin_email", "Public email address of the Filelocker Administrator.", "text", "admin@mycompany.com"),
     ("max_file_life_days", "Max number of days a file can exist on the system. After this time, the file will be securely erased along with any shares it was associated with.", "number", "7"),

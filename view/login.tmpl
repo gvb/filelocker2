@@ -29,7 +29,9 @@
                     <h2 class="errorMessage">$errorMessage</h2>
                 #end if
                 <form action="$loginPage" method="post" name="login">
-                <input type="hidden" name="authType" value="$authType"/> 
+                #if $authType == "local"
+                <input type="hidden" name="local" value="$str(True)"/>
+                #end if
                 <table>
                     <tr>
                         <td><label for="username">Username:</label></td>
