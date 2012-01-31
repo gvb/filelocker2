@@ -136,7 +136,7 @@ class RootController:
         return str(Template(file=get_template_file(styleFile), searchList=[locals(),globals()]))
 
     @cherrypy.expose
-    @cherrypy.tools.requires_login(permissionId="admin")
+    @cherrypy.tools.requires_login()
     def index(self, **kwargs):
         config = cherrypy.request.app.config['filelocker']
         user, originalUser, maxDays = (cherrypy.session.get("user"),  cherrypy.session.get("original_user"), cherrypy.request.app.config['filelocker']['max_file_life_days'])
