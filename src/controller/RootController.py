@@ -8,17 +8,19 @@ import sqlalchemy
 from Cheetah.Template import Template
 from lib import Encryption
 from lib.Models import *
-import AccountController
-import ShareController
-import MessageController
-import FileController
-import AdminController
-
+from lib import AccountService
+from lib import FileService
+from lib import ShareService
 from lib.Formatters import *
 __author__="wbdavis"
 __date__ ="$Sep 25, 2011 9:36:56 PM$"
 
 class RootController:
+    import FileController
+    import ShareController
+    import MessageController
+    import AdminController
+    import AccountController
     share = ShareController.ShareController()
     file = FileController.FileController()
     account = AccountController.AccountController()
@@ -31,7 +33,7 @@ class RootController:
 
     @cherrypy.expose
     def local(self, **kwargs):
-        raise cherrypy.HTTPRedirect(["%s/login" % cherrypy.request.app.config['filelocker']['root_url'], "authType=local"], 301)
+        raise cherrypy.HTTPRedirect(["%s/login" % cherrypy.request.app.config['filelocker']['root_url'], "local=%s" % str(True)], 301)
 
     @cherrypy.expose
     def login(self, **kwargs):
@@ -39,8 +41,9 @@ class RootController:
         msg, errorMessage, authType, config = ( None, None, cherrypy.request.app.config['filelocker']['auth_type'], cherrypy.request.app.config['filelocker'])
         if kwargs.has_key("msg"):
             msg = kwargs['msg']
-        if kwargs.has_key("authType"):
-            authType = kwargs['authType']
+        if kwargs.has_key("local") and kwargs['local']==str(True):
+            authType = "local"
+
         loginPage = config['root_url'] + "/process_login"
         if msg is not None and str(strip_tags(msg))=="1":
             errorMessage = "Invalid username or password"
@@ -48,16 +51,15 @@ class RootController:
             errorMessage = "You have been logged out of the application"
         elif msg is not None and str(strip_tags(msg))=="3":
             errorMessage = "Password cannot be blank"
-        if authType is None:
-            authType = config['auth_type']
-        if authType == "cas":
-            pass
-        elif authType == "ldap" or authType == "local":
+
+        if authType == "ldap" or authType == "local":
             currentYear = datetime.date.today().year
             footerText = str(Template(file=get_template_file('footer_text.tmpl'), searchList=[locals(),globals()]))
             tpl = Template(file=get_template_file('login.tmpl'), searchList=[locals(),globals()])
             logging.error("returning template")
             return str(tpl)
+        elif authType == "cas":
+            raise cherrypy.HTTPRedirect(config['root_url'])
         else:
             logging.error("[system] [login] [No authentication variable set in config]")
             raise cherrypy.HTTPError(403, "No authentication mechanism")
@@ -91,41 +93,39 @@ class RootController:
 
     @cherrypy.expose
     def process_login(self, username, password, **kwargs):
-        authType, rootURL = cherrypy.request.app.config['filelocker']['auth_type'], cherrypy.request.app.config['filelocker']['root_url']
-        if kwargs.has_key("authType"):
-            authType = kwargs['authType']
+        rootURL, local = cherrypy.request.app.config['filelocker']['root_url'], False
+        if kwargs.has_key("local") and kwargs['local']==str(True):
+            local = True
         username = strip_tags(username)
-        if authType == "cas":
-            pass
+
+        if password is None or password == "":
+            logging.error("Password is non - redirecting to login")
+            raise cherrypy.HTTPRedirect("%s/login?msg=3&local=%s" % (rootURL, str(local)))
         else:
-            if password is None or password == "":
-                logging.error("Password is non - redirecting to login")
-                raise cherrypy.HTTPRedirect("%s/login?msg=3&authType=%s" % (rootURL, authType))
-            else:
-                logging.error("password not none - instantiating directory and checking password")
-                directory = AccountController.ExternalDirectory(cherrypy.request.app.config['filelocker'])
-                if directory.authenticate(username, password):
-                    currentUser = AccountController.get_user(username, True) #if they are authenticated and local, this MUST return a user object
-                    if currentUser is not None:
-                        if currentUser.authorized == False:
+            logging.error("password not none - instantiating directory and checking password")
+            directory = AccountService.ExternalDirectory(cherrypy.request.app.config['filelocker'], local)
+            if directory.authenticate(username, password):
+                currentUser = AccountService.get_user(username, True) #if they are authenticated and local, this MUST return a user object
+                if currentUser is not None:
+                    if currentUser.authorized == False:
+                        raise cherrypy.HTTPError(403, "You do not have permission to access this system")
+                    session.add(AuditLog(cherrypy.session.get("user").id, "Login", "User %s logged in successfully from IP %s" % (currentUser.id, cherrypy.request.remote.ip)))
+                    session.commit()
+                    logging.error("User found, authenticated, redirecting")
+                    raise cherrypy.HTTPRedirect(rootURL)
+                else: #This should only happen in the case of a user existing in the external directory, but having never logged in before
+                    try:
+                        newUser = directory.lookup_user(username)
+                        AccountService.install_user(newUser)
+                        currentUser = AccountService.get_user(username, True)
+                        if currentUser is not None and currentUser.authorized != False:
+                            raise cherrypy.HTTPRedirect(rootURL)
+                        else:
                             raise cherrypy.HTTPError(403, "You do not have permission to access this system")
-                        session.add(AuditLog(cherrypy.session.get("user").id, "Login", "User %s logged in successfully from IP %s" % (currentUser.id, cherrypy.request.remote.ip)))
-                        session.commit()
-                        logging.error("User found, authenticated, redirecting")
-                        raise cherrypy.HTTPRedirect(rootURL)
-                    else: #This should only happen in the case of a user existing in the external directory, but having never logged in before
-                        try:
-                            newUser = directory.lookup_user(username)
-                            AccountController.install_user(newUser)
-                            currentUser = AccountController.get_user(username, True)
-                            if currentUser is not None and currentUser.authorized != False:
-                                raise cherrypy.HTTPRedirect(rootURL)
-                            else:
-                                raise cherrypy.HTTPError(403, "You do not have permission to access this system")
-                        except Exception, e:
-                            return "Unable to install user: %s" % str(e)
-                else:
-                    raise cherrypy.HTTPRedirect("%s/login?msg=1&authType=%s" % (rootURL, authType))
+                    except Exception, e:
+                        return "Unable to install user: %s" % str(e)
+            else:
+                raise cherrypy.HTTPRedirect("%s/login?msg=1&local=%s" % (rootURL, str(local)))
 
     @cherrypy.expose
     def css(self, style):
@@ -136,7 +136,7 @@ class RootController:
         return str(Template(file=get_template_file(styleFile), searchList=[locals(),globals()]))
 
     @cherrypy.expose
-    @cherrypy.tools.requires_login()
+    @cherrypy.tools.requires_login(permissionId="admin")
     def index(self, **kwargs):
         config = cherrypy.request.app.config['filelocker']
         user, originalUser, maxDays = (cherrypy.session.get("user"),  cherrypy.session.get("original_user"), cherrypy.request.app.config['filelocker']['max_file_life_days'])
@@ -199,7 +199,7 @@ class RootController:
         currentUploads = len(cherrypy.file_uploads)
         logsFile = open(cherrypy.config["log.error_file"])
         logs = tail(logsFile, 50)
-        attributes = AccountController.get_shareable_attributes_by_user(user)
+        attributes = AccountService.get_shareable_attributes_by_user(user)
         currentUserIds = []
         sessionCache = {}
         sessionCache = cherrypy.session.cache
@@ -220,7 +220,7 @@ class RootController:
         sMessages, fMessages, user, role= ([],[],cherrypy.session.get("user"),cherrypy.session.get("current_role"))
         config = cherrypy.request.app.config['filelocker']
         userId = strip_tags(userId) if strip_tags(userId) != None else user.id
-        if (userId != user.id and AccountController.user_has_permission(user, "admin")==False):
+        if (userId != user.id and AccountService.user_has_permission(user, "admin")==False):
             raise cherrypy.HTTPError(403)
         actionList, actionLogList = ([], [])
         try:
@@ -274,11 +274,11 @@ class RootController:
         if role is None:
             uploadRequests = session.query(UploadRequest).filter(UploadRequest.owner_id==user.id).all()
             userFiles = self.file.get_user_file_list(format="list")
-            userShareableAttributes = AccountController.get_shareable_attributes_by_user(user)
-            attributeFilesDict = ShareController.get_files_shared_with_user_by_attribute(user)
-            sharedFiles = ShareController.get_files_shared_with_user(user)
+            userShareableAttributes = AccountService.get_shareable_attributes_by_user(user)
+            attributeFilesDict = ShareService.get_files_shared_with_user_by_attribute(user)
+            sharedFiles = ShareService.get_files_shared_with_user(user)
         else:
-            userShareableAttributes = AccountController.get_shareable_attributes_by_role(role)
+            userShareableAttributes = AccountService.get_shareable_attributes_by_role(role)
         tpl = Template(file=get_template_file('files.tmpl'), searchList=[locals(),globals()])
         return str(tpl)
 

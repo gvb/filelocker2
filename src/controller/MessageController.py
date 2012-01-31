@@ -6,8 +6,7 @@ from Cheetah.Template import Template
 from Cheetah.Filters import WebSafe
 from lib.SQLAlchemyTool import session
 import sqlalchemy
-
-import AccountController
+from lib import AccountService
 from lib import Encryption
 from lib.Formatters import *
 from lib.Models import *
@@ -25,17 +24,17 @@ class MessageController:
             recipientIdList = split_list_sanitized(recipientIds)
             subject= strip_tags(subject)
             #Process the expiration data for the file
-            if expiration is None and (AccountController.user_has_permission(user, "expiration_exempt") == False and AccountController.user_has_permission(user, "admin")==False): #Check permission before allowing a non-expiring upload
+            if expiration is None and (AccountService.user_has_permission(user, "expiration_exempt") == False and AccountService.user_has_permission(user, "admin")==False): #Check permission before allowing a non-expiring upload
                 expiration = maxExpiration
             else:
-                if maxExpiration < expiration and AccountController.user_has_permission(user, "expiration_exempt")==False:
+                if maxExpiration < expiration and AccountService.user_has_permission(user, "expiration_exempt")==False:
                     raise Exception("Expiration date must be between now and %s." % maxExpiration.strftime("%m/%d/%Y"))
             newMessage = Message(subject=subject, body=body, date_sent=datetime.datetime.now(), owner_id=user.id, date_expires=expiration, encryption_key=Encryption.generatePassword())
             session.add(newMessage)
             session.commit()
             encrypt_message(newMessage)
             for recipientId in recipientIdList:
-                rUser = AccountController.get_user(recipientId)
+                rUser = AccountService.get_user(recipientId)
                 if rUser is not None:
                     newMessage.message_shares.append(MessageShare(message_id=newMessage.id, recipient_id=rUser.id))
                     session.add(AuditLog(user.id, "Send Message", "%s sent a message with subject: \"%s\" to %s(%s)" % (user.id, newMessage.subject, rUser.display_name, rUser.id), rUser.id, None))
@@ -56,7 +55,7 @@ class MessageController:
         try:
             recipientIdList = split_list_sanitized(recipientIds)
             for recipientId in recipientIdList:
-                rUser = AccountController.get_user(recipientId)
+                rUser = AccountService.get_user(recipientId)
                 if rUser is not None:
                     session.add(MessageShare(message_id=newMessage.id, recipient_id=rUser.id))
                     session.add(AuditLog(user.id, "Send Message", "%s sent a message with subject: \"%s\" to %s(%s)" % (user.id, newMessage.subject, rUser.display_name, rUser.id), rUser.id, None))
@@ -132,7 +131,7 @@ class MessageController:
             messageIdList = split_list_sanitized(messageIds)
             for messageId in messageIdList:
                 rMessage = session.query(MessageShare).filter(MessageShare.message_id==messageId).one()
-                if rMessage.recipient_id == user.id or rMessage.message.owner_id == user.id or AccountController.user_has_permission(user, "admin"):
+                if rMessage.recipient_id == user.id or rMessage.message.owner_id == user.id or AccountService.user_has_permission(user, "admin"):
                     session.delete(rMessage)
                 else:
                     fMessages.append("You do not have permission to delete message with ID: %s" % messageId)
@@ -151,7 +150,7 @@ class MessageController:
             messageIdList = split_list_sanitized(messageIds)
             for messageId in messageIdList:
                 message = session.query(Message).filter(Message.id==messageId).scalar()
-                if (message.owner_id==user.id or AccountController.user_has_permission(user, "admin")):
+                if (message.owner_id==user.id or AccountService.user_has_permission(user, "admin")):
                     session.delete(message)
                 else:
                     fMessages.append("You do not have permission to delete message with ID: %s" % messageId)

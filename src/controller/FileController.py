@@ -21,7 +21,8 @@ from lib.Models import *
 from lib.Formatters import *
 from lib import Mail
 from lib import Encryption
-import AccountController
+from lib import AccountService
+from lib import FileService
 __author__="wbdavis"
 __date__ ="$Sep 25, 2011 9:28:54 PM$"
 
@@ -35,10 +36,10 @@ class FileController(object):
             quotaMB, quotaUsage = 0,0
             if cherrypy.session.get("current_role") is not None:
                 quotaMB = cherrypy.session.get("current_role").quota
-                quotaUsage = get_role_quota_usage_bytes(cherrypy.session.get("current_role").id)
+                quotaUsage = FileService.get_role_quota_usage_bytes(cherrypy.session.get("current_role").id)
             else:
                 quotaMB = user.quota
-                quotaUsage = get_user_quota_usage_bytes(user.id)
+                quotaUsage = FileService.get_user_quota_usage_bytes(user.id)
             quotaUsedMB = int(quotaUsage) / 1024 / 1024
         except Exception, e:
             fMessages.append(str(e))
@@ -129,7 +130,7 @@ class FileController(object):
             #TODO: Account for attribute shares here 'document_attribute'
         if format=="json" or format=="searchbox_html" or format=="cli":
             myFilesJSON = []
-            userShareableAttributes = AccountController.get_shareable_attributes_by_user(user) if role is None else AccountController.get_shareable_attributes_by_role(role)
+            userShareableAttributes = AccountService.get_shareable_attributes_by_user(user) if role is None else AccountService.get_shareable_attributes_by_role(role)
             for flFile in myFilesList:
                 flFile.fileUserShares, flFile.fileGroupShares, flFile.availableGroups, sharedGroupsList, flFile.fileAttributeShares = ([],[],[],[],[])
                 for share in flFile.user_shares:
@@ -173,8 +174,8 @@ class FileController(object):
             flFile = session.query(File).filter(File.id==fileId).one()
             if flFile.owner_id == user.id:
                 fMessages.append("You cannot take your own file")
-            elif flFile.shared_with(user) or AccountController.user_has_permission(user, "admin"):
-                if (get_user_quota_usage_bytes(user) + flFile.size) >= (user.quota*1024*1024):
+            elif flFile.shared_with(user) or AccountService.user_has_permission(user, "admin"):
+                if (FileService.get_user_quota_usage_bytes(user) + flFile.size) >= (user.quota*1024*1024):
                     logging.warning("[%s] [take_file] [User has insufficient quota space remaining to check in file: %s]" % (user.id, flFile.name))
                     raise Exception("You may not copy this file because doing so would exceed your quota")
                 takenFile = flFile.get_copy()
@@ -209,7 +210,7 @@ class FileController(object):
                     session.add(AuditLog(user.id, "Delete File", "File %s (%s) owned by role %s has been deleted by user %s. " % (flFile.name, flFile.id, role.name, user.id, role.id)))
                     session.commit()
                     sMessages.append("File %s deleted successfully" % flFile.name)
-                elif flFile.owner_id == user.id or AccountController.user_has_permission(user, "admin"):
+                elif flFile.owner_id == user.id or AccountService.user_has_permission(user, "admin"):
                     queue_for_deletion(flFile.id)
                     session.delete(flFile)
                     session.add(AuditLog(user.id, "Delete File", "File %s (%s) has been deleted" % (flFile.name, flFile.id)))
@@ -232,7 +233,7 @@ class FileController(object):
         fileId = strip_tags(fileId)
         try:
             flFile = session.query(File).filter(File.id==fileId).one()
-            if flFile.owner_id == user.id or AccountController.user_has_permission(user, "admin"):
+            if flFile.owner_id == user.id or AccountService.user_has_permission(user, "admin"):
                 if kwargs.has_key("fileName"):
                     flFile.name = strip_tags(kwargs['fileName'])
                 if kwargs.has_key('notifyOnDownload'):
@@ -258,7 +259,7 @@ class FileController(object):
         #Check Permission to upload since we can't wrap in requires login for public uploads
         if cherrypy.session.has_key("uploadRequest") and cherrypy.session.get("uploadRequest") is not None and cherrypy.session.get("uploadRequest").expired == False:
             uploadRequest = cherrypy.session.get("uploadRequest")
-            user = AccountController.get_user(uploadRequest.owner_id)
+            user = AccountService.get_user(uploadRequest.owner_id)
             uploadKey = "%s:%s" % (user.id, uploadRequest.id)
         else:
             cherrypy.tools.requires_login()
@@ -277,7 +278,7 @@ class FileController(object):
             fMessages.append("Request must have a valid content length")
             raise HTTPError(411, "Request must have a valid content length")
         fileSizeMB = ((fileSizeBytes/1024)/1024)
-        vaultSpaceFreeMB, vaultCapacityMB = get_vault_usage()
+        vaultSpaceFreeMB, vaultCapacityMB = FileService.get_vault_usage()
         
         if (fileSizeMB*2) >= vaultSpaceFreeMB:
             logging.critical("[system] [upload] [File vault is running out of space and cannot fit this file. Remaining Space is %s MB, fileSizeBytes is %s]" % (vaultSpaceFreeMB, fileSizeBytes))
@@ -285,9 +286,9 @@ class FileController(object):
             raise HTTPError(413, "The server doesn't have enough space left on its drive to fit this file. The administrator has been notified.")
         quotaSpaceRemainingBytes = 0
         if role is not None:
-            quotaSpaceRemainingBytes = (role.quota*1024*1024) - get_role_quota_usage_bytes(role.id)
+            quotaSpaceRemainingBytes = (role.quota*1024*1024) - FileService.get_role_quota_usage_bytes(role.id)
         else:
-            quotaSpaceRemainingBytes = (user.quota*1024*1024) - get_user_quota_usage_bytes(user.id)
+            quotaSpaceRemainingBytes = (user.quota*1024*1024) - FileService.get_user_quota_usage_bytes(user.id)
         if fileSizeBytes > quotaSpaceRemainingBytes:
             fMessages.append("File size is larger than your quota will accomodate")
             raise HTTPError(413, "File size is larger than your quota will accomodate")
@@ -312,7 +313,7 @@ class FileController(object):
 
         #Read file from client
         if lcHDRS['content-type'] == "application/octet-stream":
-            file_object = get_temp_file()
+            file_object = FileService.get_temp_file()
             tempFileName = file_object.name.split(os.path.sep)[-1]
             #Create the progress file object and drop it into the transfer dictionary
             upFile = ProgressFile(8192, fileName, file_object, uploadIndex)
@@ -352,7 +353,7 @@ class FileController(object):
             if fileName is None:
                 fileName = upFile.filename
             if str(type(upFile.file)) == '<type \'cStringIO.StringO\'>' or isinstance(upFile.file, StringIO.StringIO):
-                newTempFile = get_temp_file()
+                newTempFile = FileService.get_temp_file()
                 newTempFile.write(str(upFile.file.getvalue()))
                 newTempFile.seek(0)
                 upFile = ProgressFile(8192, fileName, newTempFile)
@@ -381,15 +382,15 @@ class FileController(object):
         maxExpiration = datetime.datetime.today() + datetime.timedelta(days=config['max_file_life_days'])
         expiration = kwargs['expiration'] if kwargs.has_key("expiration") else None
         if (expiration is None or expiration == "" or expiration.lower() =="never"):
-            if role is not None and AccountController.role_has_permission(role, "expiration_exempt") or AccountController.role_has_permission(role, "admin"):
+            if role is not None and AccountService.role_has_permission(role, "expiration_exempt") or AccountService.role_has_permission(role, "admin"):
                 expiration = None
-            elif AccountController.user_has_permission(user,  "expiration_exempt") or AccountController.user_has_permission(user, "admin"): #Check permission before allowing a non-expiring upload
+            elif AccountService.user_has_permission(user,  "expiration_exempt") or AccountService.user_has_permission(user, "admin"): #Check permission before allowing a non-expiring upload
                 expiration = None
             else:
                 expiration = maxExpiration
         else:
             expiration = datetime.datetime(*time.strptime(strip_tags(expiration), "%m/%d/%Y")[0:5])
-            if expiration > maxExpiration and AccountController.user_has_permission(user,  "expiration_exempt")==False:
+            if expiration > maxExpiration and AccountService.user_has_permission(user,  "expiration_exempt")==False:
                 fMessages.append("Expiration date was invalid. Expiration set to %s" % maxExpiration.strftime("%m/%d/%Y"))
                 expiration = maxExpiration
         newFile.date_expires = expiration
@@ -410,7 +411,7 @@ class FileController(object):
                     fileTransfer.status = "Scanning and Encrypting" if scanFile else "Encrypting"
         #Check in the file
         try:
-            check_in_file(tempFileName, newFile)
+            FileService.check_in_file(tempFileName, newFile)
             #If this is an upload request, check to see if it's a single use request and nullify the ticket if so, now that the file has been successfully uploaded
             if uploadRequest is not None:
                 if uploadRequest.type == "single":
@@ -445,7 +446,7 @@ class FileController(object):
             logging.warning("[%s] [upload] [Key error deleting entry in file_transfer]" % user.id)
 
         #Queue the temp file for secure erasure
-        queue_for_deletion(tempFileName)
+        FileService.queue_for_deletion(tempFileName)
 
         #Return the response
         if format=="cli":
@@ -473,7 +474,7 @@ class FileController(object):
             user, role = cherrypy.session.get("user"), cherrypy.session.get("current_role")
             try:
                 requestedFile = session.query(File).filter(File.id==fileId).one()
-                if (role is not None and requestedFile.role_owner_id == role.id) or requestedFile.owner_id == user.id or requestedFile.shared_with(user) or AccountController.user_has_permission(user, "admin"):
+                if (role is not None and requestedFile.role_owner_id == role.id) or requestedFile.owner_id == user.id or requestedFile.shared_with(user) or AccountService.user_has_permission(user, "admin"):
                     serveFile = True
             except sqlalchemy.orm.exc.NoResultFound, nrf:
                 raise cherrypy.HTTPError(404, "Could not find file")
@@ -534,7 +535,7 @@ class FileController(object):
         try:
             ticketId = strip_tags(ticketId)
             uploadRequest = session.query(UploadRequest).filter(UploadRequest.id == ticketId).one()
-            if uploadRequest.owner_id == user.id or AccountController.user_has_permission(user, "admin"):
+            if uploadRequest.owner_id == user.id or AccountService.user_has_permission(user, "admin"):
                 session.delete(uploadRequest)
                 session.add(AuditLog(user.id, "Delete Upload Request", "You deleted an upload request with ID: %s" % uploadRequest.id))
                 session.commit()
@@ -618,13 +619,13 @@ class FileController(object):
             if padding==0:
                 padding=16
             endOfFile = True
-            file_download_complete(user, fileId, publicShareId)
+            FileService.file_download_complete(user, fileId, publicShareId)
             yield data[:len(data)-padding]
         else:
             #For multiblock files
             while True:
                 if endOfFile:
-                    file_download_complete(user, fileId, publicShareId)
+                    FileService.file_download_complete(user, fileId, publicShareId)
                     break
                 next_data = decrypter.decrypt(dFile.read(1024*8))
                 if (next_data is not None and next_data != "") and not len(next_data)<(1024*8):
@@ -674,264 +675,3 @@ class FileController(object):
         except KeyError:
             sMessages = ["No active uploads"]
         yield fl_response(sMessages, fMessages, format, data=uploadStats)
-
-def file_download_complete(user, fileId, publicShareId=None):
-    try:
-        role = None
-        if cherrypy.session.has_key("current_role"):
-            role = cherrypy.session.get("current_role")
-        flFile = session.query(File).filter(File.id==fileId).one()
-        if ((role is not None and flFile.role_owner_id != role.id) or user == None or user.id != flFile.owner_id) and flFile.notify_on_download:
-            try:
-                owner = None
-                if role is not None: owner = session.query(User).filter(User.id==flFile.role_owner_id).one()
-                else: owner = session.query(User).filter(User.id==flFile.owner_id).one()
-                if owner.email is not None and owner.email != "":
-                    self.mail.notify(self.get_template_file('download_notification.tmpl'),{'sender': None, 'recipient': owner.email, 'fileName': flFile.name, 'downloadUserId': user.id, 'downloadUserName': user.display_name})
-            except Exception, e:
-                logging.error("[%s] [file_download_complete] [Unable to notify user %s of download completion: %s]" % (user.id, owner.id, str(e)))
-
-        if publicShareId is not None:
-            publicShare = session.query(PublicShare).filter(PublicShare.id == publicShareId).one()
-            session.add(AuditLog(flFile.owner_id,"Download File", "File %s downloaded via Public Share. " % (flFile.name), None, flFile.role_owner_id, flFile.id))
-            if flFile.notify_on_download:
-                try:
-                    owner = None
-                    if role is not None: owner = session.query(User).filter(User.id==flFile.role_owner_id).one()
-                    else: owner = session.query(User).filter(User.id==flFile.owner_id).one()
-                    if owner.email is not None and owner.email != "":
-                        Mail.notify(get_template_file('public_download_notification.tmpl'),{'sender': None, 'recipient': owner.email, 'fileName': flFile.name})
-                except Exception, e:
-                    logging.error("[%s] [file_download_complete] [Unable to notify user %s of download completion: %s]" % ("admin", owner.id, str(e)))
-            if publicShare.reuse == "single":
-                publicShare.files.remove(flFile)
-                session.commit()
-                publicShare = session.query(PublicShare).filter(PublicShare.id == publicShare.id).one()
-                if len(publicShare.files) == 0:
-                    session.delete(publicShare)
-                    session.add(AuditLog(flFile.owner_id, "Delete Public Share", "File %s downloaded via single use public share. File is no longer publicly shared." % (flFile.name, flFile.id), None, flFile.role_owner_id, flFile.id))
-                    session.commit()
-        else:
-            log =AuditLog(user.id, "Download File", "File %s downloaded by user %s." % (flFile.name, user.id), flFile.owner_id, role.id if role is not None else None, flFile.id)
-            session.add(log)
-        session.commit()
-    except Exception, e:
-        logging.error("[%s] [file_download_complete] [Unable to finish download completion: %s]" % ("admin", str(e)))
-
-def get_upload_ticket_by_password(ticketId, password):
-    uploadRequest = session.query(UploadRequest).filter(UploadRequest.id == ticketId)
-    if uploadRequest is None:
-        raise Exception("Invalid Upload Request ID")
-    if password == None and uploadRequest.password == None:
-        return uploadRequest
-    else:
-        isValid = lib.Encryption.compare_password_hash(password, uploadRequest.password)
-        if isValid and len(uploadRequest.password) == 32:
-            newHash = lib.Encryption.hash_password(password)
-            uploadRequest.password = newHash
-            session.commit() #New has stored in the db
-            return uploadRequest
-        else:
-            raise Exception("You must enter the correct password to access this upload request.")
-
-def get_temp_file():
-    config = cherrypy.request.app.config['filelocker']
-    fileList, filePrefix, fileSuffix = os.listdir(config['vault']), "[%s]fltmp" % str(config['cluster_member_id']), ".tmp"
-    randomNumber = random.randint(1, 1000000)
-    tempFileName = os.path.join(config['vault'], filePrefix + str(randomNumber) + fileSuffix)
-    while tempFileName in fileList:
-        randomNumber = random.randint(1, 1000000)
-        tempFileName = os.path.join(config['vault'], filePrefix + str(randomNumber) + fileSuffix)
-    file_object = open(tempFileName, "wb")
-    return file_object
-
-def check_in_file(tempFileName, flFile):
-    config = cherrypy.request.app.config['filelocker']
-    filePath = os.path.join(config['vault'], tempFileName)
-    #Virus scanning if requested
-    avCommandList = config['antivirus_command'].split(" ")
-    avCommandList.append(filePath)
-    try:
-        p = subprocess.Popen(avCommandList, stdout=subprocess.PIPE)
-        output = p.communicate()[0]
-        if(p.returncode != 0):
-            logging.warning("[%s] [check_in_file] [File %s did not pass requested virus scan, return code: %s, output: %s]" % (flFile.owner_id, flFile.name, p.returncode, output))
-            queue_for_deletion(tempFileName)
-            flFile.passed_avscan = False
-        else:
-            flFile.passed_avscan = True
-    except OSError, oe:
-        logging.critical("[%s] [check_in_file] [AVSCAN execution failed: %s]", (flFile.owner_id, str(oe)))
-        flFile.passed_avscan = False
-
-    md5sum = None
-    try:
-        p = subprocess.Popen(["md5sum",filePath], stdout=subprocess.PIPE)
-        md5sum = p.communicate()[0].split(" ")[0]
-    except Exception, e:
-        logging.error("Couldn't calculate file md5sum: %s" % str(e))
-    flFile.md5 = md5sum
-    #Determine file size and check against quota
-    try:
-        flFile.size = os.stat(filePath)[ST_SIZE]
-        if (flFile.owner_id != "system"):
-            user = session.query(User).filter(User.id == flFile.owner_id).one()
-            if (get_user_quota_usage_bytes(user.id) + flFile.size) >= (user.quota*1024*1024):
-                logging.warning("[%s] [check_in_file] [User has insufficient quota space remaining to check in file: %s]" % (user.id, flFile.name))
-                raise Exception("You may not upload this file as doing so would exceed your quota")
-    except Exception, e:
-        logging.critical("[%s] [check_in_file] [Couldn't determine file size, using one set from content-length: %s]" % (flFile.owner_id, str(e)))
-
-    #determine file type
-    flFile.type = "Unknown"
-    try:
-        fileres = os.popen("%s %s" % (config['file_command'], filePath), "r")
-        data = fileres.read().strip()
-        fileres.close()
-        if data.find(";") >= 0:
-            (ftype, lo) = data.split(";")
-            del(lo)
-            flFile.fileType = ftype.strip()
-        else:
-            flFile.fileType = data.strip()
-    except Exception, e:
-        logging.error("[%s] [checkInFile] [Unable to determine file type: %s]" % (user.id, str(e)))
-
-    #Logic is a little strange here - if the user supplied an encryptionKey, then don't save it with the file
-    encryptionKey = None
-    flFile.encryption_key = Encryption.generatePassword()
-    encryptionKey = flFile.encryption_key
-    os.umask(077)
-    newFile = open(filePath, "rb")
-    f = open(os.path.join(config['vault'], str(flFile.id)), "wb")
-    encrypter, salt = Encryption.new_encrypter(encryptionKey)
-    padding, endOfFile = (0, False)
-    f.write(salt)
-    data = newFile.read(1024*8)
-    #If File is only one block long, handle it here
-    if len(data) < (1024*8):
-        padding = 16-(len(data)%16)
-        if padding == 16:
-            paddingByte = "%X" % 0
-        else:
-            paddingByte = "%X" % padding
-        for i in range(padding): data+=paddingByte
-        f.write(encrypter.encrypt(data))
-    else:
-        while 1:
-            if endOfFile: break
-            else:
-                next_data = newFile.read(1024*8)
-                #this only happens if we are at the end, meaning the next block is the last
-                #so we have to handle the padding by aggregating the two blocks and determining pad
-                if len(next_data) < (1024*8):
-                    data+=next_data
-                    padding = 16-(len(data)%16)
-                    if padding == 16: paddingByte = "%X" % 0
-                    else: paddingByte = "%X" % padding
-                    for i in range(padding): data+=paddingByte
-                    endOfFile = True
-            f.write(encrypter.encrypt(data))
-            data = next_data
-
-        newFile.close()
-        f.close()
-        flFile.status = "Checked In"
-        logging.info("[%s] [check_in_file] [User checked in a new file %s]" % (user.id, flFile.name))
-
-def clean_temp_files(config, validTempFiles):
-    vaultFileList = os.listdir(config['filelocker']['vault'])
-    for fileName in vaultFileList:
-        try:
-            if fileName.endswith(".tmp") and fileName.startswith("[%s]" % config['filelocker']['cluster_member_id']): #This is a temp file and made by this cluster member
-                if fileName not in validTempFiles:
-                    queue_for_deletion(fileName)
-        except Exception, e:
-            logging.error("[system] [cleanTempFiles] [There was a problem while trying to clean a stale temp file %s: %s]" % (str(fileName), str(e)))
-
-def queue_for_deletion(filePath):
-    try:
-        if session.query(DeletedFile).filter(DeletedFile.file_name==filePath).scalar() == None:
-            session.add(DeletedFile(file_name=filePath))
-            session.commit()
-        logging.info("[system] [queueForDeletion] [File queued for deletion: %s]" % (str(filePath)))
-    except Exception, e:
-        logging.critical("Unable to queue file for deletion: %s" % str(e))
-
-def process_deletion_queue(config):
-    vault = config['filelocker']['vault']
-    fileRows = session.query(DeletedFile.file_name).all()
-    for fileRow in fileRows:
-        try:
-            if os.path.isfile(os.path.join(vault, fileRow.file_name)):
-                secure_delete(config, fileRow.file_name)
-                if os.path.isfile(os.path.join(vault,fileRow.file_name))==False:
-                    logging.debug("Dequeuing %s because secure delete ran and the os.path.isfile came up negative" % os.path.join(vault, fileRow.file_name))
-                    deletedFile = session.query(DeletedFile).filter(DeletedFile.file_name==fileRow.file_name).scalar()
-                    if deletedFile is not None:
-                        session.delete(deletedFile)
-                        session.commit()
-                else:
-                    #This isn't necessarily an error, it just means that the file finally got deleted
-                    logging.debug("[system] [processDeletionQueue] [Deletion of file must have failed - still exists after secure delete ran]")
-            else:
-                logging.debug("[system] [processDeletionQueue] [File %s not deleted because it doesn't exist - dequeuing]" % os.path.join(vault, fileRow.file_name))
-                deletedFile = session.query(DeletedFile).filter(DeletedFile.file_name==fileRow.file_name).scalar()
-                if deletedFile is not None:
-                    session.delete(deletedFile)
-                    session.commit()
-        except Exception, e:
-            logging.critical("[system] [processDeletionQueue] [Couldn't delete file in deletion queue: %s]" % str(e))
-
-
-def secure_delete(config, fileName):
-    import errno
-    vault = config['filelocker']['vault']
-    deleteCommand = config['filelocker']['delete_command']
-    deleteArguments = config['filelocker']['delete_arguments']
-    deleteList = []
-    deleteList.append(deleteCommand)
-    for argument in deleteArguments.split(" "):
-        deleteList.append(argument)
-    deleteList.append(os.path.join(vault,fileName))
-    try:
-        p = subprocess.Popen(deleteList, stdout=subprocess.PIPE)
-        output = p.communicate()[0]
-        if(p.returncode != 0):
-            logging.error("[%s] [secure_delete] [The command to delete the file returned a failure code of %s: %s]" % ("admin", p.returncode, output))
-        else:
-            deletedFile = session.query(DeletedFile).filter(DeletedFile.file_name==fileName).scalar()
-            if deletedFile is not None:
-                session.delete(deletedFile)
-                session.commit()
-    except OSError, oe:
-        if oe.errno == errno.ENOENT:
-            logging.error("[admin] [secure_delete] [Couldn't delete because the file was not found (dequeing): %s]" % str(oe))
-            deletedFile = session.query(DeletedFile).filter(DeletedFile.file_name==fileName).scalar()
-            if deletedFile is not None:
-                session.delete(deletedFile)
-                session.commit()
-        else:
-            logging.error("[admin] [secure_delete] [Generic system error while deleting file: %s" % str(oe))
-    except Exception, e:
-       logging.error("[admin] [secure_delete] [Couldn't securely delete file: %s]" % str(e))
-
-def get_vault_usage():
-    s = os.statvfs(cherrypy.request.app.config['filelocker']['vault'])
-    freeSpaceMB = int((s.f_bavail * s.f_frsize) / 1024 / 1024)
-    totalSizeMB = int((s.f_blocks * s.f_frsize) / 1024 / 1024 )
-    return freeSpaceMB, totalSizeMB
-
-def get_user_quota_usage_bytes(userId):
-    usage = session.query(func.sum(File.size)).filter(File.owner_id==userId).scalar()
-    if usage is None:
-        return 0
-    else:
-        return int(usage)
-
-def get_role_quota_usage_bytes(roleId):
-    usage = session.query(func.sum(File.size)).filter(File.role_owner_id==roleId).scalar()
-    if usage is None:
-        return 0
-    else:
-        return int(usage)

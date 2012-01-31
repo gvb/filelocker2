@@ -5,7 +5,7 @@
             <form action="" name="form" id="uploadForm">
                 <input type="text" style="width: 0; height: 0; top: -100px; position: absolute;"/><!-- jQuery UI dialogs autofocus to the first element. -->
                 <div>
-                    #if $AccountController.user_has_permission($user, "expiration_exempt")
+                    #if $AccountService.user_has_permission($user, "expiration_exempt")
                     <label for="expiration">Expiration date (you are expiration exempt):</label>
                     <input type="text" name="expiration" id="uploadExpiration" class="dateFuture" value="$defaultExpiration.strftime('%m/%d/%Y')" />
                     #else
@@ -620,7 +620,7 @@
             <tr>
             <td>
                 <input type="text" style="width: 0; height: 0; top: -100px; position: absolute;"/><!-- jQuery UI dialogs autofocus to the first element. -->
-                #if $AccountController.user_has_permission($user, "expiration_exempt")
+                #if $AccountService.user_has_permission($user, "expiration_exempt")
                 <h4>Expiration date (you are expiration exempt):</h4>
                 <input type="text" name="expiration" id="flMessageExpiration" class="dateFuture" value="$defaultExpiration.strftime('%m/%d/%Y')" />
                 #else

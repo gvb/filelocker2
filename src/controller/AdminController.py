@@ -6,9 +6,10 @@ from lib.SQLAlchemyTool import session
 import sqlalchemy
 from lib.Models import *
 from lib.Constants import Actions
-import FileController
 from lib.Formatters import strip_tags, split_list_sanitized, fl_response, get_template_file
 from Cheetah.Template import Template
+from lib import AccountService
+from lib import FileService
 __author__="wbdavis"
 __date__ ="$Sep 25, 2011 9:36:30 PM$"
 
@@ -86,7 +87,7 @@ class AdminController:
     def get_vault_usage(self, format="json", **kwargs):
         user, sMessages, fMessages, vaultUsedMB, vaultCapacityMB = (cherrypy.session.get("user"), [], [], 0, 0)
         try:
-            vaultSpaceFreeMB, vaultCapacityMB = FileController.get_vault_usage()
+            vaultSpaceFreeMB, vaultCapacityMB = FileService.get_vault_usage()
             vaultUsedMB = vaultCapacityMB - vaultSpaceFreeMB
         except Exception, e:
             logging.error("[%s] [get_vault_usage] [Error while getting quota: %s]" % (user.id,str(e)))

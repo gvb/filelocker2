@@ -52,7 +52,7 @@
     <script src="$config['root_url']/static/js/message.js"></script>
     <script src="$config['root_url']/static/js/share.js"></script>
 
-        #if $AccountController.user_has_permission($user, "admin")
+        #if $AccountService.user_has_permission($user, "admin")
         <script src="$config['root_url']/static/js/admin.js"></script>
         #end if
     #else
@@ -88,7 +88,7 @@
             #end if
                 </td>
                 <td><div id="historyLink" class="history"><a href="javascript:StatusResponse.hide();javascript:History.load();" title="View your interactions with Filelocker">History</a></div></td>
-                #if $AccountController.user_has_permission($user, "admin")
+                #if $AccountService.user_has_permission($user, "admin")
                     <td id="adminBackLink"><div id="adminLink" class="settings"><a href="javascript:Admin.load()" title="Launch the admin panel">Admin</a></div></td>
                 #else if $cherrypy.session.get("current_role") == None
                     <td><div id="accountLink" class="settings"><a href="javascript:StatusResponse.hide();javascript:Account.prompt()" title="Edit your account settings">Account</a></div></td>

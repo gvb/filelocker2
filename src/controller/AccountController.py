@@ -7,8 +7,10 @@ from lib.SQLAlchemyTool import session
 from Cheetah.Template import Template
 from lib.Formatters import *
 from lib.Models import *
+from lib import AccountService
 import directory
 import plugins
+
 __author__="wbdavis"
 __date__ ="$Sep 25, 2011 9:37:17 PM$"
 
@@ -42,7 +44,7 @@ class AccountController:
         try:
             userId = strip_tags(userId)
             if userId == user.id or user_has_permission(user, "admin"):
-                updateUser = get_user(userId) #This kind of implicitly enforces permissions
+                updateUser = AccountService.get_user(userId) #This kind of implicitly enforces permissions
                 updateUser.email = strip_tags(email) if strip_tags(email) is not None else updateUser.email
                 updateUser.quota = int(strip_tags(quota)) if strip_tags(quota) is not None else updateUser.quota
                 updateUser.first_name = strip_tags(firstName) if strip_tags(firstName) is not None else updateUser.first_name
@@ -179,7 +181,7 @@ class AccountController:
             group = session.query(Group).filter(Group.id==groupId).one()
             if group.owner_id == user.id or user_has_permission(user, "admin"):
                 for userId in userIds:
-                    user = get_user(userId)
+                    user = AccountService.get_user(userId)
                     group.members.remove(user)
                 session.add(AuditLog(user.id, "Update Group", "%s user(s) removed from group \"%s\"(%s)" % (len(userIds), group.name, group.id)))
                 session.commit()
@@ -206,7 +208,7 @@ class AccountController:
             group = session.query(Group).filter(Group.id == groupId).one()
             if group.owner_id == user.id or user_has_permission(user, "admin"):
                 try:
-                    user = get_user(userId)
+                    user = AccountService.get_user(userId)
                     group.members.append(user)
                     session.add(AuditLog(user.id, "Update Group", "User %s added to group \"%s\"(%s)" % (user.id, group.name, group.id)))
                     session.commit()
@@ -378,7 +380,7 @@ class AccountController:
                 role = session.query(Role).filter(Role.id==roleId).one()
                 for userId in userIds:
                     try:
-                        user = get_user(userId)
+                        user = AccountService.get_user(userId)
                         role.members.append(user)
                         session.commit()
                     except sqlalchemy.orm.exc.NoResultFound, nrf:
@@ -402,7 +404,7 @@ class AccountController:
                 role = session.query(Role).filter(Role.id==roleId).one()
                 for userId in userIds:
                     try:
-                        user = get_user(userId)
+                        user = AccountService.get_user(userId)
                         role.members.remove(user)
                         session.commit()
                     except sqlalchemy.orm.exc.NoResultFound, nrf:
@@ -612,7 +614,7 @@ class AccountController:
     def get_search_widget(self, context, **kwargs):
         user, sMessages, fMessages, config = (cherrypy.session.get("user"), [], [], cherrypy.request.app.config['filelocker'])
         groups = session.query(User).filter(User.id==user.id).one().groups
-        userShareableAttributes = get_shareable_attributes_by_user(user)
+        userShareableAttributes = AccountService.get_shareable_attributes_by_user(user)
         tpl = Template(file=get_template_file('search_widget.tmpl'), searchList=[locals(),globals()])
         return str(tpl)
 
@@ -627,7 +629,7 @@ class AccountController:
                 firstName = strip_tags(firstName)
                 lastName = strip_tags(lastName)
                 userId = strip_tags(userId)
-                directory = ExternalDirectory(config)
+                directory = AccountService.ExternalDirectory(config)
                 foundUsers = directory.get_user_matches(firstName, lastName, userId)
             else:
                 fMessages.append("Please specify the first name, last name, or username of the user for whom you are searching")
@@ -651,126 +653,6 @@ class AccountController:
             return fl_response(sMessages, fMessages, "json", data=shareLinkList) #This is kind of a hack since autocomplete requires a unique data structure, eventually we may be able to move this to the formatter
         else:
             return fl_response(sMessages, fMessages, format, data=foundUsers)
-
-class ExternalDirectory(object):
-    directory = None
-    def __init__(self, config):
-        directoryType = config['directory_type']
-        if directoryType == "ldap":
-            from directory import LDAPDirectory
-            self.directory = LDAPDirectory.LDAPDirectory(config)
-        elif directoryType == "local":
-            from directory import LocalDirectory
-            self.directory = LocalDirectory.LocalDirectory()
-    def lookup_user(self, userId):
-        return self.directory.lookup_user(userId)
-    def authenticate(self, username, password):
-        return self.directory.authenticate(username, password)
-    def get_user_matches(self, firstname, lastname, userId):
-        return self.directory.get_user_matches(firstname, lastname, userId)
-
-def user_has_permission(user, permissionId):
-    #print "User Permissions: %s" % str(user.permissions)
-    for permission in user.permissions:
-        if permission.id == permissionId:
-            return True
-    for group in user.groups:
-        for permission in group.permissions:
-            if permission.id == permissionId:
-                return True
-    return False
-
-def role_has_permission(role, permissionId):
-    for permission in role.permissions:
-        if permission.id == permissionId:
-            return True
-    return False
-
-def install_user(self, user):
-    if user is not None:
-        if user.quota is None:
-            user.quota = int(session.query(ConfigParameter).filter(ConfigParameter.id=="default_quota").one().value)
-        session.add(user)
-        session.add(AuditLog(user.id, "Install User", "User %s (%s) installed" % (user.display_name, user.id)))
-        session.commit()
-    else:
-        raise Exception("User %s doesn't exist in directory" % userId)
-
-def get_user(userId, login=False):
-    import warnings
-    config = cherrypy.request.app.config['filelocker']
-    warnings.simplefilter("ignore")
-    user = session.query(User).filter(User.id==userId).scalar()
-    if user is None and config['auth_type']!="local": #This would be silly if we are using local auth, there's no other source of user info
-        directory = ExternalDirectory(config)
-        user = directory.lookup_user(userId)
-        if user is not None:
-            session.add(user)
-            session.commit()
-    if user is not None:
-        attributeList = []
-        for permission in user.permissions:
-            if permission.id.startswith("(attr)"):
-                attributeList.append(permission.id.split("(attr)")[1])
-        for group in user.groups:
-            for permission in group.permissions:
-                if permission.id.startswith("(attr)"):
-                    attributeList.append(permission.id.split("(attr)")[1])
-        if login:
-            for flPlugin in getPlugins(FilelockerPlugin, plugins):
-                attributeList.extend(flPlugin.get_user_attributes(user.id, self)) #Send user object off to  plugin to get the list populated
-                if flPlugin.is_authorized(user.userId, self) == False: #Checks if any plugin is going to explicitly deny this user access to Filelocker
-                    user.authorized = False
-            uniqueAttributeList = []
-            for attributeId in attributeList:
-                if attributeId not in uniqueAttributeList:
-                    attr = session.query(Attribute).filter(Attribute.id==attributeId).scalar()
-                    if attr is not None:
-                        user.attributes.append(attr)
-                    uniqueAttributeList.append(attributeId)
-            user.date_last_login = datetime.datetime.now()
-            session.commit()
-            setup_session(user.get_copy())
-    return user
-
-def get_shareable_attributes_by_user(user):
-    """
-    This function gets the attributes that a user has permission to share with.
-
-    Examples of this would be a teacher for a class being able to share with all users
-    who have the class as an attribute"""
-    attributeList = []
-    allAttributes = session.query(Attribute).all()
-    if user_has_permission(user, "admin"):
-        attributeList = allAttributes
-    else:
-        for attribute in allAttributes:
-            if user_has_permission(user, "(attr)%s" % attribute.id):
-                attributeList.append(attribute)
-    return attributeList
-
-def get_shareable_attributes_by_role(role):
-    """
-    This function gets the attributes that a role has permission to share with.
-
-    Examples of this would be a teacher for a class being able to share with all users
-    who have the class as an attribute"""
-    attributeList = []
-    allAttributes = session.query(Attribute).all()
-    if role_has_permission(role, "admin"):
-        attributeList = allAttributes
-    else:
-        for attribute in allAttributes:
-            if role_has_permission(role, "(attr)%s" % attribute.id):
-                attributeList.append(attribute)
-    return attributeList
-
-def setup_session(user):
-    print "Setting up session %s" % user.id
-    cherrypy.session['user'] = user
-    cherrypy.session['current_role'] = None
-    cherrypy.session['sMessages'] = []
-    cherrypy.session['fMessages'] = []
 
 if __name__ == "__main__":
     print "Hello";

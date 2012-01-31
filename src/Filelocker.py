@@ -1,4 +1,7 @@
-import lib.Models
+__author__="wbdavis"
+__date__ ="$Sep 25, 2011 9:09:40 PM$"
+__version__ = "2.6"
+
 import ConfigParser
 import os
 import sys
@@ -13,18 +16,17 @@ from cherrypy.process import plugins, servers
 from Cheetah.Template import Template
 from lib.SQLAlchemyTool import configure_session_for_app, session
 import sqlalchemy
-import lib
+from lib import AccountService
+from lib import FileService
 from lib.CAS import CAS
 from lib.Models import *
 from lib.Formatters import *
 
-__author__="wbdavis"
-__date__ ="$Sep 25, 2011 9:09:40 PM$"
-__version__ = "2.6"
-
+cherrypy.server.max_request_body_size = 0
 def before_upload(**kwargs):
     cherrypy.request.process_request_body = False
-    
+cherrypy.tools.before_upload = cherrypy.Tool('before_request_body', before_upload, priority=71)
+
 def requires_login(permissionId=None, **kwargs):
     format, rootURL = None, cherrypy.request.app.config['filelocker']['root_url']
     if cherrypy.request.params.has_key("format"):
@@ -34,7 +36,7 @@ def requires_login(permissionId=None, **kwargs):
         if user.date_tos_accept == None:
             raise cherrypy.HTTPRedirect(rootURL+"/sign_tos")
         elif permissionId is not None:
-            if lib.AccountController.user_has_permission(user, permissionId)==False:
+            if AccountService.user_has_permission(user, permissionId)==False:
                 raise HTTPError(403)
         else:
             pass
@@ -44,13 +46,13 @@ def requires_login(permissionId=None, **kwargs):
             if cherrypy.request.params.has_key("ticket"):
                 valid_ticket, userId = casConnector.validate_ticket(rootURL, cherrypy.request.params['ticket'])
                 if valid_ticket:
-                    currentUser = lib.AccountController.get_user(currentUser.id, True)
+                    currentUser = AccountService.get_user(currentUser.id, True)
                     if currentUser is None:
                         currentUser = User(id=userId, display_name="Guest user", first_name="Unknown", last_name="Unknown")
                         logging.error("[%s] [requires_login] [User authenticated, but not found in directory - installing with defaults]"%str(userId))
                         session.add(currentUser)
                         session.commit()
-                        currentUser = lib.AccountController.get_user(currentUser.id, True) #To populate attributes
+                        currentUser = AccountService.get_user(currentUser.id, True) #To populate attributes
                     if currentUser.authorized == False:
                         raise cherrypy.HTTPError(403, "Your user account does not have access to this system.")
                     session.add(AuditLog(currentUser.id, "Login", "User %s logged in successfully from IP %s" % (currentUser.id, cherrypy.request.remote.ip)))
@@ -74,7 +76,7 @@ def requires_login(permissionId=None, **kwargs):
                 raise cherrypy.HTTPRedirect(rootURL+"/login")
             else:
                 raise cherrypy.HTTPError(401)
-                
+cherrypy.tools.requires_login = cherrypy.Tool('before_request_body', requires_login, priority=70)
 
 def error(status, message, traceback, version):
     currentYear = datetime.date.today().year
@@ -86,7 +88,6 @@ def error(status, message, traceback, version):
     return tpl
 
 def daily_maintenance(config):
-    from controller import FileController
     expiredFiles = session.query(File).filter(File.date_expires < datetime.datetime.now())
     for flFile in expiredFiles:
         try:
@@ -98,7 +99,7 @@ def daily_maintenance(config):
                 session.delete(share)
             for share in flFile.attribute_shares:
                 session.delete(share)
-            FileController.queue_for_deletion(flFile.id)
+            FileService.queue_for_deletion(flFile.id)
             session.add(AuditLog("admin", "Delete File", "File %s (ID:%s) has expired and has been purged by the system." % (flFile.name, flFile.id), flFile.owner_id))
             session.delete(flFile)
             session.commit()
@@ -109,7 +110,7 @@ def daily_maintenance(config):
     for message in expiredMessages:
         try:
             session.delete(message)
-            FileController.queue_for_deletion("m%s" % str(message.id))
+            FileService.queue_for_deletion("m%s" % str(message.id))
             session.add(AuditLog("admin", "Delete Message", "Message %s (ID:%s) has expired and has been deleted by the system." % (message.messageSubject, message.messageId), message.owner_id))
             session.commit()
         except Exception, e:
@@ -125,8 +126,9 @@ def daily_maintenance(config):
             logging.error("[system] [daily_maintenance] [Error while deleting expired upload request: %s]" % (str(e)))
     maxUserDays = config['filelocker']['user_inactivity_expiration']
     expiredUsers = session.query(User).filter(and_(User.date_last_login < (datetime.date.today() - datetime.timedelta(days=maxUserDays)), User.id!= "admin"))
+    
     for user in expiredUsers:
-        if lib.AccountController.user_has_permission(user, "admin") == False and lib.AccountController.user_has_permission(user, "expiration_exempt") == False:
+        if AccountService.user_has_permission(user, "admin") == False and AccountService.user_has_permission(user, "expiration_exempt") == False:
             print "Purging user %s" % user.id
             session.delete(user)
             session.add(AuditLog("admin", "Delete User", "User %s was deleted due to inactivity. All files and shares associated with this user have been purged as well" % str(user.id)))
@@ -147,14 +149,14 @@ def daily_maintenance(config):
                     try:
                         session.query(Message).filter(Message.id==messageId).one()
                     except sqlalchemy.orm.exc.NoResultFound, nrf:
-                        FileController.queue_for_deletion(fileName)
+                        FileService.queue_for_deletion(fileName)
                 else:
                     try:
                         fileId = int(fileName)
                         try:
                             session.query(File).filter(File.id==fileId).one()
                         except sqlalchemy.orm.exc.NoResultFound, nrf:
-                            FileController.queue_for_deletion(fileName)
+                            FileService.queue_for_deletion(fileName)
                     except Exception, e:
                         logging.warning("There was a file that did not match Filelocker's naming convention in the vault: %s. It has not been purged." % fileName)
         except Exception, e:
@@ -164,7 +166,7 @@ def daily_maintenance(config):
 def update_config(config):
     config['filelocker']['version'] = __version__
     try:
-        parameters = session.query(lib.Models.ConfigParameter).all()
+        parameters = session.query(ConfigParameter).all()
         for parameter in parameters:
             value = None
             if parameter.type == "boolean":
@@ -186,9 +188,7 @@ def midnightloghandler(fn, level, backups):
     h.setLevel(level)
     h.setFormatter(cherrypy._cplogging.logfmt)
     return h
-cherrypy.server.max_request_body_size = 0
-cherrypy.tools.requires_login = cherrypy.Tool('before_request_body', requires_login, priority=70)
-cherrypy.tools.before_upload = cherrypy.Tool('before_request_body', before_upload, priority=71)
+
 
 def start(configfile=None, daemonize=False, pidfile=None):
     cherrypy.file_uploads = dict()
@@ -243,7 +243,7 @@ def start(configfile=None, daemonize=False, pidfile=None):
                             del cherrypy.file_uploads[uploadKey]
                     if os.path.isfile(self.file_location):
                         tempFileName = self.file_location.split(os.path.sep)[-1]
-                        FileController.queue_for_deletion(tempFileName)
+                        FileService.queue_for_deletion(tempFileName)
                 except KeyError:
                     pass
                 except KeyError, ke:
@@ -293,7 +293,7 @@ def start(configfile=None, daemonize=False, pidfile=None):
                             del cherrypy.file_uploads[uploadKey]
                     if os.path.isfile(self.file_location):
                         tempFileName = self.file_location.split(os.path.sep)[-1]
-                        FileController.queue_for_deletion(tempFileName)
+                        FileService.queue_for_deletion(tempFileName)
                 except KeyError:
                     pass
                 except KeyError, ke:
@@ -331,12 +331,6 @@ def start(configfile=None, daemonize=False, pidfile=None):
     configure_session_for_app(app)
     update_config(app.config)
 
-#    try:
-    from controller import FileController
-
-    #Now that CherryPy has started, perform maintenance...first check that the database is up to date
-    #check_updates()
-
     #Set hour counter to 0.0. We have daily maintenance for expirations and maintenance every 12 minutes for queued deletions, etc.
     hour = 0.0
     while True:
@@ -347,11 +341,10 @@ def start(configfile=None, daemonize=False, pidfile=None):
             cherrypy.config.update({'server.max_request_body_size': maxSize*1024*1024})
         except Exception, e:
             logging.error("[admin] [maintenance] [Problem setting max file size: %s]" % str(e))
-#        logging.error("Just updated the max size to %s" % maxSize)
         if app.config['filelocker'].has_key("cluster_member_id") and int(app.config['filelocker']["cluster_member_id"])==0: # This will allow you set up other front ends that don't run maintenance on the DB or FS
             if hour == 0.0: #on startup and each new day
                 daily_maintenance(app.config)
-            FileController.process_deletion_queue(app.config) #process deletion queue every 12 minutes
+            FileService.process_deletion_queue(app.config) #process deletion queue every 12 minutes
             if hour < 24.0:
                 hour += 0.2
             if hour >= 24.0:
@@ -361,7 +354,7 @@ def start(configfile=None, daemonize=False, pidfile=None):
         for key in cherrypy.file_uploads.keys():
             for progressFile in cherrypy.file_uploads[key]:
                 validTempFiles.append(progressFile.file_object.name.split(os.path.sep)[-1])
-        FileController.clean_temp_files(app.config, validTempFiles)
+        FileService.clean_temp_files(app.config, validTempFiles)
         time.sleep(720) #12 minutes
 #    except KeyboardInterrupt, ki:
 #        logging.error("Keyboard interrupt")

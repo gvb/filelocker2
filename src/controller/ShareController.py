@@ -2,7 +2,7 @@ import cherrypy
 import logging
 from Cheetah.Template import Template
 from lib.SQLAlchemyTool import session
-import AccountController
+from lib import AccountService
 from lib.Formatters import *
 from lib.Models import *
 from lib import Mail
@@ -25,8 +25,8 @@ class ShareController:
             if userId is not None:
                 for fileId in fileIds:
                     flFile = session.query(File).filter(File.id==fileId).one()
-                    shareUser = AccountController.get_user(userId)
-                    if (role is not None and flFile.role_owner_id == role.id) or flFile.owner_id == user.id or AccountController.user_has_permission(user, "admin"):
+                    shareUser = AccountService.get_user(userId)
+                    if (role is not None and flFile.role_owner_id == role.id) or flFile.owner_id == user.id or AccountService.user_has_permission(user, "admin"):
                         existingShare = session.query(UserShare).filter(and_(UserShare.file_id==fileId, UserShare.user_id==userId)).scalar()
                         if existingShare is None:
                             flFile.user_shares.append(UserShare(user_id=userId, file_id=fileId))
@@ -64,7 +64,7 @@ class ShareController:
         for fileId in fileIds:
             try:
                 flFile = session.query(File).filter(File.id==fileId).one()
-                if (role is not None and flFile.role_owner_id == role.id) or flFile.owner_id == user.id or AccountController.user_has_permission(user, "admin"):
+                if (role is not None and flFile.role_owner_id == role.id) or flFile.owner_id == user.id or AccountService.user_has_permission(user, "admin"):
                     ps = session.query(UserShare).filter(and_(UserShare.user_id == userId, UserShare.file_id == flFile.id)).scalar()
                     if ps is not None:
                         session.delete(ps)
@@ -91,14 +91,14 @@ class ShareController:
         try:
             if groupId is not None:
                 group = session.query(Group).filter(Group.id==groupId).one()
-                if (role is not None and group.role_owner_id == role.id) or group.owner_id == user.id or AccountController.user_has_permission(user, "admin"):
+                if (role is not None and group.role_owner_id == role.id) or group.owner_id == user.id or AccountService.user_has_permission(user, "admin"):
                     sharedFiles = []
                     for fileId in fileIds:
                         flFile = session.query(File).filter(File.id == fileId).one()
                         existingShare = session.query(GroupShare).filter(and_(GroupShare.group_id==group.id, GroupShare.file_id==fileId)).scalar()
                         if existingShare is not None:
                             fMessages.append("File %s is already shared with group %s" % (flFile.name, group.name))
-                        elif (role is not None and flFile.role_owner_id == role.id) or flFile.owner_id == user.id or AccountController.user_has_permission(user, "admin"):
+                        elif (role is not None and flFile.role_owner_id == role.id) or flFile.owner_id == user.id or AccountService.user_has_permission(user, "admin"):
                             flFile.group_shares.append(GroupShare(group_id=groupId, file_id=fileId))
                             sharedFiles.append(flFile)
                         else:
@@ -145,9 +145,9 @@ class ShareController:
         for fileId in fileIds:
             try:
                 group = session.query(Group).filter(Group.id==groupId).one()
-                if (role is not None and group.role_owner_id == role.id) or group.owner_id == user.id or AccountController.user_has_permission(user, "admin"):
+                if (role is not None and group.role_owner_id == role.id) or group.owner_id == user.id or AccountService.user_has_permission(user, "admin"):
                     flFile = session.query(File).filter(File.id==fileId).one()
-                    if (role is not None and flFile.role_owner_id == role.id) or flFile.owner_id == user.id or AccountController.user_has_permission(user, "admin"):
+                    if (role is not None and flFile.role_owner_id == role.id) or flFile.owner_id == user.id or AccountService.user_has_permission(user, "admin"):
                         share = session.query(GroupShare).filter(GroupShare.group_id == groupId and GroupShare.file_id == flFile.id).scalar()
                         if share is not None:
                             session.delete(share)
@@ -172,7 +172,7 @@ class ShareController:
             hiddenShares = session.query(HiddenShare).filter(HiddenShare.owner_id == user.id).all()
             for hiddenShare in hiddenShares:
                 hiddenFileIds.append(hiddenShare.file_id)
-            for flFile in get_files_shared_with_user(user):
+            for flFile in ShareService.get_files_shared_with_user(user):
                 if flFile.id not in hiddenFileIds:
                     sharedFiles.append(flFile.get_dict())
                     fileIds.append(flFile.id)
@@ -215,7 +215,7 @@ class ShareController:
     def create_attribute_shares(self, fileIds, attributeId, format="json", **kwargs):
         user, sMessages, fMessages  = (cherrypy.session.get("user"), [], [])
         try:
-            userShareableAttributes, permission = AccountController.get_shareable_attributes_by_user(user), False
+            userShareableAttributes, permission = AccountService.get_shareable_attributes_by_user(user), False
             for attribute in userShareableAttributes:
                 if attributeId == attribute.id:
                     permission = True
@@ -236,7 +236,7 @@ class ShareController:
     def delete_attribute_shares(self, fileIds, attributeId, format="json", **kwargs):
         user, sMessages, fMessages  = (cherrypy.session.get("user"), [], [])
         try:
-            userShareableAttributes, permission = AccountController.get_shareable_attributes_by_user(user), False
+            userShareableAttributes, permission = AccountService.get_shareable_attributes_by_user(user), False
             for attribute in userShareableAttributes:
                 if attributeId == attribute.id:
                     permission = True
@@ -286,7 +286,7 @@ class ShareController:
             sharedFiles = []
             for fileId in fileIds:
                 flFile = session.query(File).filter(File.id==fileId).one()
-                if flFile.owner_id == user.id or AccountController.user_has_permission(user, "admin"):
+                if flFile.owner_id == user.id or AccountService.user_has_permission(user, "admin"):
                     ps.files.append(flFile)
                     session.commit()
                     sharedFiles.append(flFile)
@@ -355,7 +355,7 @@ class ShareController:
                 session.add(AuditLog(user.id, "Delete Public Share", "Role %s stopped sharing files publicly via URL using share ID: %s" % (role.name, str(ps.id)), None, role.id))
                 session.commit()
                 sMessages.append("Successfully unshared files")
-            elif ps.owner_id == user.id or AccountController.user_has_permission(user, "admin"):
+            elif ps.owner_id == user.id or AccountService.user_has_permission(user, "admin"):
                 session.delete(ps)
                 session.add(AuditLog(user.id, "Delete Public Share", "You stopped sharing files publicly via URL using share ID: %s" % str(ps.id)))
                 session.commit()
@@ -384,7 +384,7 @@ class ShareController:
                                     publicShares.append(publicShare)
                         else:
                             fMessages.append("This role does not have permission to access public shares on file with ID: %s" % fileId)
-                    elif flFile.owner_id == user.id or AccountController.user_has_permission(user, "admin"):
+                    elif flFile.owner_id == user.id or AccountService.user_has_permission(user, "admin"):
                         for publicShare in flFile.public_shares:
                             if publicShare.id not in publicShareIds:
                                 publicShareIds.append(publicShare.id)
@@ -423,32 +423,3 @@ class ShareController:
         sMessages.append("Successfully hid shares. Unhide shares in Account Settings.")
         session.commit()
         return fl_response(sMessages, fMessages, format)
-
-
-def get_files_shared_with_user(user):
-    sharedFiles = []
-    attachedUser = session.query(User).filter(User.id == user.id).one()
-    hiddenFileIds = []
-    hiddenShares = session.query(HiddenShare).filter(HiddenShare.owner_id == user.id).all()
-    for hiddenShare in hiddenShares:
-        hiddenFileIds.append(hiddenShare.file_id)
-    for share in attachedUser.user_shares:
-        if (share.flFile.id not in hiddenFileIds):
-            sharedFiles.append(share.flFile)
-    for group in attachedUser.groups:
-        for share in group.group_shares:
-            if (share.flFile.id not in hiddenFileIds):
-                sharedFiles.append(share.flFile)
-    return sharedFiles
-
-def get_files_shared_with_user_by_attribute(user):
-    """Builds a dictionary keyed by attribute id with values that are lists of files shared by this attribute"""
-    attributeShareDictionary = {}
-    for attributeId in user.attributes:
-        attribute = session.query(Attribute).filter(Attribute.id==attributeId).scalar() #Do this to ensure this attribute is even recognized by the system
-        if attribute is not None:
-            for attributeShare in session.query(AttributeShare).filter(AttributeShare.attribute_id==attribute.id).all():
-                if attributeShareDictionary.has_key(attributeShare.attribute_id)==False:
-                    attributeShareDictionary[attributeShare.attribute_id] = []
-                attributeShareDictionary[attributeShare.attribute_id].append(attributeShare.flFile)
-    return attributeShareDictionary
