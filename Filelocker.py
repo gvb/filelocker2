@@ -47,7 +47,7 @@ def requires_login(permissionId=None, **kwargs):
             if cherrypy.request.params.has_key("ticket"):
                 valid_ticket, userId = casConnector.validate_ticket(rootURL, cherrypy.request.params['ticket'])
                 if valid_ticket:
-                    currentUser = AccountService.get_user(currentUser.id, True)
+                    currentUser = AccountService.get_user(userId, True)
                     if currentUser is None:
                         currentUser = User(id=userId, display_name="Guest user", first_name="Unknown", last_name="Unknown")
                         logging.error("[%s] [requires_login] [User authenticated, but not found in directory - installing with defaults]"%str(userId))

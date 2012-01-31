@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import re
 import os
 import datetime
@@ -33,7 +34,7 @@ class RootController:
 
     @cherrypy.expose
     def local(self, **kwargs):
-        raise cherrypy.HTTPRedirect(["%s/login" % cherrypy.request.app.config['filelocker']['root_url'], "local=%s" % str(True)], 301)
+        raise cherrypy.HTTPRedirect("%s/login?local=%s" % (cherrypy.request.app.config['filelocker']['root_url'], str(True)))
 
     @cherrypy.expose
     def login(self, **kwargs):
@@ -41,6 +42,7 @@ class RootController:
         msg, errorMessage, authType, config = ( None, None, cherrypy.request.app.config['filelocker']['auth_type'], cherrypy.request.app.config['filelocker'])
         if kwargs.has_key("msg"):
             msg = kwargs['msg']
+	logging.error("Login with kwargs: %s" % str(kwargs))
         if kwargs.has_key("local") and kwargs['local']==str(True):
             authType = "local"
 
@@ -69,7 +71,9 @@ class RootController:
     def logout(self):
         config = cherrypy.request.app.config['filelocker']
         if cherrypy.request.app.config['filelocker']['auth_type'] == "cas":
-            casLogoutUrl =  CAS.logout_url()+"?redirectUrl="+config['root_url']+"/logout_cas"
+	    from lib.CAS import CAS
+	    casConnector = CAS(cherrypy.request.app.config['filelocker']['cas_url'])
+            casLogoutUrl =  casConnector.logout_url()+"?redirectUrl="+config['root_url']+"/logout_cas"
             currentYear = datetime.date.today().year
             footerText = str(Template(file=get_template_file('footer_text.tmpl'), searchList=[locals(),globals()]))
             tpl = Template(file=get_template_file('cas_logout.tmpl'), searchList=[locals(), globals()])
