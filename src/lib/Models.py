@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import datetime
 import logging
 import sys
@@ -416,9 +417,9 @@ def create_database_tables(dburi):
     Base.metadata.create_all(engine)
     Session = sessionmaker(bind=engine)
     session = Session()
-    import Filelocker.__version__ as version
+    from Filelocker import __version__
     initialConfigList = [("org_name", "Name of your organization.", "text", "My Company"),
-    ("version", "Currently running version of Filelocker", "text", str(version)),
+    ("version", "Currently running version of Filelocker", "text", str(__version__)),
     ("org_url", "Home page of your organization.", "text", "http://www.mycompany.com"),
     ("admin_email", "Public email address of the Filelocker Administrator.", "text", "admin@mycompany.com"),
     ("max_file_life_days", "Max number of days a file can exist on the system. After this time, the file will be securely erased along with any shares it was associated with.", "number", "7"),

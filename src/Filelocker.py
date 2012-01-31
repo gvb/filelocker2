@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 __author__="wbdavis"
 __date__ ="$Sep 25, 2011 9:09:40 PM$"
 __version__ = "2.6"
@@ -16,7 +17,6 @@ from cherrypy.process import plugins, servers
 from Cheetah.Template import Template
 from lib.SQLAlchemyTool import configure_session_for_app, session
 import sqlalchemy
-from lib import AccountService
 from lib import FileService
 from lib.CAS import CAS
 from lib.Models import *
@@ -28,6 +28,7 @@ def before_upload(**kwargs):
 cherrypy.tools.before_upload = cherrypy.Tool('before_request_body', before_upload, priority=71)
 
 def requires_login(permissionId=None, **kwargs):
+    from lib import AccountService
     format, rootURL = None, cherrypy.request.app.config['filelocker']['root_url']
     if cherrypy.request.params.has_key("format"):
         format = cherrypy.request.params['format']
@@ -88,6 +89,7 @@ def error(status, message, traceback, version):
     return tpl
 
 def daily_maintenance(config):
+    from lib import AccountService
     expiredFiles = session.query(File).filter(File.date_expires < datetime.datetime.now())
     for flFile in expiredFiles:
         try:
