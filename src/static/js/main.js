@@ -14,7 +14,7 @@ Filelocker = function(){
     */
     function request(path, action, payloadObject, verboseMode, successFunction)
     {
-        $.ajax({
+        return $.ajax({
             type: "POST",
             cache: false,
             dataType: "json",
