@@ -32,9 +32,6 @@ Admin = function() {
         $("#roleUpdatePermissionsBox").dialog($.extend({
             title: "<span class='wand'>Edit Permissions</span>"
         }, Defaults.largeDialog));
-        $("#systemStatisticsBox").dialog($.extend({
-            title: "<span class='statistics'>View System Usage Statistics</span>"
-        }, Defaults.largeDialog));
         $("#updatePasswordBox").dialog($.extend({
             title: "<span class='statistics'>Update Password</span>"
         }, Defaults.smallDialog));
@@ -776,7 +773,9 @@ Admin = function() {
             }).done(function() {
                 getMonthlyStatistics();
             }).done(function() {
-                $("#systemStatisticsBox").tabs().dialog("open");
+                $("#systemStatisticsBox").tabs().dialog($.extend({
+                    title: "<span class='statistics'>View System Usage Statistics</span>"
+                }, Defaults.largeDialog)).dialog("open");
             });
         }
         
@@ -897,7 +896,7 @@ Admin = function() {
                         appendKey: true,
                         colors: ['#fee932','#000000'],
                         diagonalLabels: true,
-                        dottedLast: false,
+                        dottedLast: true, //TODO this breaks if there is no data.  It crashes the browser.
                         labelWidth: 10
                     }).appendTo("#daily").trigger("visualizeRefresh");
                 }
