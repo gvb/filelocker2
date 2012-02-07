@@ -32,9 +32,6 @@ Admin = function() {
         $("#roleUpdatePermissionsBox").dialog($.extend({
             title: "<span class='wand'>Edit Permissions</span>"
         }, Defaults.largeDialog));
-        $("#systemStatisticsBox").dialog($.extend({
-            title: "<span class='statistics'>View System Usage Statistics</span>"
-        }, Defaults.largeDialog));
         $("#updatePasswordBox").dialog($.extend({
             title: "<span class='statistics'>Update Password</span>"
         }, Defaults.smallDialog));
@@ -771,16 +768,21 @@ Admin = function() {
     Statistics = function() {
         function load()
         {
-            getHourlyStatistics();
-            getDailyStatistics();
-            getMonthlyStatistics();
-            $("#systemStatistics").tabs().dialog("open");
+            getHourlyStatistics().done(function() {
+                getDailyStatistics();
+            }).done(function() {
+                getMonthlyStatistics();
+            }).done(function() {
+                $("#systemStatisticsBox").tabs().dialog($.extend({
+                    title: "<span class='statistics'>View System Usage Statistics</span>"
+                }, Defaults.largeDialog)).dialog("open");
+            });
         }
         
         function getHourlyStatistics()
         {
             $("#hourly").empty();
-            Filelocker.request("/admin/get_hourly_statistics", "retrieving hourly statistics", null, false, function(returnData) {
+            return Filelocker.request("/admin/get_hourly_statistics", "retrieving hourly statistics", null, false).success(function(returnData) {
                 var hourlyTable = "<div class='statisticsTableWrapper'><table id='hourlyStatisticsTable' class='statisticsTable'><colgroup><col class='colHead' /></colgroup><caption>% of Total Usage by Hour (Last 30 Days)</caption><thead><tr><td class='rowHead'>Hour</td>";
                 var hourlyHeaders = "";
                 var hourlyDownloadData = "";
@@ -791,7 +793,7 @@ Admin = function() {
                     var hasDownloadData = false;
                     var hasUploadData = false;
                     $.each(returnData.data.downloads, function(key, value) {
-                        if (key == i)
+                        if (parseInt(key) == i)
                         {
                             hourlyDownloadData += "<td scope='row'>"+value+"</td>";
                             hasDownloadData = true;
@@ -799,7 +801,7 @@ Admin = function() {
                         }
                     });
                     $.each(returnData.data.uploads, function(key, value) {
-                        if (key == i)
+                        if (parseInt(key) == i)
                         {
                             hourlyUploadData += "<td scope='row'>"+value+"</td>";
                             hasUploadData = true;
@@ -836,8 +838,8 @@ Admin = function() {
         function getDailyStatistics()
         {
             $("#daily").empty();
-            Filelocker.request("/admin/get_daily_statistics", "retrieving daily statistics", null, false, function(returnData) {
-                var dailyTable = "<div class='statisticsTableWrapper'><table id='dailyStatisticsTable' class='statisticsTable'><colgroup><col class='colHead' /></colgroup><caption>Total Usage by Day (Last 30 Days)</caption><thead><tr><td class='rowHead'>Hour</td>";
+            return Filelocker.request("/admin/get_daily_statistics", "retrieving daily statistics", null, false, function(returnData) {
+                var dailyTable = "<div class='statisticsTableWrapper'><table id='dailyStatisticsTable' class='statisticsTable'><colgroup><col class='colHead' /></colgroup><caption>Total Usage by Day (Last 30 Days)</caption><thead><tr><td class='rowHead'>Day</td>";
                 var dailyHeaders = "";
                 var dailyDownloadData = "";
                 var dailyUploadData = "";
@@ -845,7 +847,17 @@ Admin = function() {
                 d.setDate(d.getDate()-30);
                 for (var i=0; i<=30; i++)
                 {
-                    var dateToUse = d.getMonth()+1+"/"+d.getDate();
+                    var dateToUse;
+                    if (d.getMonth()+1 < 10)
+                        dateToUse = "0" + (d.getMonth()+1);
+                    else
+                        dateToUse = d.getMonth()+1;
+                    dateToUse += "/";
+                    if (d.getDate() < 10)
+                        dateToUse += "0" + d.getDate();
+                    else
+                        dateToUse += d.getDate();
+                    
                     dailyHeaders += "<th scope='col'>"+dateToUse+"</th>";
                     var hasDownloadData = false;
                     var hasUploadData = false;
@@ -884,7 +896,7 @@ Admin = function() {
                         appendKey: true,
                         colors: ['#fee932','#000000'],
                         diagonalLabels: true,
-                        dottedLast: true,
+                        dottedLast: true, //TODO this breaks if there is no data.  It crashes the browser.
                         labelWidth: 10
                     }).appendTo("#daily").trigger("visualizeRefresh");
                 }
@@ -896,7 +908,7 @@ Admin = function() {
         function getMonthlyStatistics()
         {
             $("#monthly").empty();
-            Filelocker.request("/admin/get_monthly_statistics", "retrieving monthly statistics", null, false, function(returnData) {
+            return Filelocker.request("/admin/get_monthly_statistics", "retrieving monthly statistics", null, false, function(returnData) {
                 var monthlyTable = "<div class='statisticsTableWrapper'><table id='monthlyStatisticsTable' class='statisticsTable'><colgroup><col class='colHead' /></colgroup><caption>Total Usage by Month (Last 12 Months)</caption><thead><tr><td class='rowHead'>Month</td>";
                 var monthlyHeaders = "";
                 var monthlyDownloadData = "";
@@ -914,7 +926,7 @@ Admin = function() {
                     var hasDownloadData = false;
                     var hasUploadData = false;
                     $.each(returnData.data.downloads, function(key, value) {
-                        if (key == month)
+                        if (parseInt(key) == month)
                         {
                             monthlyDownloadData += "<td scope='row'>"+value+"</td>";
                             hasDownloadData = true;
@@ -922,7 +934,7 @@ Admin = function() {
                         }
                     });
                     $.each(returnData.data.uploads, function(key, value) {
-                        if (key == month)
+                        if (parseInt(key) == month)
                         {
                             monthlyUploadData += "<td scope='row'>"+value+"</td>";
                             hasUploadData = true;
@@ -957,7 +969,8 @@ Admin = function() {
         }
         
         return {
-            load:load
+            load:load,
+            getDailyStatistics: getDailyStatistics,
         }
     }();
     
