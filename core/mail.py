@@ -12,9 +12,9 @@ class Mail:
     def get_server(self):
         server = SMTP(self.config['smtpServer'], self.config['smtpPort'] )
         if self.config['smtpStartTLS']:
-            server.ehlo(self.config['smtpSender'])
+            server.ehlo()
             server.starttls()
-            server.ehlo(self.config['smtpSender'])
+            server.ehlo()
         if self.config['smtpAuthRequired']:
             server.login(self.config['smtpUser'], self.config['smtpPass'] )
         return server
