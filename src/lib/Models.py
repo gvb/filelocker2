@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
 import datetime
-import logging
-import sys
 import time
 import StringIO
 import sqlalchemy
@@ -370,6 +368,7 @@ class Attribute(Base):
 class ClusterNode(Base):
     __tablename__="cluster_nodes"
     id = Column(Integer, primary_key=True)
+    member_id = Column(Integer, nullable=False)
     hostname = Column(String(255), nullable=False)
     last_seen_timestamp = Column(DateTime, nullable=False)
     is_master = Column(Boolean, nullable=False, default=False)

@@ -28,6 +28,8 @@ class Actions:
     CREATE_UPLOAD_REQUEST = "Create Upload Request"
     DELETE_UPLOAD_REQUEST = "Delete Upload Request"
 
+    DELETE_MESSAGE = "Delete Message"
+
     SEND_EMAIL = "Send Email"
     DELETE_FILE = "Delete File"
     DOWNLOAD = "Download File"
