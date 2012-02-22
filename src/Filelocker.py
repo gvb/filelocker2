@@ -52,8 +52,7 @@ def requires_login(permissionId=None, **kwargs):
                     if currentUser is None:
                         currentUser = User(id=userId, display_name="Guest user", first_name="Unknown", last_name="Unknown")
                         cherrypy.log.error("[%s] [requires_login] [User authenticated, but not found in directory - installing with defaults]"%str(userId))
-                        session.add(currentUser)
-                        session.commit()
+                        AccountService.install_user(currentUser)
                         currentUser = AccountService.get_user(currentUser.id, True) #To populate attributes
                     if currentUser.authorized == False:
                         raise cherrypy.HTTPError(403, "Your user account does not have access to this system.")
