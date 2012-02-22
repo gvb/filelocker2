@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import cherrypy
 from Cheetah.Template import Template
 from lib.SQLAlchemyTool import session
@@ -269,7 +270,6 @@ class ShareController:
         config = cherrypy.request.app.config['filelocker']
         fileIds = split_list_sanitized(fileIds)
         cc = True if cc == "true" else False
-        print "CC is %s" % str(cc)
         try:
             try:
                 expiration = datetime.datetime(*(time.strptime(strip_tags(expiration), "%m/%d/%Y")[0:6]))

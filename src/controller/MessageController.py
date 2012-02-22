@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import cherrypy
 import cgi
 from lib import Encryption
@@ -19,7 +20,8 @@ class MessageController:
     def create_message(self, subject, body, recipientIds, expiration, format="json", **kwargs):
         user, sMessages, fMessages = cherrypy.session.get("user"), [], []
         try:
-            maxExpiration = datetime.datetime.today() + datetime.timedelta(days=cherrypy.request.app.config['filelocker']['max_file_life_days'])
+            maxDays = int(session.query(ConfigParameter).filter(ConfigParameter.name=='max_file_life_days').one().value)
+            maxExpiration = datetime.datetime.today() + datetime.timedelta(days=maxDays)
             expiration = datetime.datetime(*time.strptime(strip_tags(expiration), "%m/%d/%Y")[0:5]) if (kwargs.has_key('expiration') and strip_tags(expiration) is not None and expiration.lower() != "never") else maxExpiration
             recipientIdList = split_list_sanitized(recipientIds)
             subject= strip_tags(subject)

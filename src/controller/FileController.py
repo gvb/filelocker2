@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import os
 import stat
 import shutil
@@ -68,7 +69,6 @@ class FileController(object):
             if (role is not None and flFile.role_owner_id == role.id) or flFile.owner_id == user.id or AccuontController.user_has_permission(user, "admin"):
                 if endDateFormatted is not None:
                     endDateFormatted = endDateFormatted + datetime.timedelta(days=1)
-                     #for row in results:
 
                 uniqueDownloads = session.query(func.date(AuditLog.date), func.count(distinct(AuditLog.initiator_user_id))).\
                 filter(AuditLog.action==Actions.DOWNLOAD).\
@@ -151,6 +151,7 @@ class FileController(object):
                 selectedFileIds = ",".join(fileIdList)
                 context = "private_sharing"
                 groups = session.query(Group).filter(Group.owner_id == user.id).all()
+                authType = session.query(ConfigParameter).filter(ConfigParameter.name=="auth_type").one().value
                 searchWidget = str(Template(file=get_template_file('search_widget.tmpl'), searchList=[locals(),globals()]))
                 tpl = Template(file=get_template_file('share_files.tmpl'), searchList=[locals(),globals()])
                 return str(tpl)
@@ -459,7 +460,7 @@ class FileController(object):
     @cherrypy.expose
     def download(self, fileId, **kwargs):
         serveFile, publicShareId, requestedFile = False, None, None
-        if cherrypy.session.has_key("public_share_id"):
+        if cherrypy.session.has_key("public_share_id") and cherrypy.session.has_key("user")==False:
             publicShareId = cherrypy.session.get("public_share_id")
             try:
                 publicShare = session.query(PublicShare).filter(PublicShare.id == publicShareId).one()
@@ -471,14 +472,17 @@ class FileController(object):
             except sqlalchemy.orm.exc.NoResultFound, nrf:
                 raise cherrypy.HTTPError(404, "Could not find share or file")
         else:
-            cherrypy.tools.requires_login()
-            user, role = cherrypy.session.get("user"), cherrypy.session.get("current_role")
-            try:
-                requestedFile = session.query(File).filter(File.id==fileId).one()
-                if (role is not None and requestedFile.role_owner_id == role.id) or requestedFile.owner_id == user.id or requestedFile.shared_with(user) or AccountService.user_has_permission(user, "admin"):
-                    serveFile = True
-            except sqlalchemy.orm.exc.NoResultFound, nrf:
-                raise cherrypy.HTTPError(404, "Could not find file")
+            #cherrypy.tools.requires_login()
+            if cherrypy.session.has_key("user")==False:
+                raise cherrypy.HTTPRedirect(cherrypy.request.app.config['filelocker']['root_url'])
+            else:
+                user, role = cherrypy.session.get("user"), cherrypy.session.get("current_role")
+                try:
+                    requestedFile = session.query(File).filter(File.id==fileId).one()
+                    if (role is not None and requestedFile.role_owner_id == role.id) or requestedFile.owner_id == user.id or requestedFile.shared_with(user) or AccountService.user_has_permission(user, "admin"):
+                        serveFile = True
+                except sqlalchemy.orm.exc.NoResultFound, nrf:
+                    raise cherrypy.HTTPError(404, "Could not find file")
 
         cherrypy.response.timeout = 36000
         cherrypy.session.release_lock()

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import cherrypy
 import datetime
 from twisted.plugin import getPlugins, IPlugin
@@ -106,7 +107,6 @@ def get_shareable_attributes_by_role(role):
     return attributeList
 
 def setup_session(user):
-    print "Setting up session %s" % user.id
     cherrypy.session['user'] = user
     cherrypy.session['current_role'] = None
     cherrypy.session['sMessages'] = []

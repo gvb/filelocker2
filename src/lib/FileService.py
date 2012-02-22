@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import os
 from stat import ST_SIZE
 import random
@@ -106,7 +107,7 @@ def check_in_file(tempFileName, flFile):
         else:
             flFile.passed_avscan = True
     except OSError, oe:
-        cherrypy.log.error("[%s] [check_in_file] [AVSCAN execution failed: %s]", (flFile.owner_id, str(oe)))
+        cherrypy.log.error("[%s] [check_in_file] [AVSCAN execution failed: %s]" % (flFile.owner_id, str(oe)))
         flFile.passed_avscan = False
 
     md5sum = None

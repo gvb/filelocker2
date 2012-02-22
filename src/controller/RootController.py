@@ -142,6 +142,7 @@ class RootController:
     @cherrypy.tools.requires_login()
     def index(self, **kwargs):
         config = cherrypy.request.app.config['filelocker']
+	orgConfig = get_config_dict_from_objects(session.query(ConfigParameter).filter(ConfigParameter.name.like('org_%')).all())
         user, originalUser = (cherrypy.session.get("user"),  cherrypy.session.get("original_user"))
         maxDays = int(session.query(ConfigParameter).filter(ConfigParameter.name=='max_file_life_days').one().value)
         roles = session.query(User).filter(User.id == user.id).one().roles
@@ -155,9 +156,9 @@ class RootController:
         startDateFormatted = sevenDaysAgo
         endDateFormatted = today
         messageSearchWidget = self.account.get_search_widget("messages")
-        geoTagging = get_config_dict_from_objects([session.query(ConfigParameter).filter(ConfigParameter.name=='geotagging').one().value])['geotagging']
+        geoTagging = get_config_dict_from_objects([session.query(ConfigParameter).filter(ConfigParameter.name=='geotagging').one()])['geotagging']
         banner = session.query(ConfigParameter).filter(ConfigParameter.name=='banner').one().value
-        defaultQuota = int(session.query(ConfigParameter).filter(ConfigParameter.name=='geotagging').one().value)
+        defaultQuota = int(session.query(ConfigParameter).filter(ConfigParameter.name=='default_quota').one().value)
         header = Template(file=get_template_file('header.tmpl'), searchList=[locals(),globals()])
         lightboxen = str(Template(file=get_template_file('lightboxen.tmpl'), searchList=[locals(),globals()]))
         footerText = str(Template(file=get_template_file('footer_text.tmpl'), searchList=[locals(),globals()]))
@@ -196,6 +197,7 @@ class RootController:
     @cherrypy.tools.requires_login()
     def admin_console(self, **kwargs):
         user, config = cherrypy.session.get("user"), cherrypy.request.app.config['filelocker']
+	orgConfig = get_config_dict_from_objects(session.query(ConfigParameter).filter(ConfigParameter.name.like('org_%')).all())
         templateFiles = os.listdir(os.path.join(config['root_path'], "view"))
         configParameters = session.query(ConfigParameter).order_by(ConfigParameter.name).all()
         flUsers = session.query(User).slice(0,50)
@@ -227,6 +229,8 @@ class RootController:
     def history(self, userId=None, startDate=None, endDate=None, logAction=None, format="html", **kwargs):
         sMessages, fMessages, user, role= ([],[],cherrypy.session.get("user"),cherrypy.session.get("current_role"))
         config = cherrypy.request.app.config['filelocker']
+        orgConfig = get_config_dict_from_objects(session.query(ConfigParameter).filter(ConfigParameter.name.like('org_%')).all())
+
         userId = strip_tags(userId) if strip_tags(userId) != None else user.id
         if (userId != user.id and AccountService.user_has_permission(user, "admin")==False):
             raise cherrypy.HTTPError(403)
@@ -277,9 +281,10 @@ class RootController:
     @cherrypy.tools.requires_login()
     def files(self, **kwargs):
         user, role, defaultExpiration, uploadRequests, userFiles, userShareableAttributes,attributeFilesDict,sharedFiles = (cherrypy.session.get("user"), cherrypy.session.get("current_role"), None, [], [], [], {}, [])
+        config = cherrypy.request.app.config['filelocker']
         orgConfig = get_config_dict_from_objects(session.query(ConfigParameter).filter(ConfigParameter.name.like('org_%')).all())
         maxDays = int(session.query(ConfigParameter).filter(ConfigParameter.name=='max_file_life_days').one().value)
-        geoTagging = get_config_dict_from_objects([session.query(ConfigParameter).filter(ConfigParameter.name=='geotagging').one().value])['geotagging']
+        geoTagging = get_config_dict_from_objects([session.query(ConfigParameter).filter(ConfigParameter.name=='geotagging').one()])['geotagging']
         adminEmail = session.query(ConfigParameter).filter(ConfigParameter.name=='admin_email').one().value
         defaultExpiration = datetime.date.today() + (datetime.timedelta(days=maxDays))
         if role is None:
@@ -295,9 +300,9 @@ class RootController:
 
     @cherrypy.expose
     def help(self, **kwargs):
-        defaultQuota = int(session.query(ConfigParameter).filter(ConfigParameter.name=='geotagging').one().value)
+        defaultQuota = int(session.query(ConfigParameter).filter(ConfigParameter.name=='default_quota').one().value)
         maxDays = int(session.query(ConfigParameter).filter(ConfigParameter.name=='max_file_life_days').one().value)
-        geoTagging = get_config_dict_from_objects([session.query(ConfigParameter).filter(ConfigParameter.name=='geotagging').one().value])['geotagging']
+        geoTagging = get_config_dict_from_objects([session.query(ConfigParameter).filter(ConfigParameter.name=='geotagging').one()])['geotagging']
         tpl = Template(file=get_template_file('halp.tmpl'), searchList=[locals(),globals()])
         return str(tpl)
 
@@ -305,6 +310,7 @@ class RootController:
     @cherrypy.tools.requires_login()
     def manage_groups(self, **kwargs):
         user, config = cherrypy.session.get("user"), cherrypy.request.app.config['filelocker']
+        orgConfig = get_config_dict_from_objects(session.query(ConfigParameter).filter(ConfigParameter.name.like('org_%')).all())
         groups = session.query(Group).filter(Group.owner_id==user.id).all()
         tpl = Template(file=get_template_file('manage_groups.tmpl'), searchList=[locals(),globals()])
         return str(tpl)
@@ -317,6 +323,7 @@ class RootController:
     def upload_request(self, requestId=None, msg=None, **kwargs):
         user = None
         messages, uploadRequest, requestId, config = [], None, strip_tags(requestId), cherrypy.request.app.config['filelocker']
+        orgConfig = get_config_dict_from_objects(session.query(ConfigParameter).filter(ConfigParameter.name.like('org_%')).all())
         if msg is not None and int(msg) == 1: messages.append("You must supply a valid ID and password to upload files for this request")
         if msg is not None and int(msg) == 2: messages.append("Unable to load upload request")
         if msg is not None and int(msg) == 3: messages.append("Invalid password")
@@ -331,7 +338,7 @@ class RootController:
             except sqlalchemy.orm.exc.NoResultFound, nrf:
                 message.append("Invalid upload request ID")
         currentYear = datetime.date.today().year
-        geoTagging = get_config_dict_from_objects([session.query(ConfigParameter).filter(ConfigParameter.name=='geotagging').one().value])['geotagging']
+        geoTagging = get_config_dict_from_objects([session.query(ConfigParameter).filter(ConfigParameter.name=='geotagging').one()])['geotagging']
         banner = session.query(ConfigParameter).filter(ConfigParameter.name=='banner').one().value
         headerHTML = str(Template(file=get_template_file('header.tmpl'), searchList=[locals(),globals()]))
         footerText = str(Template(file=get_template_file('footer_text.tmpl'), searchList=[locals(),globals()]))
@@ -396,7 +403,7 @@ class RootController:
             tpl = str(Template(file=get_template_file('public_upload_request_uploader.tmpl'), searchList=[locals(),globals()]))
         else:
              raise cherrypy.HTTPRedirect("%s/upload_request?msg=2" % (config['root_url']))
-        geoTagging = get_config_dict_from_objects([session.query(ConfigParameter).filter(ConfigParameter.name=='geotagging').one().value])['geotagging']
+        geoTagging = get_config_dict_from_objects([session.query(ConfigParameter).filter(ConfigParameter.name=='geotagging').one()])['geotagging']
         banner = session.query(ConfigParameter).filter(ConfigParameter.name=='banner').one().value
         headerHTML = str(Template(file=get_template_file('header.tmpl'), searchList=[locals(),globals()]))
         footerText = str(Template(file=get_template_file('footer_text.tmpl'), searchList=[locals(),globals()]))
@@ -432,7 +439,7 @@ class RootController:
         except Exception, e:
             message = "Unable to access download page: %s " % str(e)
         currentYear = datetime.date.today().year
-        geoTagging = get_config_dict_from_objects([session.query(ConfigParameter).filter(ConfigParameter.name=='geotagging').one().value])['geotagging']
+        geoTagging = get_config_dict_from_objects([session.query(ConfigParameter).filter(ConfigParameter.name=='geotagging').one()])['geotagging']
         banner = session.query(ConfigParameter).filter(ConfigParameter.name=='banner').one().value
         headerHTML = str(Template(file=get_template_file('header.tmpl'), searchList=[locals(),globals()]))
         footerText = str(Template(file=get_template_file('footer_text.tmpl'), searchList=[locals(),globals()]))
