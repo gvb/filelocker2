@@ -115,7 +115,7 @@ Utility = function() {
         }
         else if(destination === "public_upload")
         {
-            textId = "fileNotes";
+            textId = "puFileNotes";
             notesId = "publicUploadNotesInfo";
         }
         else if(destination === "upload_request")

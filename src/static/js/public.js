@@ -15,7 +15,7 @@ PublicUpload = function() {
                 onSubmit: function(id, fileName){
                     uploader.setParams({
                         scanFile: $("#puScanFile").prop("checked"),
-                        fileNotes: $("#fileNotes").val(),
+                        fileNotes: $("#puFileNotes").val(),
                         expiration: $("#puExpiration").val(),
                         uploadIndex: id,
                         fileName: fileName
@@ -26,8 +26,6 @@ PublicUpload = function() {
                         pollerId = setInterval(function() { poll(); }, 1000);
                 },
                 onComplete: function(id, fileName, response){
-                    //Filelocker.checkMessages("uploading file");
-                    //load();
                     location.reload(true);
                 },
                 onCancel: function(id, fileName){

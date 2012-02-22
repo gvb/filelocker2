@@ -82,16 +82,16 @@
                 <input type="text" class="dateFuture" name="puExpiration" id="puExpiration" size="9" maxlength="10" value="$defaultExpiration.strftime('%m/%d/%Y')" />
             </div>
             <div>
-                <label for="fileNotes">Add notes to file:</label>
-                <textarea name="fileNotes" id="fileNotes" cols="38" rows="3" onKeyUp="javascript:limitCharacters('public_upload');"></textarea>
+                <label for="puFileNotes">Add notes to file:</label>
+                <textarea name="puFileNotes" id="puFileNotes" cols="38" rows="3" onKeyUp="javascript:Utility.limitCharacters('public_upload');"></textarea>
                 <div id="publicUploadNotesInfo"></div>
             </div>
             <div>
                 <label for="uploadScanFile">Other options:</label>
                 #if $uploadRequest.scan_file
-                    <input type="checkbox" disabled="disabled" checked="checked" name="scanFile" id="scanFile" />Scan for viruses (The user has requested that this file undergo a virus scan)
+                    <input type="checkbox" disabled="disabled" checked="checked" name="puScanFile" id="puScanFile" />Scan for viruses (The user has requested that this file undergo a virus scan)
                 #else
-                    <input type="checkbox" name="scanFile" id="scanFile"/><span onclick="javascript:check('scanFile');">Scan for viruses?</span>
+                    <input type="checkbox" name="puScanFile" id="puScanFile"/>Scan for viruses?
                 #end if
             </div>
             <div>
