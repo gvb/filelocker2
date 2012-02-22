@@ -39,7 +39,7 @@
                         <tr id="user_$flUser.id" class="userRow">
                             <td id="userNameElement_$flUser.id" class="userNameElement"><input type="checkbox" name="select_user" value="$flUser.id" class="userSelectBox" id="checkbox_$flUser.id">
                                 <div class="posrel">
-                                    <div id="menu_row_$flUser.id" class="menuUsers hidden">
+                                    <div id="menu_userRow_$flUser.id" class="menuUsers hidden">
                                     <ul class="menu">
                                         <li><div class="button" style="width: 185px;"><a href="javascript:Admin.User.promptUpdate('$flUser.id', '$flUser.first_name', '$flUser.last_name', '$flUser.email', $flUser.quota);" title="Edit user account for '$flUser.id'" class="editButton"><span><center>Edit Account</center></span></a></div></li>
                                         <li><div class="button" style="width: 185px;"><a href="javascript:Admin.Permission.load('$flUser.id');" title="Grant and revoke user permissions for '$flUser.id'" class="wandButton"><span><center>Edit Permissions</center></span></a></div></li>
@@ -109,11 +109,11 @@
                         <tr id="role_$flRole.id" class="roleRow">
                             <td id="roleNameElement_$flRole.id" class="roleNameElement"><input type="checkbox" name="select_role" value="$flRole.id" class="roleSelectBox" id="checkbox_$flRole.id">
                                 <div class="posrel">
-                                    <div id="menu_row_$flRole.id" class="menuRoles hidden">
+                                    <div id="menu_roleRow_$flRole.id" class="menuRoles hidden">
                                     <ul class="menu">
                                         <li><div class="button" style="width: 185px;"><a href="javascript:Admin.Role.promptUpdate('$flRole.id', '$flRole.name', '$flRole.email', $flRole.quota);" title="Edit account for '$flRole.id'" class="editButton"><span><center>Edit Role Account</center></span></a></div></li>
                                         <li><div class="button" style="width: 185px;"><a href="javascript:Admin.RolePermission.load('$flRole.id');" title="Grant and revoke role permissions for '$flRole.id'" class="wandButton"><span><center>Edit Permissions</center></span></a></div></li>
-                                        <li><div class="button" style="width: 185px;"><a href="javascript:Admin.Role.prompt('$flRole.id');" title="Manage membership for '$flRole.name'" class="editButton"><span><center>Manage Membership</center></span></a></div></li>
+                                        <li><div class="button" style="width: 185px;"><a href="javascript:Admin.Role.prompt('$flRole.id');" title="Manage membership for '$flRole.name'" class="editButton"><span><center>Manage Members</center></span></a></div></li>
                                     </ul>
                                 </div>
                             </td>
