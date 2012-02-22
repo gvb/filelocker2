@@ -2,11 +2,11 @@
 import re
 import os
 import datetime
-import logging
 import cherrypy
 from lib.SQLAlchemyTool import session
 import sqlalchemy
 from Cheetah.Template import Template
+from lib.Constants import Actions
 from lib import Encryption
 from lib.Models import *
 from lib import AccountService
@@ -38,11 +38,11 @@ class RootController:
 
     @cherrypy.expose
     def login(self, **kwargs):
-        logging.error( "login")
-        msg, errorMessage, authType, config = ( None, None, cherrypy.request.app.config['filelocker']['auth_type'], cherrypy.request.app.config['filelocker'])
+        msg, errorMessage, config = ( None, None, cherrypy.request.app.config['filelocker'])
+        authType = session.query(ConfigParameter).filter(ConfigParameter.name=="auth_type").one().value
+        orgConfig = get_config_dict_from_objects(session.query(ConfigParameter).filter(ConfigParameter.name.like('org_%')).all())
         if kwargs.has_key("msg"):
             msg = kwargs['msg']
-	logging.error("Login with kwargs: %s" % str(kwargs))
         if kwargs.has_key("local") and kwargs['local']==str(True):
             authType = "local"
 
@@ -58,21 +58,22 @@ class RootController:
             currentYear = datetime.date.today().year
             footerText = str(Template(file=get_template_file('footer_text.tmpl'), searchList=[locals(),globals()]))
             tpl = Template(file=get_template_file('login.tmpl'), searchList=[locals(),globals()])
-            logging.error("returning template")
             return str(tpl)
         elif authType == "cas":
             raise cherrypy.HTTPRedirect(config['root_url'])
         else:
-            logging.error("[system] [login] [No authentication variable set in config]")
+            cherrypy.log.error("[system] [login] [No authentication variable set in config]")
             raise cherrypy.HTTPError(403, "No authentication mechanism")
 
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def logout(self):
         config = cherrypy.request.app.config['filelocker']
-        if cherrypy.request.app.config['filelocker']['auth_type'] == "cas":
-	    from lib.CAS import CAS
-	    casConnector = CAS(cherrypy.request.app.config['filelocker']['cas_url'])
+        authType = session.query(ConfigParameter).filter(ConfigParameter.name=="auth_type").one().value
+        if authType == "cas":
+            from lib.CAS import CAS
+            casUrl = session.query(ConfigParameter).filter(ConfigParameter.name=="cas_url").one().value
+            casConnector = CAS(casUrl)
             casLogoutUrl =  casConnector.logout_url()+"?redirectUrl="+config['root_url']+"/logout_cas"
             currentYear = datetime.date.today().year
             footerText = str(Template(file=get_template_file('footer_text.tmpl'), searchList=[locals(),globals()]))
@@ -85,11 +86,9 @@ class RootController:
 
     @cherrypy.expose
     def logout_cas(self):
-        config = cherrypy.request.app.config['filelocker']
         from lib.CAS import CAS
-        orgURL = cherrypy.response.cookie['filelocker']['org_url']
-        orgName = cherrypy.response.cookie['filelocker']['org_name']
-        rootURL = cherrypy.response.cookie['filelocker']['root_url']
+        config = cherrypy.request.app.config['filelocker']
+        orgConfig = get_config_dict_from_objects(session.query(ConfigParameter).filter(ConfigParameter.name.like('org_%')).all())
         currentYear = datetime.date.today().year
         footerText = str(Template(file=get_template_file('footer_text.tmpl'), searchList=[locals(),globals()]))
         tpl = Template(file=get_template_file('cas_logout_confirmation.tmpl'), searchList=[locals(), globals()])
@@ -103,11 +102,11 @@ class RootController:
         username = strip_tags(username)
 
         if password is None or password == "":
-            logging.error("Password is non - redirecting to login")
+            cherrypy.log.error("Password is non - redirecting to login")
             raise cherrypy.HTTPRedirect("%s/login?msg=3&local=%s" % (rootURL, str(local)))
         else:
-            logging.error("password not none - instantiating directory and checking password")
-            directory = AccountService.ExternalDirectory(cherrypy.request.app.config['filelocker'], local)
+            cherrypy.log.error("password not none - instantiating directory and checking password")
+            directory = AccountService.ExternalDirectory(local)
             if directory.authenticate(username, password):
                 currentUser = AccountService.get_user(username, True) #if they are authenticated and local, this MUST return a user object
                 if currentUser is not None:
@@ -115,7 +114,7 @@ class RootController:
                         raise cherrypy.HTTPError(403, "You do not have permission to access this system")
                     session.add(AuditLog(cherrypy.session.get("user").id, "Login", "User %s logged in successfully from IP %s" % (currentUser.id, cherrypy.request.remote.ip)))
                     session.commit()
-                    logging.error("User found, authenticated, redirecting")
+                    cherrypy.log.error("User found, authenticated, redirecting")
                     raise cherrypy.HTTPRedirect(rootURL)
                 else: #This should only happen in the case of a user existing in the external directory, but having never logged in before
                     try:
@@ -143,7 +142,8 @@ class RootController:
     @cherrypy.tools.requires_login()
     def index(self, **kwargs):
         config = cherrypy.request.app.config['filelocker']
-        user, originalUser, maxDays = (cherrypy.session.get("user"),  cherrypy.session.get("original_user"), cherrypy.request.app.config['filelocker']['max_file_life_days'])
+        user, originalUser = (cherrypy.session.get("user"),  cherrypy.session.get("original_user"))
+        maxDays = int(session.query(ConfigParameter).filter(ConfigParameter.name=='max_file_life_days').one().value)
         roles = session.query(User).filter(User.id == user.id).one().roles
         currentYear = datetime.date.today().year
         startDateFormatted, endDateFormatted = None, None
@@ -155,6 +155,9 @@ class RootController:
         startDateFormatted = sevenDaysAgo
         endDateFormatted = today
         messageSearchWidget = self.account.get_search_widget("messages")
+        geoTagging = get_config_dict_from_objects([session.query(ConfigParameter).filter(ConfigParameter.name=='geotagging').one().value])['geotagging']
+        banner = session.query(ConfigParameter).filter(ConfigParameter.name=='banner').one().value
+        defaultQuota = int(session.query(ConfigParameter).filter(ConfigParameter.name=='geotagging').one().value)
         header = Template(file=get_template_file('header.tmpl'), searchList=[locals(),globals()])
         lightboxen = str(Template(file=get_template_file('lightboxen.tmpl'), searchList=[locals(),globals()]))
         footerText = str(Template(file=get_template_file('footer_text.tmpl'), searchList=[locals(),globals()]))
@@ -173,6 +176,7 @@ class RootController:
     @cherrypy.expose
     def sign_tos(self, **kwargs):
         config = cherrypy.request.app.config['filelocker']
+        orgConfig = get_config_dict_from_objects(session.query(ConfigParameter).filter(ConfigParameter.name.like('org_%')).all())
         if cherrypy.session.has_key("user") and cherrypy.session.get("user") is not None:
             user = cherrypy.session.get("user")
             if kwargs.has_key('action') and kwargs['action']=="sign":
@@ -214,7 +218,7 @@ class RootController:
                     currentUsersList.append(currentUser)
                     currentUserIds.append(currentUser.id)
             except Exception, e:
-                logging.error("[%s] [admin] [Unable to read user session: %s]" % (user.id, str(e)))
+                cherrypy.log.error("[%s] [admin] [Unable to read user session: %s]" % (user.id, str(e)))
         tpl = Template(file=get_template_file('admin.tmpl'), searchList=[locals(),globals()])
         return str(tpl)
 
@@ -245,7 +249,7 @@ class RootController:
 
             if logAction is None or logAction == "" or logAction == "all_minus_login":
                 logAction = "all_minus_login"
-                actionLogListAtt = actionLogListAtt.filter(AuditLog.action != "Login")
+                actionLogListAtt = actionLogListAtt.filter(AuditLog.action != Actions.LOGIN)
             else:
                 logAction = strip_tags(logAction)
                 actionLogListAtt = actionLogListAtt.filter(AuditLog.action == logAction)
@@ -272,9 +276,12 @@ class RootController:
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def files(self, **kwargs):
-        config = cherrypy.request.app.config['filelocker']
         user, role, defaultExpiration, uploadRequests, userFiles, userShareableAttributes,attributeFilesDict,sharedFiles = (cherrypy.session.get("user"), cherrypy.session.get("current_role"), None, [], [], [], {}, [])
-        defaultExpiration = datetime.date.today() + (datetime.timedelta(days=cherrypy.request.app.config['filelocker']['max_file_life_days']))
+        orgConfig = get_config_dict_from_objects(session.query(ConfigParameter).filter(ConfigParameter.name.like('org_%')).all())
+        maxDays = int(session.query(ConfigParameter).filter(ConfigParameter.name=='max_file_life_days').one().value)
+        geoTagging = get_config_dict_from_objects([session.query(ConfigParameter).filter(ConfigParameter.name=='geotagging').one().value])['geotagging']
+        adminEmail = session.query(ConfigParameter).filter(ConfigParameter.name=='admin_email').one().value
+        defaultExpiration = datetime.date.today() + (datetime.timedelta(days=maxDays))
         if role is None:
             uploadRequests = session.query(UploadRequest).filter(UploadRequest.owner_id==user.id).all()
             userFiles = self.file.get_user_file_list(format="list")
@@ -288,7 +295,9 @@ class RootController:
 
     @cherrypy.expose
     def help(self, **kwargs):
-        config = cherrypy.request.app.config['filelocker']
+        defaultQuota = int(session.query(ConfigParameter).filter(ConfigParameter.name=='geotagging').one().value)
+        maxDays = int(session.query(ConfigParameter).filter(ConfigParameter.name=='max_file_life_days').one().value)
+        geoTagging = get_config_dict_from_objects([session.query(ConfigParameter).filter(ConfigParameter.name=='geotagging').one().value])['geotagging']
         tpl = Template(file=get_template_file('halp.tmpl'), searchList=[locals(),globals()])
         return str(tpl)
 
@@ -322,6 +331,8 @@ class RootController:
             except sqlalchemy.orm.exc.NoResultFound, nrf:
                 message.append("Invalid upload request ID")
         currentYear = datetime.date.today().year
+        geoTagging = get_config_dict_from_objects([session.query(ConfigParameter).filter(ConfigParameter.name=='geotagging').one().value])['geotagging']
+        banner = session.query(ConfigParameter).filter(ConfigParameter.name=='banner').one().value
         headerHTML = str(Template(file=get_template_file('header.tmpl'), searchList=[locals(),globals()]))
         footerText = str(Template(file=get_template_file('footer_text.tmpl'), searchList=[locals(),globals()]))
         footerHTML = str(Template(file=get_template_file('footer.tmpl'), searchList=[locals(),globals()]))
@@ -333,7 +344,9 @@ class RootController:
     def upload_request_uploader(self, requestId=None, password=None, **kwargs):
         user = None
         requestOwner, uploadRequest, tpl, messages, config = (None, None, None, [], cherrypy.request.app.config['filelocker'])
-        defaultExpiration = datetime.date.today() + (datetime.timedelta(days=config['max_file_life_days']))
+        orgConfig = get_config_dict_from_objects(session.query(ConfigParameter).filter(ConfigParameter.name.like('org_%')).all())
+        maxDays = int(session.query(ConfigParameter).filter(ConfigParameter.name=='max_file_life_days').one().value)
+        defaultExpiration = datetime.date.today() + (datetime.timedelta(days=maxDays))
         requestFiles = []
         requestId = strip_tags(requestId)
         if requestId is not None:
@@ -347,7 +360,7 @@ class RootController:
                 if uploadRequest is None: #Expired request, but they still have a valid session to view file
                     uploadRequest = cherrypy.session.get("uploadRequest")
                     uploadRequest.expired = True
-            elif password is None or password =="": #If they come in with a ticket - fill it in a prompt for password
+            elif password is None or password =="": #If they come in with a ticket - fill it in and prompt for password
                 try:
                     uploadRequest = session.query(UploadRequest).filter(UploadRequest.id == requestId).one()
                     if uploadRequest.password == None and uploadRequest.type == "single":
@@ -383,6 +396,8 @@ class RootController:
             tpl = str(Template(file=get_template_file('public_upload_request_uploader.tmpl'), searchList=[locals(),globals()]))
         else:
              raise cherrypy.HTTPRedirect("%s/upload_request?msg=2" % (config['root_url']))
+        geoTagging = get_config_dict_from_objects([session.query(ConfigParameter).filter(ConfigParameter.name=='geotagging').one().value])['geotagging']
+        banner = session.query(ConfigParameter).filter(ConfigParameter.name=='banner').one().value
         headerHTML = str(Template(file=get_template_file('header.tmpl'), searchList=[locals(),globals()]))
         footerText = str(Template(file=get_template_file('footer_text.tmpl'), searchList=[locals(),globals()]))
         footerHTML = str(Template(file=get_template_file('footer.tmpl'), searchList=[locals(),globals()]))
@@ -393,6 +408,7 @@ class RootController:
     def public_download(self, shareId, **kwargs):
         user = None
         message, publicShare, config = None, None, cherrypy.request.app.config['filelocker']
+        orgConfig = get_config_dict_from_objects(session.query(ConfigParameter).filter(ConfigParameter.name.like('org_%')).all())
         cherrypy.response.timeout = 36000
         shareId = strip_tags(shareId)
 
@@ -416,6 +432,8 @@ class RootController:
         except Exception, e:
             message = "Unable to access download page: %s " % str(e)
         currentYear = datetime.date.today().year
+        geoTagging = get_config_dict_from_objects([session.query(ConfigParameter).filter(ConfigParameter.name=='geotagging').one().value])['geotagging']
+        banner = session.query(ConfigParameter).filter(ConfigParameter.name=='banner').one().value
         headerHTML = str(Template(file=get_template_file('header.tmpl'), searchList=[locals(),globals()]))
         footerText = str(Template(file=get_template_file('footer_text.tmpl'), searchList=[locals(),globals()]))
         footerHTML = str(Template(file=get_template_file('footer.tmpl'), searchList=[locals(),globals()]))

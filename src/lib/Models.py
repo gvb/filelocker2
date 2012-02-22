@@ -38,10 +38,9 @@ try:
 except Exception, e:
     try:
         from sqlalchemy.databases.mysql import MSBigInteger
-        logging.debug("Exeption e: %s" % str(e))
         BIGINT_ALIAS = MSBigInteger
     except Exception, e:
-        logging.erro("Couldn't setup large integer storage: %s" % str(e))
+        cherrypy.log.error("Couldn't setup large integer storage: %s" % str(e))
   
 #Database Backended Models
 user_permissions_table = Table("user_permissions", Base.metadata,
@@ -367,6 +366,14 @@ class Attribute(Base):
 
     def __str__(self):
         return "%s (%s)" % (self.name, self.id)
+
+class ClusterNode(Base):
+    __tablename__="cluster_nodes"
+    id = Column(Integer, primary_key=True)
+    hostname = Column(String(255), nullable=False)
+    last_seen_timestamp = Column(DateTime, nullable=False)
+    is_master = Column(Boolean, nullable=False, default=False)
+
 
 class AuditLog(Base):
     __tablename__ = "audit_logs"

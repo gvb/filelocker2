@@ -1,5 +1,3 @@
-
-import logging
 from lib.SQLAlchemyTool import session
 from lib.Formatters import *
 from lib.Models import *

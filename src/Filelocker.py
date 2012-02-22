@@ -42,15 +42,17 @@ def requires_login(permissionId=None, **kwargs):
         else:
             pass
     else:
-        if cherrypy.request.app.config['filelocker']['auth_type'] == "cas":
-            casConnector = CAS(cherrypy.request.app.config['filelocker']['cas_url'])
+        authType = session.query(ConfigParameter).filter(ConfigParameter.name=="auth_type").one().value
+        if authType == "cas":
+            casUrl = session.query(ConfigParameter).filter(ConfigParameter.name=="cas_url").one().value
+            casConnector = CAS(casUrl)
             if cherrypy.request.params.has_key("ticket"):
                 valid_ticket, userId = casConnector.validate_ticket(rootURL, cherrypy.request.params['ticket'])
                 if valid_ticket:
                     currentUser = AccountService.get_user(userId, True)
                     if currentUser is None:
                         currentUser = User(id=userId, display_name="Guest user", first_name="Unknown", last_name="Unknown")
-                        logging.error("[%s] [requires_login] [User authenticated, but not found in directory - installing with defaults]"%str(userId))
+                        cherrypy.log.error("[%s] [requires_login] [User authenticated, but not found in directory - installing with defaults]"%str(userId))
                         session.add(currentUser)
                         session.commit()
                         currentUser = AccountService.get_user(currentUser.id, True) #To populate attributes
@@ -82,11 +84,40 @@ cherrypy.tools.requires_login = cherrypy.Tool('before_request_body', requires_lo
 def error(status, message, traceback, version):
     currentYear = datetime.date.today().year
     config = cherrypy.request.app.config['filelocker']
-    rootURL = config['root_url']
-    orgURL, orgName = config['org_url'], config['org_name']
+    orgConfig = get_config_dict_from_objects(session.query(ConfigParameter).filter(ConfigParameter.name.like('org_%')).all())
     footerText = str(Template(file=get_template_file('footer_text.tmpl'), searchList=[locals(),globals()]))
     tpl = str(Template(file=get_template_file('error.tmpl'), searchList=[locals(),globals()]))
     return tpl
+
+def cluster_maintenance(config):
+    #Clean node table, check for master, if none run election
+    expiredNodes = session.query(ClusterNode).filter(ClusterNode.last_seen_timestamp < datetime.datetime.now()-datetime.timedelta(minutes=5)).all()
+    for node in expiredNodes:
+        session.delete(node)
+    session.commit()
+    currentNode = session.query(ClusterNode).filter(ClusterNode.id == config['filelocker']['cluster_member_id']).scalar()
+    if currentNode is None: #This node isn't in the DB yet, check in
+        import socket
+        currentNode = ClusterNode(id=config['filelocker']['cluster_member_id'], hostname=socket.gethostname(), is_master=False, last_seen_timestamp=datetime.datetime.now())
+        session.add(currentNode)
+        session.commit()
+    else: #In the DB, update last seen to avoid purging
+        currentNode.last_seen_timestamp = datetime.datetime.now()
+        session.commit()
+    if config['filelocker']['cluster_member_id']==0: #If this is master node, assume control
+        currentNode.is_master = True
+        for node in session.query(ClusterNode).all():
+            node.is_master = False
+        session.commit()
+    elif session.query(ClusterNode).filter(ClusterNode.is_master==True).scalar() is None: #No master nodes found, become master if eligible
+        highestPriority = currentNode.id
+        for node in session.query(ClusterNode).all():
+            if node.id < highestPriority:
+                highestPriority = node.id
+                break
+        if higestPriority == currentNode.id:
+            currentNode.is_master = True
+            session.commit()
 
 def daily_maintenance(config):
     from lib import AccountService
@@ -107,7 +138,7 @@ def daily_maintenance(config):
             session.commit()
         except Exception, e:
             session.rollback()
-            logging.error("[system] [daily_maintenance] [Error while deleting expired file: %s]" % str(e))
+            cherrypy.log.error("[system] [daily_maintenance] [Error while deleting expired file: %s]" % str(e))
     expiredMessages = session.query(Message).filter(Message.date_expires < datetime.datetime.now())
     for message in expiredMessages:
         try:
@@ -117,7 +148,7 @@ def daily_maintenance(config):
             session.commit()
         except Exception, e:
             session.rollback()
-            logging.error("[system] [daily_maintenance] [Error while deleting expired message: %s]" % str(e))
+            cherrypy.log.error("[system] [daily_maintenance] [Error while deleting expired message: %s]" % str(e))
     expiredUploadRequests = session.query(UploadRequest).filter(UploadRequest.date_expires < datetime.datetime.now())
     for uploadRequest in expiredUploadRequests:
         try:
@@ -125,7 +156,7 @@ def daily_maintenance(config):
             session.add(AuditLog("system", "Delete Upload Request", "Upload request %s has expired." % uploadRequest.id, uploadRequest.owner_id))
             session.commit()
         except Exception, e:
-            logging.error("[system] [daily_maintenance] [Error while deleting expired upload request: %s]" % (str(e)))
+            cherrypy.log.error("[system] [daily_maintenance] [Error while deleting expired upload request: %s]" % (str(e)))
     maxUserDays = config['filelocker']['user_inactivity_expiration']
     expiredUsers = session.query(User).filter(and_(User.date_last_login < (datetime.date.today() - datetime.timedelta(days=maxUserDays)), User.id!= "admin"))
     
@@ -160,9 +191,9 @@ def daily_maintenance(config):
                         except sqlalchemy.orm.exc.NoResultFound, nrf:
                             FileService.queue_for_deletion(fileName)
                     except Exception, e:
-                        logging.warning("There was a file that did not match Filelocker's naming convention in the vault: %s. It has not been purged." % fileName)
+                        cherrypy.log.error("There was a file that did not match Filelocker's naming convention in the vault: %s. It has not been purged." % fileName)
         except Exception, e:
-            logging.error("[system] [daily_maintenance] [There was a problem while trying to delete an orphaned file %s: %s]" % (str(fileName), str(e)))
+            cherrypy.log.error("[system] [daily_maintenance] [There was a problem while trying to delete an orphaned file %s: %s]" % (str(fileName), str(e)))
             session.rollback()
 
 def update_config(config):
@@ -181,7 +212,7 @@ def update_config(config):
                 value = datetime.datetime.strptime(parameter.value, "%m/%d/%Y %H:%M:%S")
             config['filelocker'][parameter.name] = value
     except Exception, e:
-        logging.error("Could not update config: %s" % str(e))
+        cherrypy.log.error("Could not update config: %s" % str(e))
 
 
 def midnightloghandler(fn, level, backups):
@@ -342,8 +373,15 @@ def start(configfile=None, daemonize=False, pidfile=None):
             maxSize = long(maxSizeParam.value)
             cherrypy.config.update({'server.max_request_body_size': maxSize*1024*1024})
         except Exception, e:
-            logging.error("[admin] [maintenance] [Problem setting max file size: %s]" % str(e))
-        if app.config['filelocker'].has_key("cluster_member_id") and int(app.config['filelocker']["cluster_member_id"])==0: # This will allow you set up other front ends that don't run maintenance on the DB or FS
+            cherrypy.log.error("[admin] [maintenance] [Problem setting max file size: %s]" % str(e))
+        #cluster_maintenance(app.config)
+        currentMaster = None
+        try:
+            currentMaster = session.query(ClusterNode).filter(ClusterNode.is_master==True).one()
+        except sqlalchemy.orm.exc.NoResultFound:
+            cherrypy.log.error("[system] [start] [No cluster master found, assuming master ID is 0]")
+            currentMaster = ClusterNode(id=0)
+        if currentMaster.id == app.config['filelocker']["cluster_member_id"]: # This will allow you set up other front ends that don't run maintenance on the DB or FS
             if hour == 0.0: #on startup and each new day
                 daily_maintenance(app.config)
             FileService.process_deletion_queue(app.config) #process deletion queue every 12 minutes
@@ -359,11 +397,11 @@ def start(configfile=None, daemonize=False, pidfile=None):
         FileService.clean_temp_files(app.config, validTempFiles)
         time.sleep(720) #12 minutes
 #    except KeyboardInterrupt, ki:
-#        logging.error("Keyboard interrupt")
+#        cherrypy.log.error("Keyboard interrupt")
 #        engine.exit()
 #        sys.exit(1)
 #    except Exception, e:
-#        logging.error("Exception: %s" % str(e))
+#        cherrypy.log.error("Exception: %s" % str(e))
 #        logging.critical("Failed to start up Filelocker: %s" % str(e))
 #        engine.exit()
 #        sys.exit(1)

@@ -24,7 +24,7 @@
     <h4 class="hidden">How do I upload large files?</h4>
     <span class="helpDescription pseudoLink">Learn how to upload large files to Filelocker</span>
     <ul>
-        <li>Users wanting to upload files greater than 2GB in size may need to increase their quota (the default quota is $config['default_quota'] MB).</li>
+        <li>Users wanting to upload files greater than 2GB in size may need to increase their quota (the default quota is $defaultQuota MB).</li>
         <li>Additionally, only certain browsers support file uploads larger than 2GB.</li>
         <li>If you are using Microsoft's Internet Explorer versions 6, 7, or 8, you will need to upgrade to <a href="http://windows.microsoft.com/en-us/internet-explorer/products/ie/home" target="_blank" title="Download Microsoft's Internet Explorer">version 9</a>.</li>
         <li>If you are using Mozilla's Firefox versions 1,2, or 3, you will need to upgrade to <a href="http://mozilla.com/firefox" target="_blank" title="Download Mozilla's Firefox">version 4</a>.</li>
@@ -60,7 +60,7 @@
     <span class="helpDescription pseudoLink">Learn how to send a secure message on Filelocker</span>
     <ul>
         <li>Filelocker can be used to send encrypted text messages to other Filelocker users.</li>
-        <li>These messages are removed from the system after $config['max_file_life_days'] days.</li>
+        <li>These messages are removed from the system after $maxDays days.</li>
         <li>You can access the messaging interface by clicking on "Messages" in the upper right corner.</li>
         <li>The default view is your "Inbox" - messages that other users have sent you through Filelocker.</li>
         <li>To read a message, simply click on the subject of the message.</li>
@@ -81,7 +81,7 @@
         <li>By default, Filelocker CLI will look in the current working directory for the configuration file, but you may specify an alternate location with "-c".</li>
     </ol>
 </div>
-#if $config['geotagging']
+#if $geoTagging
 <div id="help_geotag">
     <h4 class="hidden">What is Filelocker geotagging?</h4>
     <span class="helpDescription pseudoLink">Learn how to geotag Filelocker uploads</span>

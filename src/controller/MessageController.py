@@ -1,15 +1,15 @@
 import cherrypy
-import logging
 import cgi
 from lib import Encryption
 from Cheetah.Template import Template
 from Cheetah.Filters import WebSafe
 from lib.SQLAlchemyTool import session
 import sqlalchemy
+from lib.Models import *
 from lib import AccountService
 from lib import Encryption
 from lib.Formatters import *
-from lib.Models import *
+
 __author__="wbdavis"
 __date__ ="$Sep 25, 2011 9:32:23 PM$"
 
@@ -45,7 +45,7 @@ class MessageController:
         except ValueError:
             fMessages.append("Invalid expiration date format. Date must be in mm/dd/yyyy format.")
         except Exception, e:
-            logging.error("[%s] [create_message] [Could not create message: %s]" % (user.id, str(e)))
+            cherrypy.log.error("[%s] [create_message] [Could not create message: %s]" % (user.id, str(e)))
             fMessages.append("Could not send message: %s" % str(e))
         return fl_response(sMessages, fMessages, format)
     
@@ -63,7 +63,7 @@ class MessageController:
                     fMessages.append("Could not send to user with ID:%s - Invalid user ID" % str(recipientId))
             session.commit()
         except Exception, e:
-            logging.error("[%s] [share_message] [Could not share message: %s]" % (user.id, str(e)))
+            cherrypy.log.error("[%s] [share_message] [Could not share message: %s]" % (user.id, str(e)))
             fMessages.append("Could not share message: %s" % str(e))
         return fl_response(sMessages, fMessages, format)
 
@@ -119,7 +119,7 @@ class MessageController:
         except sqlalchemy.orm.exc.NoResultFound:
             fMessages.append("Invalid message id")
         except Exception, e:
-            logging.error("[%s] [read_message] [Could not mark message as read: %s]" % (user.id, str(e)))
+            cherrypy.log.error("[%s] [read_message] [Could not mark message as read: %s]" % (user.id, str(e)))
             fMessages.append("Could not mark message as read: %s" % str(e))
         return fl_response(sMessages, fMessages, format)
 
@@ -138,7 +138,7 @@ class MessageController:
             session.commit()
             sMessages.append("Message(s) deleted")
         except Exception, e:
-            logging.error("[%s] [delete_message_shares] [Could not delete received message: %s]" % (user.id, str(e)))
+            cherrypy.log.error("[%s] [delete_message_shares] [Could not delete received message: %s]" % (user.id, str(e)))
             fMessages.append("Could not delete received message: %s" % str(e))
         return fl_response(sMessages, fMessages, format)
 
@@ -157,7 +157,7 @@ class MessageController:
             session.commit()
             sMessages.append("Message(s) deleted")
         except Exception, e:
-            logging.error("[%s] [delete_messages] [Could not delete message: %s]" % (user.id, str(e)))
+            cherrypy.log.error("[%s] [delete_messages] [Could not delete message: %s]" % (user.id, str(e)))
             fMessages.append("Could not delete message: %s" % str(e))
         return fl_response(sMessages, fMessages, format)
 

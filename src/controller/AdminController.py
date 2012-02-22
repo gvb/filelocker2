@@ -1,7 +1,6 @@
 import Filelocker
 import os
 import cherrypy
-import logging
 from lib.SQLAlchemyTool import session
 import sqlalchemy
 from lib.Models import *
@@ -25,7 +24,7 @@ class AdminController:
                 permissionData.append({'permissionId': permission.id, 'permissionName': permission.name, 'inheritedFrom': ""})
             sMessages.append("Got permissions")
         except Exception, e:
-            logging.error("%s] [] [Couldn't get permissions: %s]" % (user.id, str(e)))
+            cherrypy.log.error("%s] [] [Couldn't get permissions: %s]" % (user.id, str(e)))
             fMessages.append("Could not get permissions: %s" % str(e))
         return fl_response(sMessages, fMessages, format, data=permissionData)
 
@@ -56,7 +55,7 @@ class AdminController:
         except ValueError, ve:
             fMessages.append("CSV file not parsed correctly, possibly in wrong format.")
         except Exception, e:
-            logging.error("[%s] [bulk_create_user] [Problem creating users in bulk: %s]" % (user.id, str(e)))
+            cherrypy.log.error("[%s] [bulk_create_user] [Problem creating users in bulk: %s]" % (user.id, str(e)))
             fMessages.append("Problem creating users in bulk: %s" % str(e))
         return fl_response(sMessages, fMessages, format)
 
@@ -79,7 +78,7 @@ class AdminController:
             response.stream = True
             return response.body
         except Exception, e:
-            logging.error("[%s] [download_user_data] [Unable to serve user data CSV: %s]" % (user.id, str(e)))
+            cherrypy.log.error("[%s] [download_user_data] [Unable to serve user data CSV: %s]" % (user.id, str(e)))
             raise cherrypy.HTTPError(500, "Unable to serve user data CSV: %s" % str(e))
 
     @cherrypy.expose
@@ -90,7 +89,7 @@ class AdminController:
             vaultSpaceFreeMB, vaultCapacityMB = FileService.get_vault_usage()
             vaultUsedMB = vaultCapacityMB - vaultSpaceFreeMB
         except Exception, e:
-            logging.error("[%s] [get_vault_usage] [Error while getting quota: %s]" % (user.id,str(e)))
+            cherrypy.log.error("[%s] [get_vault_usage] [Error while getting quota: %s]" % (user.id,str(e)))
             fMessages.append("Could not get vault usage: %s" % str(e))
         return fl_response(sMessages, fMessages, format, data={'vaultCapacityMB': vaultCapacityMB , 'vaultUsedMB': vaultUsedMB})
 
@@ -120,7 +119,7 @@ class AdminController:
             sMessages.append("Success")
         except Exception, e:
             fMessages.append("Unable to get statistics: %s" % str(e))
-            logging.error("[%s] [get_hourly_statistics] [%s]" % (user.id, str(e)))
+            cherrypy.log.error("[%s] [get_hourly_statistics] [%s]" % (user.id, str(e)))
         return fl_response(sMessages, fMessages, format, data={"downloads":downloadAveragesDict, "uploads":uploadAveragesDict})
         
     @cherrypy.expose
@@ -153,7 +152,7 @@ class AdminController:
             sMessages.append("Success")
         except Exception, e:
             fMessages.append("Unable to get statistics: %s" % str(e))
-            logging.error("[%s] [get_hourly_statistics] [%s]" % (user.id, str(e)))
+            cherrypy.log.error("[%s] [get_hourly_statistics] [%s]" % (user.id, str(e)))
         return fl_response(sMessages, fMessages, format, data={"downloads":downloadData, "uploads":uploadData})
         
     @cherrypy.expose
@@ -186,7 +185,7 @@ class AdminController:
             sMessages.append("Success")
         except Exception, e:
             fMessages.append("Unable to get statistics: %s" % str(e))
-            logging.error("[%s] [get_hourly_statistics] [%s]" % (user.id, str(e)))
+            cherrypy.log.error("[%s] [get_hourly_statistics] [%s]" % (user.id, str(e)))
         return fl_response(sMessages, fMessages, format, data={"downloads":downloadData, "uploads":uploadData})
 
     @cherrypy.expose
@@ -207,10 +206,11 @@ class AdminController:
                     parameter.description = description
                     parameter.value = value
             session.commit()
-            Filelocker.update_config(cherrypy.request.app.config)
+            #TODO: Make sure this if phased out properly
+            #Filelocker.update_config(cherrypy.request.app.config)
         except Exception, e:
             session.rollback()
-            logging.error("[%s] [update_server_config] [Could not update server config: %s]" % (user.id, str(e)))
+            cherrypy.log.error("[%s] [update_server_config] [Could not update server config: %s]" % (user.id, str(e)))
             fMessages.append("Unable to update config: %s" % str(e))
         return fl_response(sMessages, fMessages, format)
 
@@ -225,7 +225,7 @@ class AdminController:
             templateFile = open(templateFilePath)
             templateText = templateFile.read()
         except Exception, e:
-            logging.error("[%s] [get_template_text] [Unable to load template text: %s]" % (user.id, str(e)))
+            cherrypy.log.error("[%s] [get_template_text] [Unable to load template text: %s]" % (user.id, str(e)))
             fMessages.append("Unable to load template text: %s" % str(e))
         return fl_response(sMessages, fMessages, format, data=templateText)
 
@@ -245,7 +245,7 @@ class AdminController:
             templateFile = open(get_template_file(templateName))
             templateText = templateFile.read()
         except Exception, e:
-            logging.error("[%s] [save_template] [Unable to save template text: %s]" % (user.id, str(e)))
+            cherrypy.log.error("[%s] [save_template] [Unable to save template text: %s]" % (user.id, str(e)))
             fMessages.append("Unable to save template text: %s" % str(e))
         return fl_response(sMessages, fMessages, format, data=templateText)
 
@@ -262,7 +262,7 @@ class AdminController:
             templateText = templateFile.read()
             sMessages.append("Successfully reverted template file %s to original." % templateName)
         except Exception, e:
-            logging.error("[%s] [revert_template] [Unable to revert template text: %s]" % (user.id, str(e)))
+            cherrypy.log.error("[%s] [revert_template] [Unable to revert template text: %s]" % (user.id, str(e)))
             fMessages.append("Unable to revert template text: %s" % str(e))
         return fl_response(sMessages, fMessages, format, data=templateText)
     

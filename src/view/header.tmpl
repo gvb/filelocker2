@@ -15,12 +15,12 @@
         var HOST_IP = "$cherrypy.request.remote.ip";
         #end if
         
-        #if $config['geotagging']
+        #if $geoTagging
         var GEOTAGGING = true;
         #else
         var GEOTAGGING = false;
         #end if
-        #if $cherrypy.session.has_key('sawBanner') or $config['banner'] is None or $config['banner'] == ""
+        #if $cherrypy.session.has_key('sawBanner') or $banner is None or $banner == ""
         var BANNER = false;
         #else
         var BANNER = true;
@@ -37,7 +37,7 @@
     <script src="$config['root_url']/static/js/lib/jquery.tipsy.js"></script>
     <script src="$config['root_url']/static/js/lib/jquery.visualize.js"></script>
     <script src="$config['root_url']/static/js/lib/fileuploader.js"></script>
-    #if $config['geotagging']
+    #if $geoTagging
     <script src="$config['root_url']/static/js/lib/geo.js"></script>
     #end if
 

@@ -1,6 +1,5 @@
 import cherrypy
 import datetime
-import logging
 from twisted.plugin import getPlugins, IPlugin
 from lib.SQLAlchemyTool import session
 from lib.Formatters import *
@@ -39,11 +38,11 @@ def install_user(self, user):
 
 def get_user(userId, login=False):
     import warnings
-    config = cherrypy.request.app.config['filelocker']
+    authType = session.query(ConfigParameter).filter(ConfigParameter.name=="auth_type").one().value
     warnings.simplefilter("ignore")
     user = session.query(User).filter(User.id==userId).scalar()
-    if user is None and config['auth_type']!="local": #This would be silly if we are using local auth, there's no other source of user info
-        directory = ExternalDirectory(config)
+    if user is None and authType!="local": #This would be silly if we are using local auth, there's no other source of user info
+        directory = ExternalDirectory()
         user = directory.lookup_user(userId)
         if user is not None:
             session.add(user)
@@ -115,14 +114,14 @@ def setup_session(user):
 
 class ExternalDirectory(object):
     directory = None
-    def __init__(self, config, localOverride=False):
-        directoryType = config['directory_type']
+    def __init__(self, localOverride=False):
+        directoryType = session.query(ConfigParameter).filter(ConfigParameter.name=="directory_type").one().value
         if directoryType == "local" or localOverride:
             from directory import LocalDirectory
             self.directory = LocalDirectory.LocalDirectory()
         elif directoryType == "ldap":
             from directory import LDAPDirectory
-            self.directory = LDAPDirectory.LDAPDirectory(config)
+            self.directory = LDAPDirectory.LDAPDirectory()
     def lookup_user(self, userId):
         return self.directory.lookup_user(userId)
     def authenticate(self, username, password):

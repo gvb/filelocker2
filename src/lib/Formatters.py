@@ -16,6 +16,24 @@ except AttributeError, ae:
 __author__="wbdavis"
 __date__ ="$Sep 25, 2011 10:44:58 PM$"
 
+def get_config_dict_from_objects(configObjects):
+    configDict = {}
+    try:
+        for parameter in configObjects:
+            value = None
+            if parameter.type == "boolean":
+                value = (parameter.value in ['true','yes','True','Yes'])
+            elif parameter.type == "number":
+                value = int(parameter.value)
+            elif parameter.type == "text":
+                value = parameter.value
+            elif parameter.type == "datetime":
+                value = datetime.datetime.strptime(parameter.value, "%m/%d/%Y %H:%M:%S")
+            configDict[parameter.name] = value
+    except Exception, e:
+        cherrypy.log.error("Could not format config: %s" % str(e))
+    return configDict
+
 def get_template_file(fileName):
         filePath = None
         vault = cherrypy.request.app.config['filelocker']['vault']

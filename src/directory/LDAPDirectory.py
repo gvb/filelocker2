@@ -1,14 +1,17 @@
 # -*- coding: utf-8 -*-
 import ldap
-import logging
-from lib.Models import User
+import cherrypy
+from lib.SQLAlchemyTool import session
+from lib.Formatters import get_config_dict_from_objects
+from lib.Models import User, ConfigParameter
 #Thanks to user cywolf1 on SourceForge for the fixes in this module to get it to work with Active Directory
 class LDAPDirectory(object):
     ldap.set_option(ldap.OPT_PROTOCOL_VERSION, ldap.VERSION3)
     ldap.set_option(ldap.OPT_X_TLS_REQUIRE_CERT, ldap.OPT_X_TLS_NEVER)
     ldap.set_option(ldap.OPT_REFERRALS, 0)
-    def __init__(self, config):
+    def __init__(self):
         try:
+            config = get_config_dict_from_objects(session.query(ConfigParameter).filter(ConfigParameter.name.like('ldap_%')).all())
             self.directoryHost = config['ldap_host']
             self.ldapBindPass = config['ldap_bind_pass']
             self.ldapBindUser = config['ldap_bind_user']
@@ -21,7 +24,7 @@ class LDAPDirectory(object):
             self.displayNameAttr = config['ldap_displayname_attr']
             self.emailAttr = config['ldap_email_attr']
         except Exception, e:
-            logging.critical("Unable to build LDAP directory: %s" % str(e))
+            cherrypy.log.error("Unable to build LDAP directory: %s" % str(e))
    
     def get_bind(self):
         l = ldap.initialize(self.directoryHost)
@@ -118,7 +121,7 @@ class LDAPDirectory(object):
         l = ldap.initialize(self.directoryHost)
         try:
             if userId is "" or password is "":
-                logging.info("Username or password cannot be blank.  Anonymous logins are not permitted")
+                #Username or password cannot be blank.  Anonymous logins are not permitted
                 raise ldap.INVALID_CREDENTIALS
             if self.isActiveDirectory:
                 l.simple_bind_s(userId+"@"+self.domainName , password)
@@ -128,5 +131,5 @@ class LDAPDirectory(object):
         except ldap.INVALID_CREDENTIALS:
             return False
         except Exception, e:
-            logging.error("Error in authenticating user \"%s\": %s" % (str(userId), str(e)))
+            cherrypy.log.error("Error in authenticating user \"%s\": %s" % (str(userId), str(e)))
             return False

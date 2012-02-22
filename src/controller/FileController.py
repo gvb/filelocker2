@@ -9,7 +9,6 @@ import mimetypes
 mimetypes.init()
 mimetypes.types_map['.dwg']='image/x-dwg'
 mimetypes.types_map['.ico']='image/x-icon'
-import logging
 import datetime
 import subprocess
 from Cheetah.Template import Template
@@ -18,6 +17,7 @@ import sqlalchemy
 from sqlalchemy import *
 from sqlalchemy.sql import select, delete, insert
 from lib.Models import *
+from lib.Constants import Actions
 from lib.Formatters import *
 from lib import Mail
 from lib import Encryption
@@ -71,7 +71,7 @@ class FileController(object):
                      #for row in results:
 
                 uniqueDownloads = session.query(func.date(AuditLog.date), func.count(distinct(AuditLog.initiator_user_id))).\
-                filter(AuditLog.action=='Download File').\
+                filter(AuditLog.action==Actions.DOWNLOAD).\
                 filter(AuditLog.file_id == flFile.id).\
                 filter(AuditLog.date < endDateFormatted).\
                 filter(AuditLog.date > startDateFormatted).\
@@ -81,7 +81,7 @@ class FileController(object):
                     uniqueDownloadStats.append((row[0].strftime("%m/%d/%Y"), row[1]))
 
                 totalDownloads = session.query(func.date(AuditLog.date), func.count(AuditLog.initiator_user_id)).\
-                filter(AuditLog.action=='Download File').\
+                filter(AuditLog.action==Actions.DOWNLOAD).\
                 filter(AuditLog.file_id == flFile.id).\
                 filter(AuditLog.date < endDateFormatted).\
                 filter(AuditLog.date > startDateFormatted).\
@@ -205,15 +205,15 @@ class FileController(object):
                 fileId = int(fileId)
                 flFile = session.query(File).filter(File.id == fileId).one()
                 if flFile.role_owner_id is not None and role is not None and flFile.role_owner_id == role.id:
-                    queue_for_deletion(flFile.id)
+                    FileService.queue_for_deletion(flFile.id)
                     session.delete(flFile)
-                    session.add(AuditLog(user.id, "Delete File", "File %s (%s) owned by role %s has been deleted by user %s. " % (flFile.name, flFile.id, role.name, user.id, role.id)))
+                    session.add(AuditLog(user.id, Actions.DELETE_FILE, "File %s (%s) owned by role %s has been deleted by user %s. " % (flFile.name, flFile.id, role.name, user.id, role.id)))
                     session.commit()
                     sMessages.append("File %s deleted successfully" % flFile.name)
                 elif flFile.owner_id == user.id or AccountService.user_has_permission(user, "admin"):
-                    queue_for_deletion(flFile.id)
+                    FileService.queue_for_deletion(flFile.id)
                     session.delete(flFile)
-                    session.add(AuditLog(user.id, "Delete File", "File %s (%s) has been deleted" % (flFile.name, flFile.id)))
+                    session.add(AuditLog(user.id, Actions.DELETE_FILE, "File %s (%s) has been deleted" % (flFile.name, flFile.id)))
                     session.commit()
                     sMessages.append("File %s deleted successfully" % flFile.name)
                 else:
@@ -222,7 +222,7 @@ class FileController(object):
                 fMessages.append("Could not find file with ID: %s" % str(fileId))
             except Exception, e:
                 session.rollback()
-                logging.error("[%s] [delete_files] [Could not delete file: %s]" % (user.id, str(e)))
+                cherrypy.log.error("[%s] [delete_files] [Could not delete file: %s]" % (user.id, str(e)))
                 fMessages.append("File not deleted: %s" % str(e))
         return fl_response(sMessages, fMessages, format)
 
@@ -334,7 +334,7 @@ class FileController(object):
             #If the file didn't get all the way there
             if long(os.path.getsize(upFile.file_object.name)) != long(fileSizeBytes): #The file transfer stopped prematurely, take out of transfers and queue partial file for deletion
                 logging.debug("[system] [upload] [File upload was prematurely stopped, rejected]")
-                queue_for_deletion(tempFileName)
+                FileService.queue_for_deletion(tempFileName)
                 fMessages.append("The file %s did not upload completely before the transfer ended" % fileName)
                 if cherrypy.file_uploads.has_key(uploadKey):
                     for fileTransfer in cherrypy.file_uploads[uploadKey]:
@@ -379,7 +379,8 @@ class FileController(object):
             newFile.owner_id = user.id
 
         #Process date provided
-        maxExpiration = datetime.datetime.today() + datetime.timedelta(days=config['max_file_life_days'])
+        maxDays = int(session.query(ConfigParameter).filter(ConfigParameter.name=='max_file_life_days').one().value)
+        maxExpiration = datetime.datetime.today() + datetime.timedelta(days=maxDays)
         expiration = kwargs['expiration'] if kwargs.has_key("expiration") else None
         if (expiration is None or expiration == "" or expiration.lower() =="never"):
             if role is not None and AccountService.role_has_permission(role, "expiration_exempt") or AccountService.role_has_permission(role, "admin"):
@@ -415,13 +416,13 @@ class FileController(object):
             #If this is an upload request, check to see if it's a single use request and nullify the ticket if so, now that the file has been successfully uploaded
             if uploadRequest is not None:
                 if uploadRequest.type == "single":
-                    session.add(AuditLog(cherrypy.request.remote.ip, "Upload Requested File", "File %s has been uploaded by an external user to your Filelocker account. This was a single user request and the request has now expired." % (newFile.name), uploadRequest.owner_id))
+                    session.add(AuditLog(cherrypy.request.remote.ip, Actions.UPLOAD_REQUEST_FULFILLED, "File %s has been uploaded by an external user to your Filelocker account. This was a single user request and the request has now expired." % (newFile.name), uploadRequest.owner_id))
                     attachedUploadRequest = session.query(UploadRequest).filter(UploadRequest.id == uploadRequest.id).one()
                     session.delete(attachedUploadRequest)
                     cherrypy.session['uploadRequest'].expired = True
                 else:
-                    session.add(AuditLog(cherrypy.request.remote.ip, "Upload Requested File", "File %s has been uploaded by an external user to your Filelocker account." % (newFile.name), uploadRequest.owner_id))
-            checkInLog = AuditLog(user.id, "Check In File", "File %s (%s) checked in to Filelocker: MD5 %s " % (newFile.name, newFile.id, newFile.md5))
+                    session.add(AuditLog(cherrypy.request.remote.ip, Actions.UPLOAD_REQUEST_FULFILLED, "File %s has been uploaded by an external user to your Filelocker account." % (newFile.name), uploadRequest.owner_id))
+            checkInLog = AuditLog(user.id, Actions.UPLOAD, "File %s (%s) checked in to Filelocker: MD5 %s " % (newFile.name, newFile.id, newFile.md5))
             if role is not None:
                 checkInLog.affected_role_id = role.id
             session.add(checkInLog)
@@ -430,7 +431,7 @@ class FileController(object):
         except sqlalchemy.orm.exc.NoResultFound, nrf:
             fMessages.append("Could not find upload request with ID: %s" % str(uploadRequest.id))
         except Exception, e:
-            logging.error("[%s] [upload] [Couldn't check in file: %s]" % (user.id, str(e)))
+            cherrypy.log.error("[%s] [upload] [Couldn't check in file: %s]" % (user.id, str(e)))
             fMessages.append("File couldn't be checked in to the file repository: %s" % str(e))
 
 
@@ -520,7 +521,7 @@ class FileController(object):
                     {'sender': user.email, 'recipient': recipient, 'ownerId': user.id, \
                     'ownerName': user.display_name, 'requestId': uploadRequest.id, 'requestType': uploadRequest.type,\
                     'personalMessage': personalMessage, 'filelockerURL': config['root_url']})
-                session.add(AuditLog(user.id, "Create Upload Request", "You created an upload request. As a result, the following email addresses were sent a file upload link: %s" % ",".join(emailAddresses), None))
+                session.add(AuditLog(user.id, Actions.CREATE_UPLOAD_REQUEST, "You created an upload request. As a result, the following email addresses were sent a file upload link: %s" % ",".join(emailAddresses), None))
                 session.commit()
                 uploadURL = config['root_url']+"/public_upload?ticketId=%s" % str(uploadRequest.id)
                 sMessages.append("Successfully created upload request")
@@ -537,7 +538,7 @@ class FileController(object):
             uploadRequest = session.query(UploadRequest).filter(UploadRequest.id == ticketId).one()
             if uploadRequest.owner_id == user.id or AccountService.user_has_permission(user, "admin"):
                 session.delete(uploadRequest)
-                session.add(AuditLog(user.id, "Delete Upload Request", "You deleted an upload request with ID: %s" % uploadRequest.id))
+                session.add(AuditLog(user.id, Actions.DELETE_UPLOAD_REQUEST, "You deleted an upload request with ID: %s" % uploadRequest.id))
                 session.commit()
                 sMessages.append("Upload request deleted")
             else:
@@ -572,7 +573,7 @@ class FileController(object):
         try:
             st = os.stat(path)
         except OSError, ose:
-            logging.error("OSError while trying to serve file: %s" % str(ose))
+            cherrypy.log.error("OSError while trying to serve file: %s" % str(ose))
             raise cherrypy.NotFound()
         # Check if path is a directory.
         if stat.S_ISDIR(st.st_mode):

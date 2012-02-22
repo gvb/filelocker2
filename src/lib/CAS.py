@@ -1,10 +1,8 @@
 #! /usr/local/bin/python
 # -*- coding: utf-8 -*-
- 
-import sys
-
-import urllib, urllib2
-import logging
+import cherrypy
+import urllib
+import urllib2
 
 class CAS(object):
     """A class for working with a CAS server."""
@@ -60,7 +58,7 @@ class CAS(object):
                 valid = False
             return (valid, user)
         except Exception, e:
-            logging.critical("Error in CAS ticket validation: %s" % (str(e)))
+            cherrypy.log.error("Error in CAS ticket validation: %s" % (str(e)))
             return (False, None)
             
     def proxy_cas_authenticate(self, username, password):
@@ -75,7 +73,7 @@ class CAS(object):
         except urllib2.HTTPError, htpe:
             return False
         except Exception, e:
-            logging.error("[system] [proxyCasLogin] [%s]" % str(e))
+            cherrypy.log.error("[system] [proxyCasLogin] [%s]" % str(e))
             return False
             
            

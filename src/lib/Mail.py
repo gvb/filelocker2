@@ -2,38 +2,44 @@
 from smtplib import SMTP
 import cherrypy
 from Cheetah.Template import Template
-import logging
+from lib.SQLAlchemyTool import session
 from Models import *
+from lib.Formatters import get_config_dict_from_objects
 
 #Recipients must be a list object
-        
+def get_mail_config():
+    config = {}
+    mailConfigObjects = session.query(ConfigParameter).filter(ConfigParameter.name.like('smtp_%')).all()
+    return get_config_dict_from_objects(mailConfigObjects)
+
 def get_server(config):
     server = SMTP(config['smtp_server'], config['smtp_port'] )
     if config['smtp_start_tls']:
-        server.ehlo(config['smtp_sender'])
+        server.ehlo()
         server.starttls()
-        server.ehlo(config['smtp_sender'])
+        server.ehlo()
     if config['smtp_auth_required']:
         server.login(config['smtp_user'], config['smtp_pass'] )
     return server
 
 def notify(template, varDict={}):
     config = cherrypy.request.app.config['filelocker']
+    mailConfig = get_mail_config()
     if varDict.has_key("recipient") and varDict['recipient'] is not None and varDict['recipient'] != "":
         linksObscured = False
-        if config.has_key("smtp_obscure_links") and config['smtp_obscure_links']:
+        if mailConfig.has_key("smtp_obscure_links") and mailConfig['smtp_obscure_links']:
             linksObscured = True
             if varDict.has_key("filelockerURL"):
                 varDict['filelockerURL'] = make_unclickable(config['root_url'])
-        server = get_server(config)
-        sender = config['smtp_sender']
+        server = get_server(mailConfig)
+        sender = mailConfig['smtp_sender']
         tpl = Template(file=template, searchList=[locals(),globals()])
         try:
-            smtpresult = server.sendmail(config['smtp_sender'], varDict['recipient'], str(tpl))
+            smtpresult = server.sendmail(mailConfig['smtp_sender'], varDict['recipient'], str(tpl))
             server.close()
         except Exception, e:
             server.close()
-            logging.error("[admin] [notify] [Unable to send email to %s: %s]" % (varDict['recipient'],str(e)))
+            cherrypy.log.error("[admin] [notify] [Unable to send email to %s: %s]" % (varDict['recipient'],str(e)))
             raise Exception("Mail server failed to send email to %s. Administrator has been notified." % varDict['recipient'])
         
 

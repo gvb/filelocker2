@@ -22,7 +22,7 @@
                     <label for="uploadScanFile">Other options:</label>
                     <input type="checkbox" name="scanFile" id="uploadScanFile" checked="checked" /><span onclick="javascript:Utility.check('uploadScanFile');">Scan for viruses?</span>
                 </div>
-                #if $config['geotagging']
+                #if $geoTagging
                 <div id="uploadGeolocationOption">
                     <input type="checkbox" name="uploadGeolocation" id="uploadGeolocation" onClick="javascript:setGeoData();" /><span onclick="javascript:Utility.check('uploadGeolocation');javascript:setGeoData();">Geotag this file upload?</span> <a href="javascript:Help.prompt('help_geotag');" class="helpLink">What's this?</a>
                 </div>
@@ -113,7 +113,7 @@
                         </div>
                         <div>
                             <label for="createUserQuota">Quota (in MB):</label>
-                            <input type="text" name="createUserQuota" id="createUserQuota" size="10" value="$config['default_quota']" />
+                            <input type="text" name="createUserQuota" id="createUserQuota" size="10" value="$defaultQuota" />
                         </div>
                         <div>
                             <label for="createUserEmail">Email:</label>
@@ -172,7 +172,7 @@
             <form action="" name="form" id="userUpdateForm">
                 <div>
                     <label for="updateUserQuota">Quota (MB):</label>
-                    <input type="text" name="updateUserQuota" id="updateUserQuota" size="10" value="$config['default_quota']" />
+                    <input type="text" name="updateUserQuota" id="updateUserQuota" size="10" value="$defaultQuota" />
                 </div>
                 <div>
                     <label for="updateUserFirstName">First Name:</label>
@@ -268,7 +268,7 @@
                 </div>
                 <div>
                     <label for="createRoleQuota">Quota (in MB):</label>
-                    <input type="text" name="createRoleQuota" id="createRoleQuota" size="10" value="$config['default_quota']" />
+                    <input type="text" name="createRoleQuota" id="createRoleQuota" size="10" value="$defaultQuota" />
                 </div>
                 <div>
                     <label for="createRoleEmail">Email:</label>
@@ -382,7 +382,7 @@
     </div>
 </div>
 
-#if $config['geotagging']
+#if $geoTagging
 <div id="fileUploadLocationBox" class="hidden">
     <div class="popup_wrapper">
         <div class="popup_small">
@@ -672,7 +672,7 @@
 <div id="bannerBox" class="hidden">
     <div class="popup_wrapper">
         <div class="popup_small">
-            <div class="notes_box">$strip_tags($config['banner'])</div>
+            <div class="notes_box">$strip_tags($banner)</div>
             <div class="clear"></div>
         </div>
     </div>
