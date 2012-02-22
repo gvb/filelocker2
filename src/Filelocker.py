@@ -89,50 +89,43 @@ def error(status, message, traceback, version):
     return tpl
 
 def cluster_elections(config):
-    print "Getting current node"
     currentNodeId = int(config['filelocker']['cluster_member_id'])
     currentNode = session.query(ClusterNode).filter(ClusterNode.member_id == currentNodeId).scalar()
     if currentNode is None: #This node isn't in the DB yet, check in
-        print "Current node is none"
         import socket
         currentNode = ClusterNode(member_id=currentNodeId, hostname=socket.gethostname(), is_master=False, last_seen_timestamp=datetime.datetime.now())
         session.add(currentNode)
         session.commit()
     else: #In the DB, update last seen to avoid purging
-        print "current node updating timestamp"
         currentNode.last_seen_timestamp = datetime.datetime.now()
         session.commit()
     currentMaster = session.query(ClusterNode).filter(ClusterNode.is_master==True).scalar()
 
     #If this is default master node and another node has assumed master, reset and force election
     if currentNodeId==0 and currentNode.is_master == False and currentMaster is not None:
-        print "I am node 0, forcing an election"
         for node in session.query(ClusterNode).all():
             node.is_master = False
         session.commit()
     #This isn't the default master, there is one, but it's expired
-    elif currentMaster is not None and currentMaster.last_seen_timestamp < datetime.datetime.now()-datetime.timedelta(minutes=1): #master is expired
+    elif currentMaster is not None and currentMaster.last_seen_timestamp < datetime.datetime.now()-datetime.timedelta(minutes=5): #master is expired
         session.delete(currentMaster)
         session.commit()
     #No master, hold election
     elif currentMaster is None: #No master nodes found, become master if eligible
-        print "Electing master node"
         purge_expired_nodes()
         highestPriority = currentNode.member_id
         for node in session.query(ClusterNode).all():
             if node.member_id < highestPriority:
                 highestPriority = node.member_id
                 break
-        print "HIghest priority: %s member_id of current node: %s" % (highestPriority, currentNode.member_id)
         if highestPriority == currentNode.member_id: #Current node has lowest node id, thus highest priority, assume master
             currentNode.is_master = True
             session.commit()
     
 
-            
 def purge_expired_nodes():
     #Clean node table, check for master, if none run election
-    expirationTime = datetime.datetime.now()-datetime.timedelta(minutes=1)
+    expirationTime = datetime.datetime.now()-datetime.timedelta(minutes=5)
     expiredNodes = session.query(ClusterNode).filter(ClusterNode.last_seen_timestamp < expirationTime).all()
     for node in expiredNodes:
         session.delete(node)
@@ -385,11 +378,8 @@ def start(configfile=None, daemonize=False, pidfile=None):
             cluster_elections(app.config)
             currentNode = session.query(ClusterNode).filter(ClusterNode.member_id==int(app.config['filelocker']["cluster_member_id"])).one()
             if currentNode.is_master: # This will allow you set up other front ends that don't run maintenance on the DB or FS
-                print "I am master, purging old nodes"
                 purge_expired_nodes()
-                print "Running maintenance"
                 routine_maintenance(app.config)
-                print "Deletion queue"
                 FileService.process_deletion_queue(app.config) #process deletion queue every 12 minutes
             clean_temp_files(app.config)
             time.sleep(15) #Sleep 15 seconds after everything is done
