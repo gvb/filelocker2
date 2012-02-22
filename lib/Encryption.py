@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+import os
+import cherrypy
 import struct, string, math, hmac # RFC2104
 try:
     from hashlib import md5
@@ -9,11 +11,7 @@ from Crypto.Cipher import AES
 from Crypto.Hash import SHA256
 
 from random import SystemRandom
-import os
-import re
-import sys
-import stat
-import logging
+
 #Module responsible for building the AES encryption function
 def new_encrypter(password):
    iteration = 2048
@@ -26,7 +24,7 @@ def new_encrypter(password):
       key = KeyGen().makeKey(password, str(salt), iteration, keyBytes)
       encrypter = AES.new(key, AES.MODE_CBC, salt)
    except Exception, e:
-      logging.critical("Unable to create encrypter: %s" % str(e))
+      cherrypy.log.error("Unable to create encrypter: %s" % str(e))
    return encrypter, salt
 
 def new_decrypter(password, salt):
@@ -38,7 +36,7 @@ def new_decrypter(password, salt):
       key = KeyGen().makeKey(password, salt, iteration, keyBytes)
       decrypter = AES.new(key, AES.MODE_CBC, salt)
    except Exception, e:
-      logging.critical("Unable to create decrypter: %s" % str(e))
+      cherrypy.log.error("Unable to create decrypter: %s" % str(e))
    return decrypter
    
 #PBKDFv2 Key Generator, based on the one found in the Revolution package for the Evolution mail client

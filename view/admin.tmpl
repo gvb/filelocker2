@@ -39,7 +39,7 @@
                         <tr id="user_$flUser.id" class="userRow">
                             <td id="userNameElement_$flUser.id" class="userNameElement"><input type="checkbox" name="select_user" value="$flUser.id" class="userSelectBox" id="checkbox_$flUser.id">
                                 <div class="posrel">
-                                    <div id="menu_row_$flUser.id" class="menuUsers hidden">
+                                    <div id="menu_userRow_$flUser.id" class="menuUsers hidden">
                                     <ul class="menu">
                                         <li><div class="button" style="width: 185px;"><a href="javascript:Admin.User.promptUpdate('$flUser.id', '$flUser.first_name', '$flUser.last_name', '$flUser.email', $flUser.quota);" title="Edit user account for '$flUser.id'" class="editButton"><span><center>Edit Account</center></span></a></div></li>
                                         <li><div class="button" style="width: 185px;"><a href="javascript:Admin.Permission.load('$flUser.id');" title="Grant and revoke user permissions for '$flUser.id'" class="wandButton"><span><center>Edit Permissions</center></span></a></div></li>
@@ -55,13 +55,13 @@
                             <td onClick="Admin.User.rowClick('$flUser.id')">$flUser.last_name</td>
                             <td onClick="Admin.User.rowClick('$flUser.id')">$flUser.first_name</td>
                             <td onClick="Admin.User.rowClick('$flUser.id')">$flUser.email</td>
-                        #if float($flUser.quota) > 0:
+                        #if $flUser.quota is not None and float($flUser.quota) > 0:
                             #set $percentUsed = int(round(float($FileService.get_user_quota_usage_bytes(flUser))/float($flUser.quota)*100,0))
                         #else
                             #set $percentUsed = 0
                         #end if
                         #set $quotaUsedMB = int(round($flUser.quota_used,0))
-                        #if $flUser.quota >= 1024
+                        #if $flUser.quota is not None and $flUser.quota >= 1024
                             #set $quotaInGB = round(float($flUser.quota)/1024,2)
                             <td onClick="Admin.User.rowClick('$flUser.id')"><span class="userQuotaUsage pseudoLink" title="${percentUsed}% ($quotaUsedMB MB) used">$quotaInGB GB</span></td>
                         #else
@@ -109,24 +109,24 @@
                         <tr id="role_$flRole.id" class="roleRow">
                             <td id="roleNameElement_$flRole.id" class="roleNameElement"><input type="checkbox" name="select_role" value="$flRole.id" class="roleSelectBox" id="checkbox_$flRole.id">
                                 <div class="posrel">
-                                    <div id="menu_row_$flRole.id" class="menuRoles hidden">
+                                    <div id="menu_roleRow_$flRole.id" class="menuRoles hidden">
                                     <ul class="menu">
                                         <li><div class="button" style="width: 185px;"><a href="javascript:Admin.Role.promptUpdate('$flRole.id', '$flRole.name', '$flRole.email', $flRole.quota);" title="Edit account for '$flRole.id'" class="editButton"><span><center>Edit Role Account</center></span></a></div></li>
                                         <li><div class="button" style="width: 185px;"><a href="javascript:Admin.RolePermission.load('$flRole.id');" title="Grant and revoke role permissions for '$flRole.id'" class="wandButton"><span><center>Edit Permissions</center></span></a></div></li>
-                                        <li><div class="button" style="width: 185px;"><a href="javascript:Admin.Role.prompt('$flRole.id');" title="Manage membership for '$flRole.name'" class="editButton"><span><center>Manage Membership</center></span></a></div></li>
+                                        <li><div class="button" style="width: 185px;"><a href="javascript:Admin.Role.prompt('$flRole.id');" title="Manage membership for '$flRole.name'" class="editButton"><span><center>Manage Members</center></span></a></div></li>
                                     </ul>
                                 </div>
                             </td>
                             <td onClick="Admin.Role.rowClick('$flRole.id')"><span class="role">$flRole.id</span></td>
                             <td onClick="Admin.Role.rowClick('$flRole.id')">$flRole.name</td>
                             <td onClick="Admin.Role.rowClick('$flRole.id')">$flRole.email</td>
-                        #if float($flRole.quota) > 0:
-                            #set $percentUsed = int(round(float($FileService.get_user_quota_usage_bytes(flRole))/float($flRole.quota)*100,0))
+                        #if $flRole.quota is not None and float($flRole.quota) > 0:
+                            #set $percentUsed = int(round(float($FileService.get_role_quota_usage_bytes($flRole.id))/float($flRole.quota)*100,0))
                         #else
                             #set $percentUsed = 0
                         #end if
                         #set $quotaUsedMB = int(round($FileService.get_role_quota_usage_bytes($flRole),0)) * 1024 * 1024
-                        #if $flRole.quota >= 1024
+                        #if $flRole.quota is not None and $flRole.quota >= 1024
                             #set $quotaInGB = round(float($flRole.quota)/1024,2)
                             <td onClick="Admin.Role.rowClick('$flRole.id')"><span class="roleQuotaUsage pseudoLink" title="${percentUsed}% ($quotaUsedMB MB) used">$quotaInGB GB</span></td>
                         #else
@@ -293,7 +293,7 @@
 </div> <!--End wrapper Col 1-->
 <div id="wrapper_col2">
     <div class="text_col2">
-        <a href="$config['org_url']" target="_blank" title="Take me to the $config['org_name'] home page"><img src="$config['root_url']/static/images/logos/logo.gif" alt="$config['org_name']" class="orgLogo" /></a>
+        <a href="$orgConfig['org_url']" target="_blank" title="Take me to the $orgConfig['org_name'] home page"><img src="$config['root_url']/static/images/logos/logo.gif" alt="$orgConfig['org_name']" class="orgLogo" /></a>
         <img src="$config['root_url']/static/images/page_elements/horizontal_rule.gif" alt="" class="horizontal_rule" />
         <p><span class="strong">Admin</span> <br/> This area allows you to edit the installed role directory, edit custom templates, edit dynamic attributes, configure the server, and view logs.</p>
         <img src="$config['root_url']/static/images/page_elements/horizontal_rule.gif" alt="" class="horizontal_rule" />

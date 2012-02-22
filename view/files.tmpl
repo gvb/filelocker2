@@ -112,7 +112,7 @@
                                         #end if
                                     #end if
                                     #set $fileGeoData = $re.search(r'.*\[geo\](-?\d+\.\d+),(-?\d+\.\d+)\[/geo\].*', $str($f.notes))
-                                    #if $fileGeoData and $config['geotagging']
+                                    #if $fileGeoData and $geoTagging
                                         <li><div class="itemTitleMedium"><span class="map"><a href="http://maps.google.com/maps?q=${fileGeoData.group(1)},${fileGeoData.group(2)}" title="View this file's upload location on Google Maps" target="_blank">View Upload Location</a></span></div></li>
                                     #end if
                                     <li><div class="button" style="width: 185px;"><a href="javascript:Share.prompt('$f.id');" title="Share this file with Filelocker users and groups" class="shareButton"><span><center>Share This File</center></span></a></div></li>
@@ -201,7 +201,7 @@
                                         <li><div class="itemTitleMedium"><span class="view"><a href="javascript:viewnotes('$notesStripped');" title="View the user-entered notes for this file">View File Notes</a></span></div></li>
                                     #end if
                                     #set $fileGeoData = $re.search(r'.*\[geo\](-?\d+\.\d+),(-?\d+\.\d+)\[/geo\].*', $str($f.notes))
-                                    #if $fileGeoData and $config['geotagging']
+                                    #if $fileGeoData and $geoTagging
                                         <li><div class="itemTitleMedium"><span class="map"><a href="http://maps.google.com/maps?q=${fileGeoData.group(1)},${fileGeoData.group(2)}" title="View this file's upload location on Google Maps" target="_blank">View Upload Location</a></span></div></li>
                                     #end if
                                     <li><div class="itemTitleMedium"><span class="hide"><a href="javascript:Share.hide('$f.id');" title="Hide this share from Filelocker. Unhide shares in Account Settings" class="redText">Hide This Share</a></span></div></li>
@@ -291,7 +291,7 @@
                                                 <li><div class="itemTitleMedium"><span class="view"><a href="javascript:viewnotes('$notesStripped');" title="View the user-entered notes for this file">View File Notes</a></span></div></li>
                                             #end if
                                             #set $fileGeoData = $re.search(r'.*\[geo\](-?\d+\.\d+),(-?\d+\.\d+)\[/geo\].*', $str($f.notes))
-                                            #if $fileGeoData and $config['geotagging']
+                                            #if $fileGeoData and $geoTagging
                                                 <li><div class="itemTitleMedium"><span class="map"><a href="http://maps.google.com/maps?q=${fileGeoData.group(1)},${fileGeoData.group(2)}" title="View this file's upload location on Google Maps" target="_blank">View Upload Location</a></span></div></li>
                                             #end if
                                             <li><div class="itemTitleWide"><span id="takeOwnership_$f.id" class="take_ownership"><a href="javascript:FLFile.take('$f.id');" title="Move this file to 'My Files' for resharing">Take Ownership (to Reshare)</a></span></div></li>
@@ -379,15 +379,15 @@
 </div>
 <div id="wrapper_col2">
     <div class="text_col2">
-        <a href="$config['org_url']" target="_blank" title="Take me to the $config['org_name'] home page"><img src="$config['root_url']/static/images/logos/logo.gif" alt="$config['org_name']" class="orgLogo" /></a>
+        <a href="$orgConfig['org_url']" target="_blank" title="Take me to the $orgConfig['org_name'] home page"><img src="$config['root_url']/static/images/logos/logo.gif" alt="$orgConfig['org_name']" class="orgLogo" /></a>
         <img src="$config['root_url']/static/images/page_elements/horizontal_rule.gif" alt="" class="horizontal_rule" />
-        <p><span class="strong">Filelocker</span> allows you to share files with other people both inside and outside of $config['org_name']. It is a temporary and secure storage system for sharing files and data.</p>
+        <p><span class="strong">Filelocker</span> allows you to share files with other people both inside and outside of $orgConfig['org_name']. It is a temporary and secure storage system for sharing files and data.</p>
     #if $cherrypy.session.get("current_role") == None
         <img src="$config['root_url']/static/images/page_elements/horizontal_rule.gif" alt="" class="horizontal_rule" />
         <h4>Need a file from someone?</h4>
         <p>If you need a file from someone who doesn't have a Filelocker account, you can email them an Upload Request.</p>
         <div class="button">
-            <a href="javascript:UploadRequest.prompt();" title="Request a file from a user outside of $config['org_name']" class="uploadRequestButton"><span>Request Upload</span></a>
+            <a href="javascript:UploadRequest.prompt();" title="Request a file from a user outside of $orgConfig['org_name']" class="uploadRequestButton"><span>Request Upload</span></a>
         </div>
     #end if
         <img src="$config['root_url']/static/images/page_elements/horizontal_rule.gif" alt="" class="horizontal_rule" />
@@ -400,8 +400,8 @@
         </ul>
         <p><strong>Quick Tip</strong></p>
         <span id="randomTip"></span> <a href="javascript:Help.prompt('help_just_the_tips');" class="helpLink">Show all...</a>
-        #if $config['admin_email'] is not None and $config['admin_email'] != ""
-        <p><span class="feedback"><a href="mailto:$config['admin_email']" title="Send email to $config['admin_email'], the Filelocker administrator"><strong>Send Feedback</strong></a></span></p>
+        #if $adminEmail is not None and $adminEmail != ""
+        <p><span class="feedback"><a href="mailto:$adminEmail" title="Send email to $adminEmail, the Filelocker administrator"><strong>Send Feedback</strong></a></span></p>
         #end if
     </div>
 </div>

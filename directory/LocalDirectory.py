@@ -1,7 +1,7 @@
+import cherrypy
 from lib.SQLAlchemyTool import session
 import lib.Encryption
 from lib.Models import *
-import logging
 import sqlalchemy
 __author__="wbdavis"
 __date__ ="$Oct 5, 2011 2:09:08 AM$"
@@ -29,7 +29,7 @@ class LocalDirectory(object):
         except sqlalchemy.orm.exc.NoResultFound:
             isValid = False
         except Exception, e:
-            logging.error("[system] [authenticate] [Problem authenticating user: %s" % str(e))
+            cherrypy.log.error("[system] [authenticate] [Problem authenticating user: %s" % str(e))
             isValid = False
         return isValid
 

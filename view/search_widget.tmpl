@@ -25,8 +25,8 @@
             <input type="radio" id="${context}_searchName" name="searchType" onClick="javascript:Account.Search.toggleType('${context}','name')" /><label for="${context}_searchName" style="width: 91px;">Name</label>
         </div>
         <div id="${context}_externalSearchSelector" class="hidden">
-        #if $config['auth_type'] != "local"
-            <br /><h4>Can't find who you're looking for?</h4><input type="checkbox" name="${context}_externalSearch" id="${context}_externalSearch" onclick="javascript:Account.Search.update('${context}');" /><span onclick="javascript:Utility.check('${context}_externalSearch');javascript:Account.Search.update('${context}');">Search the entire $config['org_name'] directory.</span>
+        #if $authType != "local"
+            <br /><h4>Can't find who you're looking for?</h4><input type="checkbox" name="${context}_externalSearch" id="${context}_externalSearch" onclick="javascript:Account.Search.update('${context}');" /><span onclick="javascript:Utility.check('${context}_externalSearch');javascript:Account.Search.update('${context}');">Search the entire $orgConfig['org_name'] directory.</span>
         #end if
         </div>
         <div>

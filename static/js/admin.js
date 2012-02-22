@@ -165,7 +165,7 @@ Admin = function() {
                     html += "<tr id='user_"+this.userId+"' class='userRow'>";
                     html += "<td id='userNameElement_"+this.userId+"' class='userNameElement'><input type='checkbox' name='select_user' value='"+this.userId+"' class='userSelectBox' id='checkbox_"+this.userId+"'>";
                     html += "<div class='posrel'>";
-                    html += "<div id='menu_row_"+this.userId+"' class='menuUsers hidden'>";
+                    html += "<div id='menu_userRow_"+this.userId+"' class='menuUsers hidden'>";
                     html += "<ul class='menu'>";
                     html += "<li><div class='button' style='width: 185px;'><a href='javascript:Admin.User.promptUpdate(\""+this.userId+"\", \""+this.userFirstName+"\", \""+this.userLastName+"\", \""+this.userEmail+"\", "+this.userQuota+");' title='Edit user account for \""+this.userId+"\"' class='editButton'><span><center>Edit Account</center></span></a></div></li>";
                     html += "<li><div class='button' style='width: 185px;'><a href='javascript:Admin.Permission.load(\""+this.userId+"\");' title='Grant and revoke user permissions for \""+this.userId+"\"' class='wandButton'><span><center>Edit Permissions</center></span></a></div></li>";
@@ -322,14 +322,14 @@ Admin = function() {
                 $(".userRow").each(function(index) { $(this).removeClass("rowSelected");}); // Deselects other rows
                 $("#user_"+userId).removeClass("rowSelected"); // Select the row of the file
                 $("#userNameElement_"+userId).removeClass("leftborder");
-                $("#menu_row_"+userId).addClass("hidden"); // Show the menu on the selected file
+                $("#menu_userRow_"+userId).addClass("hidden"); // Show the menu on the selected file
             }
             else
             {
                 $(".userRow").each(function(index) { $(this).removeClass("rowSelected");}); // Deselects other rows
                 $("#user_"+userId).addClass("rowSelected"); // Select the row of the file
                 $("#userNameElement_"+userId).addClass("leftborder");
-                $("#menu_row_"+userId).removeClass("hidden"); // Show the menu on the selected file
+                $("#menu_userRow_"+userId).removeClass("hidden"); // Show the menu on the selected file
             }
         }
         function selectAll()
@@ -366,7 +366,7 @@ Admin = function() {
                     html += "<tr id='role_"+this.roleId+"' class='roleRow'>";
                     html += "<td id='roleNameElement_"+this.roleId+"' class='roleNameElement'><input type='checkbox' name='select_role' value='"+this.roleId+"' class='roleSelectBox' id='checkbox_"+this.roleId+"'>";
                     html += "<div class='posrel'>";
-                    html += "<div id='menu_row_"+this.roleId+"' class='menuRoles hidden'>";
+                    html += "<div id='menu_roleRow_"+this.roleId+"' class='menuRoles hidden'>";
                     html += "<ul class='menu'>";
                     html += "<li><div class='button' style='width: 185px;'><a href='javascript:Admin.Role.promptUpdate(\""+this.roleId+"\", \""+this.roleFirstName+"\", \""+this.roleLastName+"\", \""+this.roleEmail+"\", "+this.roleQuota+", "+this.isRole.toString()+");' title='Edit role account for \""+this.roleId+"\"' class='editButton'><span><center>Edit Account</center></span></a></div></li>";
                     html += "<li><div class='button' style='width: 185px;'><a href='javascript:Admin.RolePermission.load(\""+this.roleId+"\");' title='Grant and revoke role permissions for \""+this.roleId+"\"' class='wandButton'><span><center>Edit Permissions</center></span></a></div></li>";
@@ -490,14 +490,14 @@ Admin = function() {
                 $(".roleRow").each(function(index) { $(this).removeClass("rowSelected");}); // Deselects other rows
                 $("#role_"+roleId).removeClass("rowSelected"); // Select the row of the file
                 $("#roleNameElement_"+roleId).removeClass("leftborder");
-                $("#menu_row_"+roleId).addClass("hidden"); // Show the menu on the selected file
+                $("#menu_roleRow_"+roleId).addClass("hidden"); // Show the menu on the selected file
             }
             else
             {
                 $(".roleRow").each(function(index) { $(this).removeClass("rowSelected");}); // Deselects other rows
                 $("#role_"+roleId).addClass("rowSelected"); // Select the row of the file
                 $("#roleNameElement_"+roleId).addClass("leftborder");
-                $("#menu_row_"+roleId).removeClass("hidden"); // Show the menu on the selected file
+                $("#menu_roleRow_"+roleId).removeClass("hidden"); // Show the menu on the selected file
             }
         }
         function selectAll()

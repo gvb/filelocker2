@@ -1,8 +1,9 @@
+# -*- coding: utf-8 -*-
 import cherrypy
-import logging
 from Cheetah.Template import Template
 from lib.SQLAlchemyTool import session
 from lib import AccountService
+from lib.Constants import Actions
 from lib.Formatters import *
 from lib.Models import *
 from lib import Mail
@@ -23,18 +24,19 @@ class ShareController:
         sharedFiles, recipients = [], []
         try:
             if userId is not None:
+                shareUser = AccountService.get_user(userId)
+                if (shareUser.email is not None and shareUser.email != ""):
+                    recipients.append(shareUser)
                 for fileId in fileIds:
                     flFile = session.query(File).filter(File.id==fileId).one()
-                    shareUser = AccountService.get_user(userId)
+                    
                     if (role is not None and flFile.role_owner_id == role.id) or flFile.owner_id == user.id or AccountService.user_has_permission(user, "admin"):
                         existingShare = session.query(UserShare).filter(and_(UserShare.file_id==fileId, UserShare.user_id==userId)).scalar()
                         if existingShare is None:
                             flFile.user_shares.append(UserShare(user_id=userId, file_id=fileId))
                             session.commit()
                             sharedFiles.append(flFile)
-                            if (shareUser.email is not None and shareUser.email != ""):
-                                recipients.append(shareUser)
-                            if role is not None: session.add(AuditLog(user.id, "Create User Share", "Role %s shared file %s(%s) with %s" % (role.id, flFile.name, flFile.id, shareUser.id), shareUser.id, role.id))
+                            if role is not None: session.add(AuditLog(user.id, Actions.CREATE_USER_SHARE, "Role %s shared file %s(%s) with %s" % (role.id, flFile.name, flFile.id, shareUser.id), shareUser.id, role.id))
                             else: session.add(AuditLog(user.id, "Create User Share", "%s shared file %s(%s) with %s" % (user.id, flFile.name, flFile.id, shareUser.id), shareUser.id))
                             session.commit()
                     else:
@@ -44,7 +46,7 @@ class ShareController:
                     for recipient in recipients:
                         try:
                             Mail.notify(get_template_file('share_notification.tmpl'),{'sender':user.email if role is None else role.email,'recipient':recipient.email, 'ownerId':user.id if role is None else role.id, 'ownerName':user.display_name if role is None else role.name, 'sharedFiles':sharedFiles, 'filelockerURL': config['root_url']})
-                            session.add(AuditLog(user.id, "Send Email", "%s(%s) has been notified via email that you have shared a file with him or her." % (recipient.display_name, recipient.id), None, role.id if role is not None else None))
+                            session.add(AuditLog(user.id, Actions.SEND_EMAIL, "%s(%s) has been notified via email that you have shared a file with him or her." % (recipient.display_name, recipient.id), None, role.id if role is not None else None))
                         except Exception, e:
                             session.rollback()
                             fMessages.append("Problem sending email notification to %s: %s" % (recipient.display_name, str(e)))
@@ -68,7 +70,7 @@ class ShareController:
                     ps = session.query(UserShare).filter(and_(UserShare.user_id == userId, UserShare.file_id == flFile.id)).scalar()
                     if ps is not None:
                         session.delete(ps)
-                        session.add(AuditLog(user.id, "Delete User Share", "You stopped sharing file %s with %s" % (flFile.name, userId), None, role.id if role is not None else None))
+                        session.add(AuditLog(user.id, Actions.DELETE_USER_SHARE, "You stopped sharing file %s with %s" % (flFile.name, userId), None, role.id if role is not None else None))
                         session.commit()
                         sMessages.append("Share has been successfully deleted")
                     else:
@@ -79,6 +81,14 @@ class ShareController:
                 session.rollback()
                 fMessages.append("Problem deleting share for file: %s" % str(e))
         return fl_response(sMessages, fMessages, format)
+
+#    @cherrypy.expose
+#    @cherrypy.tools.requires_login()
+#    def share_file_with_everyone(self, fileId):
+#        everyUser = session.query(User).all()
+#        flFile = session.query(File).filter(File.id==fileId).one()
+#        for user in everyUser:
+#            file.user_shares.append(UserShare(user_id=user.id, file_id=fileId))
 
     @cherrypy.expose
     @cherrypy.tools.requires_login()
@@ -105,9 +115,9 @@ class ShareController:
                             fMessages.append("You do not have permission to share file with ID: %s" % fileId)
                     sMessages.append("Shared file(s) successfully")
                     if role is not None:
-                        session.add(AuditLog(user.id, "Create Group Share", "Role %s shared %s files with group %s(%s)" % (role.id, len(fileIds), group.name, group.id), None, role.id))
+                        session.add(AuditLog(user.id, Actions.CREATE_GROUP_SHARE, "Role %s shared %s files with group %s(%s)" % (role.id, len(fileIds), group.name, group.id), None, role.id))
                     else:
-                        session.add(AuditLog(user.id, "Create Group Share", "%s shared %s files with group %s(%s)" % (user.id, len(fileIds), group.name, group.id), None))
+                        session.add(AuditLog(user.id, Actions.CREATE_GROUP_SHARE, "%s shared %s files with group %s(%s)" % (user.id, len(fileIds), group.name, group.id), None))
                 else:
                     fMessages.append("You do not have permission to share with this group")
                 session.commit()
@@ -116,7 +126,7 @@ class ShareController:
                     for groupMember in group.members:
                         try:
                             Mail.notify(get_template_file('share_notification.tmpl'),{'sender':user.email if role is not None else role.email,'recipient':groupMember.email, 'ownerId':user.id, 'ownerName':user.display_name, 'sharedFiles':sharedFiles, 'filelockerURL': config['root_url']})
-                            session.add(AuditLog(user.id, "Send Email", "%s has been notified via email that you have shared a file with him or her." % (groupMember.email), None, role.id if role is not None else None))
+                            session.add(AuditLog(user.id, Actions.SEND_EMAIL, "%s has been notified via email that you have shared a file with him or her." % (groupMember.email), None, role.id if role is not None else None))
                             session.commit()
                         except Exception, e:
                             session.rollback()
@@ -125,7 +135,7 @@ class ShareController:
                         if (user.email is not None and user.email != ""):
                             try:
                                 Mail.notify(get_template_file('share_notification.tmpl'),{'sender':user.email if role is None else role.email,'recipient':user.email if role is None else role.email, 'ownerId':user.id if role is None else role.id, 'ownerName':user.display_name if role is not None else role.name, 'files':sharedFiles, 'filelockerURL': config['root_url']})
-                                session.add(AuditLog(user.id, "Send Email", "You have been carbon copied via email on the notification that was sent out as a result of your file share."))
+                                session.add(AuditLog(user.id, Actions.SEND_EMAIL, "You have been carbon copied via email on the notification that was sent out as a result of your file share."))
                                 session.commit()
                             except Exception, e:
                                 session.rollback()
@@ -151,7 +161,7 @@ class ShareController:
                         share = session.query(GroupShare).filter(GroupShare.group_id == groupId and GroupShare.file_id == flFile.id).scalar()
                         if share is not None:
                             session.delete(share)
-                            session.add(AuditLog(user.id, "Delete Group Share", "You stopped sharing file %s with group %s" % (flFile.name, group.name), None, role.id if role is not None else None))
+                            session.add(AuditLog(user.id, Actions.DELETE_GROUP_SHARE, "You stopped sharing file %s with group %s" % (flFile.name, group.name), None, role.id if role is not None else None))
                             session.commit()
                     else:
                         fMessages.append("You do not have permission to modify shares for file with ID: %s" % str(flFile.id))
@@ -177,7 +187,7 @@ class ShareController:
                     sharedFiles.append(flFile.get_dict())
                     fileIds.append(flFile.id)
         except Exception, e:
-            logging.error("[%s] [get_files_shared_with_user] [Couldn't get files shared with user: %s]" % (user.id, str(e)))
+            cherrypy.log.error("[%s] [get_files_shared_with_user] [Couldn't get files shared with user: %s]" % (user.id, str(e)))
             fMessages.append(str(e))
         return fl_response(sMessages, fMessages, format, data=sharedFiles)
 
@@ -191,7 +201,7 @@ class ShareController:
             sMessages.append("All shares have been unhidden")
         except Exception, e:
             fMessages.append("Could not unhide shares: %s" % str(e))
-            logging.error("[%s] [unhide_shares] [Could not unhide shares: %s]" % (user.id, str(e)))
+            cherrypy.log.error("[%s] [unhide_shares] [Could not unhide shares: %s]" % (user.id, str(e)))
         return fl_response(sMessages, fMessages, format)
         
     
@@ -207,7 +217,7 @@ class ShareController:
             sMessages.append("Share has been hidden")
         except Exception, e:
             fMessages.append("Could not hide share: %s" % str(e))
-            logging.error("[%s] [unhide_shares] [Could not unhide shares: %s]" % (user.id, str(e)))
+            cherrypy.log.error("[%s] [unhide_shares] [Could not unhide shares: %s]" % (user.id, str(e)))
         return fl_response(sMessages, fMessages, format)
 
     @cherrypy.expose
@@ -260,7 +270,6 @@ class ShareController:
         config = cherrypy.request.app.config['filelocker']
         fileIds = split_list_sanitized(fileIds)
         cc = True if cc == "true" else False
-        print "CC is %s" % str(cc)
         try:
             try:
                 expiration = datetime.datetime(*(time.strptime(strip_tags(expiration), "%m/%d/%Y")[0:6]))
@@ -293,7 +302,7 @@ class ShareController:
                     session.commit()
                 else:
                     fMessages.append("You do not have permission to share file with ID: %s" % str(flFile.id))
-            session.add(AuditLog(user.id, "Create Public Share", "%s file(s) publicly shared." % len(ps.files), None, role.id if role is not None else None))
+            session.add(AuditLog(user.id, Actions.CREATE_PUBLIC_SHARE, "%s file(s) publicly shared." % len(ps.files), None, role.id if role is not None else None))
             notifyEmailList = split_list_sanitized(notifyEmails)
             if cc:
                 if (user.email is not None and user.email != ""):
@@ -305,14 +314,14 @@ class ShareController:
                 if recipient is not None and recipient != "":
                     Mail.notify(get_template_file('public_share_notification.tmpl'), {'sender':user.email if role is None else role.email, 'recipient':recipient, 'sharedFiles':sharedFiles, 'ownerId':user.id if role is None else role.id, 'ownerName': user.display_name if role is None else role.name, 'shareId':ps.id, 'filelockerURL':config['root_url']})
             if len(notifyEmailList) > 0:
-                session.add(AuditLog(user.id, "Send Email", "Email notifications about a public share were sent to the following addresses: %s" % ",".join(notifyEmailList), None, role.id if role is not None else None))
+                session.add(AuditLog(user.id, Actions.SEND_EMAIL, "Email notifications about a public share were sent to the following addresses: %s" % ",".join(notifyEmailList), None, role.id if role is not None else None))
             session.commit()
             shareId = ps.id
             sMessages.append("Files shared successfully")
         except Exception, e:
             session.rollback()
             fMessages.append(str(e))
-            logging.error("[%s] [create_public_share] [Unable to create public share: %s]" % (user.id, str(e)))
+            cherrypy.log.error("[%s] [create_public_share] [Unable to create public share: %s]" % (user.id, str(e)))
         return fl_response(sMessages, fMessages, format, data=shareId)
     
     @cherrypy.expose
@@ -340,7 +349,7 @@ class ShareController:
                     fMessages.append("File with ID:%s not found" % fileId)
         except Exception,e:
             fMessages.append("Could delete public shares by file ids: %s" % str(e))
-            logging.error("[%s] [delete_public_shares_by_file_ids] [Could delete public shares by file ids: %s]" % (user.id, str(e)))
+            cherrypy.log.error("[%s] [delete_public_shares_by_file_ids] [Could delete public shares by file ids: %s]" % (user.id, str(e)))
         return fl_response(sMessages, fMessages, format)
 
     @cherrypy.expose
@@ -352,12 +361,12 @@ class ShareController:
             ps = session.query(PublicShare).filter(PublicShare.id == shareId).one()
             if role is not None and ps.role_owner_id == role.id:
                 session.delete(ps)
-                session.add(AuditLog(user.id, "Delete Public Share", "Role %s stopped sharing files publicly via URL using share ID: %s" % (role.name, str(ps.id)), None, role.id))
+                session.add(AuditLog(user.id, Actions.DELETE_PUBLIC_SHARE, "Role %s stopped sharing files publicly via URL using share ID: %s" % (role.name, str(ps.id)), None, role.id))
                 session.commit()
                 sMessages.append("Successfully unshared files")
             elif ps.owner_id == user.id or AccountService.user_has_permission(user, "admin"):
                 session.delete(ps)
-                session.add(AuditLog(user.id, "Delete Public Share", "You stopped sharing files publicly via URL using share ID: %s" % str(ps.id)))
+                session.add(AuditLog(user.id, Actions.DELETE_PUBLIC_SHARE, "You stopped sharing files publicly via URL using share ID: %s" % str(ps.id)))
                 session.commit()
                 sMessages.append("Successfully unshared files")
             else:

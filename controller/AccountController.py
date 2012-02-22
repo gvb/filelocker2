@@ -1,7 +1,7 @@
 import cherrypy
 import datetime
-import logging
 from twisted.plugin import getPlugins, IPlugin
+from lib.Constants import Actions
 import sqlalchemy
 from lib.SQLAlchemyTool import session
 from Cheetah.Template import Template
@@ -27,13 +27,13 @@ class AccountController:
                 else:
                     raise Exception("Passwords do not match")
             session.add(newUser)
-            session.add(AuditLog(user.id, "Create User", "%s created a new user with ID:\"%s\" on the system" % (user.id, newUser.id), newUser.id))
+            session.add(AuditLog(user.id, Actions.CREATE_USER, "%s created a new user with ID:\"%s\" on the system" % (user.id, newUser.id), newUser.id))
             session.commit()
             sMessages.append("Created user %s (%s)" % (newUser.display_name, newUser.id))
         except ValueError:
                 fMessages.append("Invalid number entered for quota. Quota set to 0.")
         except Exception, e:
-            logging.error("Could not create user account with ID:%s - %s" % (userId, str(e)))
+            cherrypy.log.error("Could not create user account with ID:%s - %s" % (userId, str(e)))
             fMessages.append("[%s] [create_user] [Could not create user account: %s]" % (userId, str(e)))
         return fl_response(sMessages, fMessages, format)
     
@@ -55,13 +55,13 @@ class AccountController:
                     else:
                         fMessages.append("Passwords do not match, password has not be reset")
                 sMessages.append("Successfully updated user settings")
-                session.add(AuditLog(user.id, "Update User", "%s updated user account \"%s\"" % (user.id, userId), userId))
+                session.add(AuditLog(user.id, Actions.UPDATE_USER, "%s updated user account \"%s\"" % (user.id, userId), userId))
                 session.commit()
             else:
                  fMessages.append("You do not have permission to update this user")
         except Exception, e:
             session.rollback()
-            logging.error("[%s] [update_user] [Problem rupdating user: %s]" % (user.id, str(e)))
+            cherrypy.log.error("[%s] [update_user] [Problem rupdating user: %s]" % (user.id, str(e)))
             fMessages.append("Problem while updating user: %s" % str(e))
         return fl_response(sMessages, fMessages, format)
 
@@ -75,7 +75,7 @@ class AccountController:
                 try:
                     delUser = session.query(User).filter(User.id == userId).one()
                     session.delete(delUser)
-                    session.add(AuditLog(user.id, "Delete User", "User with ID: \"%s\" deleted from system" % delUser.id, "admin"))
+                    session.add(AuditLog(user.id, Actions.DELETE_USER, "User with ID: \"%s\" deleted from system" % delUser.id, "admin"))
                     sMessages.append("Successfully deleted user %s" % userId)
                 except sqlalchemy.orm.exc.NoResultFound:
                     fMessages.append("User with ID:%s does not exist" % userId)
@@ -84,7 +84,7 @@ class AccountController:
                 session.commit()
         except Exception, e:
             session.rollback()
-            logging.error("[%s] [delete_users] [Could not delete users: %s]" % (user.id, str(e)))
+            cherrypy.log.error("[%s] [delete_users] [Could not delete users: %s]" % (user.id, str(e)))
             fMessages.append("Could not delete users: %s" % str(e))
         return fl_response(sMessages, fMessages, format)
     
@@ -119,12 +119,12 @@ class AccountController:
                     group.members.append(member)
                 except sqlalchemy.orm.exc.NoResultFound:
                     fMessages.append("Could not find user with id:\"%s\" to add to group" % str(memberId))
-            session.add(AuditLog(user.id, "Create Group", "%s created a group named \"%s\"(%s)" % (user.id, group.name, group.id), None))
+            session.add(AuditLog(user.id, Actions.CREATE_GROUP, "%s created a group named \"%s\"(%s)" % (user.id, group.name, group.id), None))
             session.commit()
         except Exception, e:
             session.rollback()
             fMessages.append("Could not create group: %s" % str(e))
-            logging.error("[%s] [create_group] [Couldn't create group: %s]" % (user.id, str(e)))
+            cherrypy.log.error("[%s] [create_group] [Couldn't create group: %s]" % (user.id, str(e)))
         return fl_response(sMessages, fMessages, format)
 
     @cherrypy.tools.requires_login()
@@ -138,14 +138,14 @@ class AccountController:
                 if group.owner_id == user.id or user_has_permission(user, "admin"):
                     session.delete(group)
                     sMessages.append("Group %s deleted successfully" % group.name)
-                    session.add(AuditLog(user.id, "Delete Group", "%s deleted group \"%s\"(%s)" % (user.id, group.name, group.id), None))
+                    session.add(AuditLog(user.id, Actions.DELETE_GROUP, "%s deleted group \"%s\"(%s)" % (user.id, group.name, group.id), None))
             session.commit()
         except sqlalchemy.orm.exc.NoResultFound, nrf:
             fMessages.append("Could not find group with ID: %s" % str(groupId))
         except Exception, e:
             session.rollback()
             fMessages.append("Could not delete groups: %s" % str(e))
-            logging.error("[%s] [remove_users_from_group] [Could not delete groups: %s]" % (user.id, str(e)))
+            cherrypy.log.error("[%s] [remove_users_from_group] [Could not delete groups: %s]" % (user.id, str(e)))
         return fl_response(sMessages, fMessages, format)
 
     @cherrypy.tools.requires_login()
@@ -158,7 +158,7 @@ class AccountController:
             if group.owner_id == user.id or user_has_permission(user, "admin"):
                 group.name = strip_tags(groupName) if strip_tags(groupName) is not None else group.name
                 group.scope = strip_tags(groupScope.lower()) if groupScope is not None else group.scope
-                session.add(AuditLog(user.id, "Update Group", "Group \"%s\"(%s) has been updated" % (group.name, group.id)))
+                session.add(AuditLog(user.id, Actions.UPDATE_GROUP, "Group \"%s\"(%s) has been updated" % (group.name, group.id)))
                 session.commit()
                 sMessages.append("Group updated")
             else:
@@ -167,7 +167,7 @@ class AccountController:
             fMessages.append("Could not find group with ID: %s" % str(groupId))
         except Exception, e:
             session.rollback()
-            logging.error("[%s] [update_group] [Couldn't update group: %s]" % (user.id, str(e)))
+            cherrypy.log.error("[%s] [update_group] [Couldn't update group: %s]" % (user.id, str(e)))
             fMessages.append("Could not update group: %s" % str(e))
         return fl_response(sMessages, fMessages, format)
 
@@ -183,7 +183,7 @@ class AccountController:
                 for userId in userIds:
                     user = AccountService.get_user(userId)
                     group.members.remove(user)
-                session.add(AuditLog(user.id, "Update Group", "%s user(s) removed from group \"%s\"(%s)" % (len(userIds), group.name, group.id)))
+                session.add(AuditLog(user.id, Actions.UPDATE_GROUP, "%s user(s) removed from group \"%s\"(%s)" % (len(userIds), group.name, group.id)))
                 session.commit()
                 sMessages.append("Group members removed successfully")
             else:
@@ -195,7 +195,7 @@ class AccountController:
         except Exception, e:
             session.rollback()
             fMessages.append("Couldn't remove members from group: %s" % str(e))
-            logging.error("[%s] [remove_users_from_group] [Couldn't remove members from group: %s]" % (user.id, str(e)))
+            cherrypy.log.error("[%s] [remove_users_from_group] [Couldn't remove members from group: %s]" % (user.id, str(e)))
         return fl_response(sMessages, fMessages, format)
 
     @cherrypy.expose
@@ -210,7 +210,7 @@ class AccountController:
                 try:
                     user = AccountService.get_user(userId)
                     group.members.append(user)
-                    session.add(AuditLog(user.id, "Update Group", "User %s added to group \"%s\"(%s)" % (user.id, group.name, group.id)))
+                    session.add(AuditLog(user.id, Actions.UPDATE_GROUP, "User %s added to group \"%s\"(%s)" % (user.id, group.name, group.id)))
                     session.commit()
                 except sqlalchemy.orm.exc.NoResultFound, nrf:
                     fMessages.append("Invalid user ID: %s, not added to group" % str(userId))
@@ -222,7 +222,7 @@ class AccountController:
             fMessages.append("Group with ID:%s could not be found" % str(groupId))
         except Exception, e:
             session.rollback()
-            logging.error("[%s] [add_users_to_group] [Couldn't add members to group: %s]" % (user.id, str(e)))
+            cherrypy.log.error("[%s] [add_users_to_group] [Couldn't add members to group: %s]" % (user.id, str(e)))
             fMessages.append(str(e))
         return fl_response(sMessages, fMessages, format)
 
@@ -267,7 +267,7 @@ class AccountController:
                 quota = int(quota)
                 newRole = Role(id=roleId, name=roleName, email=email, quota=quota)
                 session.add(newRole)
-                session.add(AuditLog(user.id, "Create Role", "%s added a role to the system named \"%s\"" % (user.id, newRole.name), None))
+                session.add(AuditLog(user.id, Actions.CREATE_ROLE, "%s added a role to the system named \"%s\"" % (user.id, newRole.name), None))
                 session.commit()
                 sMessages.append("Successfully created a role named %s. Other users who are added to this role may act on behalf of this role now." % str(roleName))
             else:
@@ -276,7 +276,7 @@ class AccountController:
             fMessages.append("Quota must be a positive integer")
         except Exception, e:
             session.rollback()
-            logging.error("[%s] [create_role] [Problem creating role: %s]" % (user.id, str(e)))
+            cherrypy.log.error("[%s] [create_role] [Problem creating role: %s]" % (user.id, str(e)))
             fMessages.append("Problem creating role: %s" % str(e))
         return fl_response(sMessages, fMessages, format)
 
@@ -290,7 +290,7 @@ class AccountController:
             existingRole.name = strip_tags(roleName)
             existingRole.email = strip_tags(email)
             existingRole.quota = int(quota)
-            session.add(AuditLog(user.id, 'Update Role', "%s updated role \"%s\"(%s)" % (user.id, existingRole.name, existingRole.id), None, existingRole.id))
+            session.add(AuditLog(user.id, Actions.UPDATE_ROLE, "%s updated role \"%s\"(%s)" % (user.id, existingRole.name, existingRole.id), None, existingRole.id))
             session.commit()
             sMessages.append("Successfully updated a role named %s." % str(roleName))
         except ValueError:
@@ -299,7 +299,7 @@ class AccountController:
             fMessages.append("Role with ID:%s could not be found to update." % str(roleId))
         except Exception, e:
             session.rollback()
-            logging.error("[%s] [update_role] [Problem creating role: %s]" % (user.id, str(e)))
+            cherrypy.log.error("[%s] [update_role] [Problem creating role: %s]" % (user.id, str(e)))
             fMessages.append("Problem creating role: %s" % str(e))
         return fl_response(sMessages, fMessages, format)
 
@@ -311,7 +311,7 @@ class AccountController:
             roles = session.query(Role).all()
             sMessages.append("Successfully fetched roles %s")
         except Exception, e:
-            logging.error("[%s] [get_all_roles] [Problem getting roles: %s]" % (user.id, str(e)))
+            cherrypy.log.error("[%s] [get_all_roles] [Problem getting roles: %s]" % (user.id, str(e)))
             fMessages.append("Problem getting roles: %s" % str(e))
         return fl_response(sMessages, fMessages, format, data=roles)
 
@@ -338,14 +338,14 @@ class AccountController:
                 try:
                     role = session.query(Role).filter(Role.id == roleId).one()
                     session.delete(role)
-                    session.add(AuditLog(user.id, "Delete Role", "%s deleted role \"%s\"(%s) from the system" % (user.id, role.name, role.id), None))
+                    session.add(AuditLog(user.id, Actions.DELETE_ROLE, "%s deleted role \"%s\"(%s) from the system" % (user.id, role.name, role.id), None))
                 except sqlalchemy.orm.exc.NoResultFound:
                     fMessages.append("The role ID: %s does not exist" % str(roleId))
             session.commit()
             sMessages.append("Successfully deleted roles%s." % str(roleId))
         except Exception, e:
             session.rollback()
-            logging.error("[%s] [delete_roles] [Problem deleting roles: %s]" % (user.id, str(e)))
+            cherrypy.log.error("[%s] [delete_roles] [Problem deleting roles: %s]" % (user.id, str(e)))
             fMessages.append("Problem deleting roles: %s" % str(e))
         return fl_response(sMessages, fMessages, format)
 
@@ -366,7 +366,7 @@ class AccountController:
                     fMessages.append("You are not a member of this role")
         except Exception, e:
             fMessages.append("Unable to switch roles: %s" % str(e))
-            logging.error("Error switching roles: %s" % str(e))
+            cherrypy.log.error("Error switching roles: %s" % str(e))
         return fl_response(sMessages, fMessages, format)
     
     @cherrypy.expose
@@ -390,7 +390,7 @@ class AccountController:
             fMessages.append("Role with ID:%s could not be found" % str(roleId))
         except Exception, e:
             fMessages.append("Unable to add users to role: %s" % str(e))
-            logging.error("[%s] [add_users_to_role] [Error addings users to role: %s]" % (userIds, str(e)))
+            cherrypy.log.error("[%s] [add_users_to_role] [Error addings users to role: %s]" % (userIds, str(e)))
         return fl_response(sMessages, fMessages, format)
 
     @cherrypy.expose
@@ -414,7 +414,7 @@ class AccountController:
             fMessages.append("Role with ID:%s could not be found" % str(roleId))
         except Exception, e:
             fMessages.append("Unable to remove users from roles: %s" % str(e))
-            logging.error("[%s] [remove_users_from_role] [Unable to remove users from roles: %s]" % (userIds, str(e)))
+            cherrypy.log.error("[%s] [remove_users_from_role] [Unable to remove users from roles: %s]" % (userIds, str(e)))
         return fl_response(sMessages, fMessages, format)
 
     @cherrypy.expose
@@ -434,7 +434,7 @@ class AccountController:
                 sMessages.append("Successfully created a new attribute")
         except Exception, e:
             session.rollback()
-            logging.error("[%s] [create_attribute] [Could not create attribute: %s]" % (user.id, str(e)))
+            cherrypy.log.error("[%s] [create_attribute] [Could not create attribute: %s]" % (user.id, str(e)))
             fMessages.append("Unable to create attribute: %s" % str(e))
         return fl_response(sMessages, fMessages, format)
 
@@ -453,7 +453,7 @@ class AccountController:
                     fMessages.append("Attribute with ID: %s does not exist" % str(attributeId))
             session.commit()
         except Exception, e:
-            logging.error("[%s] [delete_attributes] [Could not delete attributes: %s]" % (user.id, str(e)))
+            cherrypy.log.error("[%s] [delete_attributes] [Could not delete attributes: %s]" % (user.id, str(e)))
             fMessages.append("Unable to delete attribute: %s" % str(e))
         return fl_response(sMessages, fMessages, format)
 
@@ -481,7 +481,7 @@ class AccountController:
         except sqlalchemy.orm.exc.NoResultFound:
             fMessages.append("The user ID: %s does not exist" % str(userId))
         except Exception, e:
-            logging.error("Couldn't get permissions for user %s: %s" % (userId, str(e)))
+            cherrypy.log.error("Couldn't get permissions for user %s: %s" % (userId, str(e)))
             fMessages.append("Could not get permissions: %s" % str(e))
         return fl_response(sMessages, fMessages, format, data=permissionData)
 
@@ -501,7 +501,7 @@ class AccountController:
         except sqlalchemy.orm.exc.NoResultFound:
             fMessages.append("The role ID: %s does not exist" % str(roleId))
         except Exception, e:
-            logging.error("[%s] [get_role_permissions] [Couldn't get permissions for role %s: %s]" % (user.id, roleId, str(e)))
+            cherrypy.log.error("[%s] [get_role_permissions] [Couldn't get permissions for role %s: %s]" % (user.id, roleId, str(e)))
             fMessages.append("Could not get permissions: %s" % str(e))
         return fl_response(sMessages, fMessages, format, data=permissionData)
 
@@ -515,7 +515,7 @@ class AccountController:
                 permissionData.append({'permissionId': permission.id, 'permissionName': permission.name, 'inheritedFrom': ""})
             sMessages.append("Got permissions")
         except Exception, e:
-            logging.error("%s] [] [Couldn't get permissions: %s]" % (user.id, str(e)))
+            cherrypy.log.error("%s] [] [Couldn't get permissions: %s]" % (user.id, str(e)))
             fMessages.append("Could not get permissions: %s" % str(e))
         return fl_response(sMessages, fMessages, format, data=permissionData)
 
@@ -537,7 +537,7 @@ class AccountController:
             fMessages.append("Permission with ID: %s does not exist" % str(permissionId))
         except Exception, e:
             session.rollback()
-            logging.error("[%s] [grant_user_permission] [Problem granting user a permission: %s]" % (user.id, str(e)))
+            cherrypy.log.error("[%s] [grant_user_permission] [Problem granting user a permission: %s]" % (user.id, str(e)))
             fMessages.append("Problem granting a user permission: %s" % str(e))
         return fl_response(sMessages, fMessages, format)
 
@@ -559,7 +559,7 @@ class AccountController:
             fMessages.append("Permission with ID: %s does not exist" % str(permissionId))
         except Exception, e:
             session.rollback()
-            logging.error("[%s] [grant_role_permission] [Problem granting role a permission: %s]" % (user.id, str(e)))
+            cherrypy.log.error("[%s] [grant_role_permission] [Problem granting role a permission: %s]" % (user.id, str(e)))
             fMessages.append("Problem granting a role permission: %s" % str(e))
         return fl_response(sMessages, fMessages, format)
 
@@ -583,7 +583,7 @@ class AccountController:
             fMessages.append("Permission with ID: %s does not exist" % str(permissionId))
         except Exception, e:
             session.rollback()
-            logging.error("[%s] [revoke_user_permission] [Problem revoking a user permission: %s]" % (user.id, str(e)))
+            cherrypy.log.error("[%s] [revoke_user_permission] [Problem revoking a user permission: %s]" % (user.id, str(e)))
             fMessages.append("Problem revoking a user permission: %s" % str(e))
         return fl_response(sMessages, fMessages, format)
 
@@ -605,15 +605,17 @@ class AccountController:
             fMessages.append("Permission with ID: %s does not exist" % str(permissionId))
         except Exception, e:
             session.rollback()
-            logging.error("[%s] [revoke_role_permission] [Problem revoking a role permission: %s]" % (user.id, str(e)))
+            cherrypy.log.error("[%s] [revoke_role_permission] [Problem revoking a role permission: %s]" % (user.id, str(e)))
             fMessages.append("Problem revoking a role permission: %s" % str(e))
         return fl_response(sMessages, fMessages, format)
 
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def get_search_widget(self, context, **kwargs):
-        user, sMessages, fMessages, config = (cherrypy.session.get("user"), [], [], cherrypy.request.app.config['filelocker'])
+        user, sMessages, fMessages = (cherrypy.session.get("user"), [], [])
+        orgConfig = get_config_dict_from_objects(session.query(ConfigParameter).filter(ConfigParameter.name.like('org_%')).all())
         groups = session.query(User).filter(User.id==user.id).one().groups
+        authType = session.query(ConfigParameter).filter(ConfigParameter.name=="auth_type").one().value
         userShareableAttributes = AccountService.get_shareable_attributes_by_user(user)
         tpl = Template(file=get_template_file('search_widget.tmpl'), searchList=[locals(),globals()])
         return str(tpl)
@@ -637,7 +639,7 @@ class AccountController:
             if str(e)=="toomany":
                 tooManyResults = True
             else:
-                logging.error("[%s] [search_users] [Errors during directory search: %s]" % (user.id, str(fMessages)))
+                cherrypy.log.error("[%s] [search_users] [Errors during directory search: %s]" % (user.id, str(fMessages)))
                 fMessages.append(str(e))
 
         if format=="autocomplete":

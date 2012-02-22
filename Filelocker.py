@@ -2,23 +2,22 @@
 __author__="wbdavis"
 __date__ ="$Sep 25, 2011 9:09:40 PM$"
 __version__ = "2.6"
-
+import sys
 import ConfigParser
 import os
-import sys
 import time
-from getpass import getpass
 import signal
 import errno
 import logging
 import datetime
 import cherrypy
-from cherrypy.process import plugins, servers
+from cherrypy.process import plugins
 from Cheetah.Template import Template
 from lib.SQLAlchemyTool import configure_session_for_app, session
 import sqlalchemy
 from lib import FileService
 from lib.CAS import CAS
+from lib.Constants import Actions
 from lib.Models import *
 from lib.Formatters import *
 
@@ -42,17 +41,18 @@ def requires_login(permissionId=None, **kwargs):
         else:
             pass
     else:
-        if cherrypy.request.app.config['filelocker']['auth_type'] == "cas":
-            casConnector = CAS(cherrypy.request.app.config['filelocker']['cas_url'])
+        authType = session.query(ConfigParameter).filter(ConfigParameter.name=="auth_type").one().value
+        if authType == "cas":
+            casUrl = session.query(ConfigParameter).filter(ConfigParameter.name=="cas_url").one().value
+            casConnector = CAS(casUrl)
             if cherrypy.request.params.has_key("ticket"):
                 valid_ticket, userId = casConnector.validate_ticket(rootURL, cherrypy.request.params['ticket'])
                 if valid_ticket:
                     currentUser = AccountService.get_user(userId, True)
                     if currentUser is None:
                         currentUser = User(id=userId, display_name="Guest user", first_name="Unknown", last_name="Unknown")
-                        logging.error("[%s] [requires_login] [User authenticated, but not found in directory - installing with defaults]"%str(userId))
-                        session.add(currentUser)
-                        session.commit()
+                        cherrypy.log.error("[%s] [requires_login] [User authenticated, but not found in directory - installing with defaults]"%str(userId))
+                        AccountService.install_user(currentUser)
                         currentUser = AccountService.get_user(currentUser.id, True) #To populate attributes
                     if currentUser.authorized == False:
                         raise cherrypy.HTTPError(403, "Your user account does not have access to this system.")
@@ -82,13 +82,63 @@ cherrypy.tools.requires_login = cherrypy.Tool('before_request_body', requires_lo
 def error(status, message, traceback, version):
     currentYear = datetime.date.today().year
     config = cherrypy.request.app.config['filelocker']
-    rootURL = config['root_url']
-    orgURL, orgName = config['org_url'], config['org_name']
+    orgConfig = get_config_dict_from_objects(session.query(ConfigParameter).filter(ConfigParameter.name.like('org_%')).all())
     footerText = str(Template(file=get_template_file('footer_text.tmpl'), searchList=[locals(),globals()]))
     tpl = str(Template(file=get_template_file('error.tmpl'), searchList=[locals(),globals()]))
     return tpl
 
-def daily_maintenance(config):
+def cluster_elections(config):
+    currentNodeId = int(config['filelocker']['cluster_member_id'])
+    currentNode = session.query(ClusterNode).filter(ClusterNode.member_id == currentNodeId).scalar()
+    if currentNode is None: #This node isn't in the DB yet, check in
+        import socket
+        currentNode = ClusterNode(member_id=currentNodeId, hostname=socket.gethostname(), is_master=False, last_seen_timestamp=datetime.datetime.now())
+        session.add(currentNode)
+        session.commit()
+    else: #In the DB, update last seen to avoid purging
+        currentNode.last_seen_timestamp = datetime.datetime.now()
+        session.commit()
+    currentMaster = session.query(ClusterNode).filter(ClusterNode.is_master==True).scalar()
+
+    #If this is default master node and another node has assumed master, reset and force election
+    if currentNodeId==0 and currentNode.is_master == False and currentMaster is not None:
+        for node in session.query(ClusterNode).all():
+            node.is_master = False
+        session.commit()
+    #This isn't the default master, there is one, but it's expired
+    elif currentMaster is not None and currentMaster.last_seen_timestamp < datetime.datetime.now()-datetime.timedelta(minutes=5): #master is expired
+        session.delete(currentMaster)
+        session.commit()
+    #No master, hold election
+    elif currentMaster is None: #No master nodes found, become master if eligible
+        purge_expired_nodes()
+        highestPriority = currentNode.member_id
+        for node in session.query(ClusterNode).all():
+            if node.member_id < highestPriority:
+                highestPriority = node.member_id
+                break
+        if highestPriority == currentNode.member_id: #Current node has lowest node id, thus highest priority, assume master
+            currentNode.is_master = True
+            session.commit()
+    
+
+def purge_expired_nodes():
+    #Clean node table, check for master, if none run election
+    expirationTime = datetime.datetime.now()-datetime.timedelta(minutes=5)
+    expiredNodes = session.query(ClusterNode).filter(ClusterNode.last_seen_timestamp < expirationTime).all()
+    for node in expiredNodes:
+        session.delete(node)
+    session.commit()
+
+def clean_temp_files(config):
+    #Cleanup orphaned temp files, possibly resulting from stalled transfers
+    validTempFiles = []
+    for key in cherrypy.file_uploads.keys():
+        for progressFile in cherrypy.file_uploads[key]:
+            validTempFiles.append(progressFile.file_object.name.split(os.path.sep)[-1])
+    FileService.clean_temp_files(config, validTempFiles)
+    
+def routine_maintenance(config):
     from lib import AccountService
     expiredFiles = session.query(File).filter(File.date_expires < datetime.datetime.now())
     for flFile in expiredFiles:
@@ -102,44 +152,44 @@ def daily_maintenance(config):
             for share in flFile.attribute_shares:
                 session.delete(share)
             FileService.queue_for_deletion(flFile.id)
-            session.add(AuditLog("admin", "Delete File", "File %s (ID:%s) has expired and has been purged by the system." % (flFile.name, flFile.id), flFile.owner_id))
+            session.add(AuditLog("admin", Actions.DELETE_FILE, "File %s (ID:%s) has expired and has been purged by the system." % (flFile.name, flFile.id), flFile.owner_id))
             session.delete(flFile)
             session.commit()
         except Exception, e:
             session.rollback()
-            logging.error("[system] [daily_maintenance] [Error while deleting expired file: %s]" % str(e))
+            cherrypy.log.error("[system] [routine_maintenance] [Error while deleting expired file: %s]" % str(e))
     expiredMessages = session.query(Message).filter(Message.date_expires < datetime.datetime.now())
     for message in expiredMessages:
         try:
             session.delete(message)
             FileService.queue_for_deletion("m%s" % str(message.id))
-            session.add(AuditLog("admin", "Delete Message", "Message %s (ID:%s) has expired and has been deleted by the system." % (message.messageSubject, message.messageId), message.owner_id))
+            session.add(AuditLog("admin", Actions.DELETE_MESSAGE, "Message %s (ID:%s) has expired and has been deleted by the system." % (message.messageSubject, message.messageId), message.owner_id))
             session.commit()
         except Exception, e:
             session.rollback()
-            logging.error("[system] [daily_maintenance] [Error while deleting expired message: %s]" % str(e))
+            cherrypy.log.error("[system] [routine_maintenance] [Error while deleting expired message: %s]" % str(e))
     expiredUploadRequests = session.query(UploadRequest).filter(UploadRequest.date_expires < datetime.datetime.now())
     for uploadRequest in expiredUploadRequests:
         try:
             session.delete(uploadRequest)
-            session.add(AuditLog("system", "Delete Upload Request", "Upload request %s has expired." % uploadRequest.id, uploadRequest.owner_id))
+            session.add(AuditLog("system", Actions.DELETE_UPLOAD_REQUEST, "Upload request %s has expired." % uploadRequest.id, uploadRequest.owner_id))
             session.commit()
         except Exception, e:
-            logging.error("[system] [daily_maintenance] [Error while deleting expired upload request: %s]" % (str(e)))
-    maxUserDays = config['filelocker']['user_inactivity_expiration']
+            cherrypy.log.error("[system] [routine_maintenance] [Error while deleting expired upload request: %s]" % (str(e)))
+    maxUserDays = int(session.query(ConfigParameter).filter(ConfigParameter.name=="user_inactivity_expiration").one().value)
     expiredUsers = session.query(User).filter(and_(User.date_last_login < (datetime.date.today() - datetime.timedelta(days=maxUserDays)), User.id!= "admin"))
     
     for user in expiredUsers:
         if AccountService.user_has_permission(user, "admin") == False and AccountService.user_has_permission(user, "expiration_exempt") == False:
-            print "Purging user %s" % user.id
+            cherrypy.log.error("Purging user %s" % user.id)
             session.delete(user)
-            session.add(AuditLog("admin", "Delete User", "User %s was deleted due to inactivity. All files and shares associated with this user have been purged as well" % str(user.id)))
+            session.add(AuditLog("admin", Actions.DELETE_USER, "User %s was deleted due to inactivity. All files and shares associated with this user have been purged as well" % str(user.id)))
             session.commit()
 
     for ps in session.query(PublicShare).all():
         if len(ps.files) == 0:
             session.delete(ps)
-            session.add(AuditLog("admin", "Delete Public Share", "Public share %s owned by %s had no files and was deleted by maintenance" % (ps.id, ps.owner_id if ps.role_owner_id is None else ps.role_owner_id)))
+            session.add(AuditLog("admin", Actions.DELETE_PUBLIC_SHARE, "Public share %s owned by %s had no files and was deleted by maintenance" % (ps.id, ps.owner_id if ps.role_owner_id is None else ps.role_owner_id)))
     session.commit()
 
     vaultFileList = os.listdir(config['filelocker']['vault'] )
@@ -160,29 +210,10 @@ def daily_maintenance(config):
                         except sqlalchemy.orm.exc.NoResultFound, nrf:
                             FileService.queue_for_deletion(fileName)
                     except Exception, e:
-                        logging.warning("There was a file that did not match Filelocker's naming convention in the vault: %s. It has not been purged." % fileName)
+                        cherrypy.log.error("There was a file that did not match Filelocker's naming convention in the vault: %s. It has not been purged." % fileName)
         except Exception, e:
-            logging.error("[system] [daily_maintenance] [There was a problem while trying to delete an orphaned file %s: %s]" % (str(fileName), str(e)))
+            cherrypy.log.error("[system] [routine_maintenance] [There was a problem while trying to delete an orphaned file %s: %s]" % (str(fileName), str(e)))
             session.rollback()
-
-def update_config(config):
-    config['filelocker']['version'] = __version__
-    try:
-        parameters = session.query(ConfigParameter).all()
-        for parameter in parameters:
-            value = None
-            if parameter.type == "boolean":
-                value = (parameter.value in ['true','yes','True','Yes'])
-            elif parameter.type == "number":
-                value = int(parameter.value)
-            elif parameter.type == "text":
-                value = parameter.value
-            elif parameter.type == "datetime":
-                value = datetime.datetime.strptime(parameter.value, "%m/%d/%Y %H:%M:%S")
-            config['filelocker'][parameter.name] = value
-    except Exception, e:
-        logging.error("Could not update config: %s" % str(e))
-
 
 def midnightloghandler(fn, level, backups):
     from logging import handlers
@@ -331,42 +362,36 @@ def start(configfile=None, daemonize=False, pidfile=None):
         
     engine.start()
     configure_session_for_app(app)
-    update_config(app.config)
+    app.config['filelocker']['version'] = __version__
+    #Set max file size upload size, in bytes
+    try:
+        maxSizeParam = session.query(ConfigParameter).filter(ConfigParameter.name == "max_file_size").one()
+        maxSize = long(maxSizeParam.value)
+        cherrypy.config.update({'server.max_request_body_size': maxSize*1024*1024})
+    except Exception, e:
+        cherrypy.log.error("[admin] [maintenance] [Problem setting max file size: %s]" % str(e))
 
-    #Set hour counter to 0.0. We have daily maintenance for expirations and maintenance every 12 minutes for queued deletions, etc.
-    hour = 0.0
-    while True:
-        #Set max file size, in bytes
-        try:
-            maxSizeParam = session.query(ConfigParameter).filter(ConfigParameter.name == "max_file_size").one()
-            maxSize = long(maxSizeParam.value)
-            cherrypy.config.update({'server.max_request_body_size': maxSize*1024*1024})
-        except Exception, e:
-            logging.error("[admin] [maintenance] [Problem setting max file size: %s]" % str(e))
-        if app.config['filelocker'].has_key("cluster_member_id") and int(app.config['filelocker']["cluster_member_id"])==0: # This will allow you set up other front ends that don't run maintenance on the DB or FS
-            if hour == 0.0: #on startup and each new day
-                daily_maintenance(app.config)
-            FileService.process_deletion_queue(app.config) #process deletion queue every 12 minutes
-            if hour < 24.0:
-                hour += 0.2
-            if hour >= 24.0:
-                hour = 0.0
-        #Cleanup orphaned temp files, possibly resulting from stalled transfers
-        validTempFiles = []
-        for key in cherrypy.file_uploads.keys():
-            for progressFile in cherrypy.file_uploads[key]:
-                validTempFiles.append(progressFile.file_object.name.split(os.path.sep)[-1])
-        FileService.clean_temp_files(app.config, validTempFiles)
-        time.sleep(720) #12 minutes
-#    except KeyboardInterrupt, ki:
-#        logging.error("Keyboard interrupt")
-#        engine.exit()
-#        sys.exit(1)
-#    except Exception, e:
-#        logging.error("Exception: %s" % str(e))
-#        logging.critical("Failed to start up Filelocker: %s" % str(e))
-#        engine.exit()
-#        sys.exit(1)
+    #Maintenance Loop
+    try:
+        while True:
+            cluster_elections(app.config)
+            currentNode = session.query(ClusterNode).filter(ClusterNode.member_id==int(app.config['filelocker']["cluster_member_id"])).one()
+            if currentNode.is_master: # This will allow you set up other front ends that don't run maintenance on the DB or FS
+                purge_expired_nodes()
+                routine_maintenance(app.config)
+                FileService.process_deletion_queue(app.config) #process deletion queue every 12 minutes
+            clean_temp_files(app.config)
+            time.sleep(15) #Sleep 15 seconds after everything is done
+    except KeyboardInterrupt, ki:
+        print "Keyboard Interrupt"
+        cherrypy.log.error("Keyboard interrupt")
+        engine.exit()
+        sys.exit(1)
+    except Exception, e:
+        print "Exception in maintenance loop: %s" % str(e)
+        cherrypy.log.error("Exception in maintenance loop: %s" % str(e))
+        engine.exit()
+        sys.exit(1)
 
 def stop(pidfile=None):
     if pidfile is None:
