@@ -524,7 +524,7 @@ class FileController(object):
                     Mail.notify(get_template_file('upload_request_notification.tmpl'),\
                     {'sender': user.email, 'recipient': recipient, 'ownerId': user.id, \
                     'ownerName': user.display_name, 'requestId': uploadRequest.id, 'requestType': uploadRequest.type,\
-                    'personalMessage': personalMessage, 'filelockerURL': config['root_url']})
+                    'personalMessage': personalMessage, 'filelockerURL': config['root_url'], 'org_url': config['org_url'], 'org_name': config['org_name']})
                 session.add(AuditLog(user.id, Actions.CREATE_UPLOAD_REQUEST, "You created an upload request. As a result, the following email addresses were sent a file upload link: %s" % ",".join(emailAddresses), None))
                 session.commit()
                 uploadURL = config['root_url']+"/public_upload?ticketId=%s" % str(uploadRequest.id)
