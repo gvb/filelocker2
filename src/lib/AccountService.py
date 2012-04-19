@@ -46,6 +46,8 @@ def get_user(userId, login=False):
         directory = ExternalDirectory()
         user = directory.lookup_user(userId)
         if user is not None:
+            if user.quota is None:
+                user.quota = int(session.query(ConfigParameter).filter(ConfigParameter.id=="default_quota").one().value)
             session.add(user)
             session.commit()
     if user is not None:
@@ -72,6 +74,9 @@ def get_user(userId, login=False):
             user.date_last_login = datetime.datetime.now()
             session.commit()
             setup_session(user.get_copy())
+    if user.quota is None: #Catch for users that got added with nil quotas
+        user.quota = 0
+        session.commit()
     return user
 
 def get_shareable_attributes_by_user(user):

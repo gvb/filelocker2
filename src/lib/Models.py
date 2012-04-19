@@ -48,7 +48,7 @@ user_permissions_table = Table("user_permissions", Base.metadata,
 class User(Base):
     __tablename__ = "users"
     id = Column(String(30), primary_key=True)
-    quota = Column(Integer)
+    quota = Column(Integer, default=0, nullable=False)
     date_last_login = Column(DateTime, nullable=True)
     date_tos_accept = Column(DateTime, nullable=True)
     email = Column(String(320), default="")
