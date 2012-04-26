@@ -9,7 +9,7 @@ __date__ ="$Oct 5, 2011 2:09:08 AM$"
 class LocalDirectory(object):
 
     def lookup_user(self, userId):
-        return session.query(User).filter(User.id == userId).one()
+        return session.query(User).filter(User.id == userId).scalar()
 
     def authenticate(self, userId, password):
         #We have to support real-time conversion from less-secure MD5 hashed passwords
