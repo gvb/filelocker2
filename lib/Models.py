@@ -122,6 +122,9 @@ class Role(Base):
             loadedPermissions.append(permission.get_copy())
         return Role(id=self.id, name=self.name, email=self.email, quota=self.quota, permissions=loadedPermissions)
 
+    def __str__(self):
+        return "%s %s %s %s" % (self.id, self.name, self.email, self.quota)
+    
 role_permissions_table = Table("role_permissions", Base.metadata,
     Column("role_id", String(30), ForeignKey("roles.id"), primary_key=True, nullable=False),
     Column("permission_id", String(50), ForeignKey("permissions.id"), primary_key=True, nullable=False))

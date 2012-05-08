@@ -101,6 +101,7 @@ class FileController(object):
     def get_user_file_list(self, fileIdList=None, format="json", **kwargs):
         """Get File List"""
         config = cherrypy.request.app.config['filelocker']
+        orgConfig = get_config_dict_from_objects(session.query(ConfigParameter).filter(ConfigParameter.name.like('org_%')).all())
         user, role, sMessages, fMessages = (cherrypy.session.get("user"), cherrypy.session.get("current_role"), [], [])
         myFilesList = []
         hiddenShares = session.query(HiddenShare).filter(HiddenShare.owner_id==user.id).all()
@@ -116,7 +117,7 @@ class FileController(object):
             fileIdList = split_list_sanitized(fileIdList)
             for fileId in fileIdList:
                 flFile = session.query(File).filter(File.id==fileId).one()
-                if (flFile.owner_id == user.id or flFile.shared_with(user)) and flFile.id not in hiddenShareIds:
+                if (role is not None and flFile.role_owner_id == role.id) or (flFile.owner_id == user.id or flFile.shared_with(user)) and flFile.id not in hiddenShareIds:
                     myFilesList.append(flFile)
         for flFile in myFilesList: #attachments to the file objects for this function, purely cosmetic
             if (len(flFile.public_shares) > 0) and (len(flFile.user_shares) > 0 or len(flFile.group_shares) > 0 ):

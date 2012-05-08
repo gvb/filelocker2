@@ -375,12 +375,16 @@ def start(configfile=None, daemonize=False, pidfile=None):
     try:
         while True:
             cluster_elections(app.config)
-            currentNode = session.query(ClusterNode).filter(ClusterNode.member_id==int(app.config['filelocker']["cluster_member_id"])).one()
-            if currentNode.is_master: # This will allow you set up other front ends that don't run maintenance on the DB or FS
-                purge_expired_nodes()
-                routine_maintenance(app.config)
-                FileService.process_deletion_queue(app.config) #process deletion queue every 12 minutes
-            clean_temp_files(app.config)
+            try:
+                currentNode = session.query(ClusterNode).filter(ClusterNode.member_id==int(app.config['filelocker']["cluster_member_id"])).one()
+                if currentNode.is_master: # This will allow you set up other front ends that don't run maintenance on the DB or FS
+                    purge_expired_nodes()
+                    routine_maintenance(app.config)
+                    FileService.process_deletion_queue(app.config) #process deletion queue every 12 minutes
+                clean_temp_files(app.config)
+            except Exception, e:
+                cherrypy.log.error("There was a problem loading data for node[%s]: %s\nIf this message appears repeatedly there could be a problem with the election process. Verify that each cluster node has a unique ID in the config." % (app.config['filelocker']["cluster_member_id"], str(e)))
+
             time.sleep(15) #Sleep 15 seconds after everything is done
     except KeyboardInterrupt, ki:
         print "Keyboard Interrupt"
