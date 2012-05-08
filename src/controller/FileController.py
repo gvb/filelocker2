@@ -101,6 +101,7 @@ class FileController(object):
     def get_user_file_list(self, fileIdList=None, format="json", **kwargs):
         """Get File List"""
         config = cherrypy.request.app.config['filelocker']
+        orgConfig = get_config_dict_from_objects(session.query(ConfigParameter).filter(ConfigParameter.name.like('org_%')).all())
         user, role, sMessages, fMessages = (cherrypy.session.get("user"), cherrypy.session.get("current_role"), [], [])
         myFilesList = []
         hiddenShares = session.query(HiddenShare).filter(HiddenShare.owner_id==user.id).all()
