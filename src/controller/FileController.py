@@ -117,7 +117,7 @@ class FileController(object):
             fileIdList = split_list_sanitized(fileIdList)
             for fileId in fileIdList:
                 flFile = session.query(File).filter(File.id==fileId).one()
-                if (flFile.owner_id == user.id or flFile.shared_with(user)) and flFile.id not in hiddenShareIds:
+                if (role is not None and flFile.role_owner_id == role.id) or (flFile.owner_id == user.id or flFile.shared_with(user)) and flFile.id not in hiddenShareIds:
                     myFilesList.append(flFile)
         for flFile in myFilesList: #attachments to the file objects for this function, purely cosmetic
             if (len(flFile.public_shares) > 0) and (len(flFile.user_shares) > 0 or len(flFile.group_shares) > 0 ):
