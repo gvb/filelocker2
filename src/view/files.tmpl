@@ -88,8 +88,8 @@
                                     #end if
                                 </li>
                                 #end if
-                                #if $role is not None
-                                    #set $ownerName = $role.name
+                                #if $f.role_owner_id is not None
+                                    #set $ownerName = $f.role_owner_id
                                 #else
                                     #set $ownerName = $f.owner_id
                                 #end if
@@ -189,9 +189,14 @@
                             <div class="posrel">
                                 <div id="menu_row_$rowId" class="menuFiles hidden"><!--add class of hidden to hide this info box-->
                                     <ul class="menu">
+                                #if $f.role_owner_id is not None
+                                    #set $ownerName = $f.role_owner_id
+                                #else
+                                    #set $ownerName = $f.owner_id
+                                #end if
                                     <li>
                                         <div class="itemTitle"><span class="ownerItem">Owner:</span></div>
-                                        $f.owner_id</li>
+                                        $ownerName</li>
                                     <li>
                                         <div class="itemTitle">
                                         #if $f.passed_avscan
@@ -279,9 +284,14 @@
                                     <div class="posrel">
                                         <div id="menu_row_$rowId" class="menuFiles hidden"><!--add class of hidden to hide this info box-->
                                             <ul class="menu">
+                                #if $f.role_owner_id is not None
+                                    #set $ownerName = $f.role_owner_id
+                                #else
+                                    #set $ownerName = $f.owner_id
+                                #end if
                                             <li>
                                                 <div class="itemTitle"><span class="ownerItem">Owner:</span></div>
-                                                $f.owner_id</li>
+                                                $ownerName</li>
                                             <li>
                                                 <div class="itemTitle">
                                                 #if $f.passed_avscan
