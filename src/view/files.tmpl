@@ -47,7 +47,7 @@
                 #end if
                 <tr id="row_$rowId" class="fileRow">
                     <td id="name_row_$rowId" class="nameElement">
-                    #if $f.owner_id == $user.id
+                    #if ($role is not None and $f.role_owner_id == $role.id) or $f.owner_id == $user.id
                         <input type="checkbox" value="$f.id" id="checkbox_row_$rowId" name="select_file" class="fileSelectBox" onChange="javascript:FLFile.onCheck()"/>
                     #end if
                         <div class="posrel">
@@ -78,7 +78,7 @@
                                     <div class="itemTitle"><span class="privatelyShared">Private Shares: </span></div><a href="javascript:Share.prompt('$f.id');">$userCount user$userPlural, $groupCount group$groupPlural</a>
                                 </li>
                                 #end if
-                                #if $f.owner_id == $user.id
+                                #if ($role is not None and $f.role_owner_id == $role.id) or $f.owner_id == $user.id
                                 <li>
                                     <div class="itemTitleMedium"><span class="notifyOnDownload">Notify Me on Download:</span></div>
                                     #if $f.notify_on_download
@@ -88,9 +88,14 @@
                                     #end if
                                 </li>
                                 #end if
+                                #if $role is not None
+                                    #set $ownerName = $role.name
+                                #else
+                                    #set $ownerName = $f.owner_id
+                                #end if
                                 <hr />
                                 <li><div class="itemTitle"><span class="fileID">ID:</span></div>$f.id</li>
-                                <li><div class="itemTitle"><span class="ownerItem">Owner:</span></div>$f.owner_id</li>
+                                <li><div class="itemTitle"><span class="ownerItem">Owner:</span></div>$ownerName</li>
                                 <li><div class="itemTitle">
                                 #if $f.passed_avscan
                                     <span class="virusPassed">Virus Scan:</span></div>Passed
@@ -101,7 +106,7 @@
                                 <li>
                                 <div class="itemTitle"><span class="clock">Uploaded:</span></div>
                                 $f.date_uploaded</li>
-                                #if $f.owner_id == $user.id
+                                #if ($role is not None and $f.role_owner_id == $role.id) or $f.owner_id == $user.id
                                     <li><div class="itemTitleMedium"><span class="cross"><a href="javascript:Utility.promptConfirmation('FLFile.del', ['$f.id']);" title="Permanently delete this file from Filelocker" class="redText">Delete This File</a></span></div></li>
                                     <li><div class="itemTitleMedium"><span class="save"><a href="javascript:FLFile.download('$f.id')" title="Download this file from Filelocker">Download This File</a></span></div></li>
                                     <li><div class="itemTitleMedium"><span class="statistics"><a href="javascript:FLFile.viewStatistics('$f.id');" title="View a chart of this file's downloads over time">View Download Statistics</a></span></div></li>
