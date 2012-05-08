@@ -69,6 +69,7 @@ class RootController:
     @cherrypy.tools.requires_login()
     def logout(self):
         config = cherrypy.request.app.config['filelocker']
+        orgConfig = get_config_dict_from_objects(session.query(ConfigParameter).filter(ConfigParameter.name.like('org_%')).all())
         authType = session.query(ConfigParameter).filter(ConfigParameter.name=="auth_type").one().value
         if authType == "cas":
             from lib.CAS import CAS
@@ -287,9 +288,9 @@ class RootController:
         geoTagging = get_config_dict_from_objects([session.query(ConfigParameter).filter(ConfigParameter.name=='geotagging').one()])['geotagging']
         adminEmail = session.query(ConfigParameter).filter(ConfigParameter.name=='admin_email').one().value
         defaultExpiration = datetime.date.today() + (datetime.timedelta(days=maxDays))
+        userFiles = self.file.get_user_file_list(format="list")
         if role is None:
             uploadRequests = session.query(UploadRequest).filter(UploadRequest.owner_id==user.id).all()
-            userFiles = self.file.get_user_file_list(format="list")
             userShareableAttributes = AccountService.get_shareable_attributes_by_user(user)
             attributeFilesDict = ShareService.get_files_shared_with_user_by_attribute(user)
             sharedFiles = ShareService.get_files_shared_with_user(user)
