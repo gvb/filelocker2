@@ -33,14 +33,13 @@ class AccountController:
         except ValueError:
                 fMessages.append("Invalid number entered for quota. Quota set to 0.")
         except Exception, e:
-            cherrypy.log.error("Could not create user account with ID:%s - %s" % (userId, str(e)))
-            fMessages.append("[%s] [create_user] [Could not create user account: %s]" % (userId, str(e)))
+            cherrypy.log.error("[%s] [create_user] [Could not create user account: %s]" % (userId, str(e)))
+            fMessages.append("Could not create user account with ID:%s - %s" % (userId, str(e)))
         return fl_response(sMessages, fMessages, format)
     
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def update_user(self, userId, quota=None, email=None, firstName=None, lastName=None, password=None, confirmPassword=None, format="json", **kwargs):
-        cherrypy.log.error("Updated email: %s" % str(email))
         user, sMessages, fMessages = (cherrypy.session.get("user"), [], [])
         try:
             userId = strip_tags(userId)
@@ -367,7 +366,7 @@ class AccountController:
                     fMessages.append("You are not a member of this role")
         except Exception, e:
             fMessages.append("Unable to switch roles: %s" % str(e))
-            cherrypy.log.error("Error switching roles: %s" % str(e))
+            cherrypy.log.error("[%s] [switch_roles] [Error switching roles: %s]" % (user.id, str(e)))
         return fl_response(sMessages, fMessages, format)
     
     @cherrypy.expose
@@ -482,7 +481,7 @@ class AccountController:
         except sqlalchemy.orm.exc.NoResultFound:
             fMessages.append("The user ID: %s does not exist" % str(userId))
         except Exception, e:
-            cherrypy.log.error("Couldn't get permissions for user %s: %s" % (userId, str(e)))
+            cherrypy.log.error("[%s] [get_user_permissions] [Couldn't get permissions for user %s: %s]" % (userId, str(e)))
             fMessages.append("Could not get permissions: %s" % str(e))
         return fl_response(sMessages, fMessages, format, data=permissionData)
 
@@ -516,7 +515,7 @@ class AccountController:
                 permissionData.append({'permissionId': permission.id, 'permissionName': permission.name, 'inheritedFrom': ""})
             sMessages.append("Got permissions")
         except Exception, e:
-            cherrypy.log.error("%s] [] [Couldn't get permissions: %s]" % (user.id, str(e)))
+            cherrypy.log.error("[%s] [get_permissions] [Couldn't get permissions: %s]" % (user.id, str(e)))
             fMessages.append("Could not get permissions: %s" % str(e))
         return fl_response(sMessages, fMessages, format, data=permissionData)
 

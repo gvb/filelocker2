@@ -201,10 +201,10 @@ class File(Base):
         groupIds = []
         for group in user.groups:
             groupIds.append(group.id)
-        for share in group_shares:
+        for share in self.group_shares:
             if share.group_id in groupIds:
                 return True
-        for share in attribute_shares:
+        for share in self.attribute_shares:
             if share.attribute_id in user.attributes:
                 return True
         return False

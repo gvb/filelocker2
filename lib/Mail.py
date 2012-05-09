@@ -13,7 +13,6 @@ def get_mail_config():
     return get_config_dict_from_objects(mailConfigObjects)
 
 def get_server(config):
-    cherrypy.log.error("============SMPT CONFIG===========\n%s" % str(config))
     if config['smtp_server'] is None or config['smtp_server'] == "":
         raise Exception("Failed to send email notification - this server has not been configured for email.")
     server = SMTP(config['smtp_server'], config['smtp_port'] if config['smtp_port'] != "" else 25 )
