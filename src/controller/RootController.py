@@ -103,10 +103,8 @@ class RootController:
         username = strip_tags(username)
 
         if password is None or password == "":
-            cherrypy.log.error("Password is non - redirecting to login")
             raise cherrypy.HTTPRedirect("%s/login?msg=3&local=%s" % (rootURL, str(local)))
         else:
-            cherrypy.log.error("password not none - instantiating directory and checking password")
             directory = AccountService.ExternalDirectory(local)
             if directory.authenticate(username, password):
                 currentUser = AccountService.get_user(username, True) #if they are authenticated and local, this MUST return a user object
@@ -115,7 +113,6 @@ class RootController:
                         raise cherrypy.HTTPError(403, "You do not have permission to access this system")
                     session.add(AuditLog(cherrypy.session.get("user").id, "Login", "User %s logged in successfully from IP %s" % (currentUser.id, cherrypy.request.remote.ip)))
                     session.commit()
-                    cherrypy.log.error("User found, authenticated, redirecting")
                     raise cherrypy.HTTPRedirect(rootURL)
                 else: #This should only happen in the case of a user existing in the external directory, but having never logged in before
                     try:

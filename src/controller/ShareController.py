@@ -127,7 +127,7 @@ class ShareController:
                     cherrypy.session.release_lock()
                     for groupMember in group.members:
                         try:
-                            Mail.notify(get_template_file('share_notification.tmpl'),{'sender':user.email if role is not None else role.email,'recipient':groupMember.email, 'ownerId':user.id, 'ownerName':user.display_name, 'sharedFiles':sharedFiles, 'filelockerURL': config['root_url'], 'org_url': orgConfig['org_url'], 'org_name': orgConfig['org_name']})
+                            Mail.notify(get_template_file('share_notification.tmpl'),{'sender':user.email if role is None else role.email,'recipient':groupMember.email, 'ownerId':user.id if role is None else role.id, 'ownerName':user.display_name if role is None else role.name, 'sharedFiles':sharedFiles, 'filelockerURL': config['root_url'], 'org_url': orgConfig['org_url'], 'org_name': orgConfig['org_name']})
                             session.add(AuditLog(user.id, Actions.SEND_EMAIL, "%s has been notified via email that you have shared a file with him or her." % (groupMember.email), None, role.id if role is not None else None))
                             session.commit()
                         except Exception, e:
@@ -136,7 +136,7 @@ class ShareController:
                     if cc:
                         if (user.email is not None and user.email != ""):
                             try:
-                                Mail.notify(get_template_file('share_notification.tmpl'),{'sender':user.email if role is None else role.email,'recipient':user.email if role is None else role.email, 'ownerId':user.id if role is None else role.id, 'ownerName':user.display_name if role is not None else role.name, 'files':sharedFiles, 'filelockerURL': config['root_url'], 'org_url': orgConfig['org_url'], 'org_name': orgConfig['org_name']})
+                                Mail.notify(get_template_file('share_notification.tmpl'),{'sender':user.email if role is None else role.email,'recipient':user.email if role is None else role.email, 'ownerId':user.id if role is None else role.id, 'ownerName':user.display_name if role is None else role.name, 'sharedFiles':sharedFiles, 'filelockerURL': config['root_url'], 'org_url': orgConfig['org_url'], 'org_name': orgConfig['org_name']})
                                 session.add(AuditLog(user.id, Actions.SEND_EMAIL, "You have been carbon copied via email on the notification that was sent out as a result of your file share."))
                                 session.commit()
                             except Exception, e:

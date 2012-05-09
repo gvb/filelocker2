@@ -24,7 +24,7 @@ class AdminController:
                 permissionData.append({'permissionId': permission.id, 'permissionName': permission.name, 'inheritedFrom': ""})
             sMessages.append("Got permissions")
         except Exception, e:
-            cherrypy.log.error("%s] [] [Couldn't get permissions: %s]" % (user.id, str(e)))
+            cherrypy.log.error("[%s] [get_permissions] [Couldn't get permissions: %s]" % (user.id, str(e)))
             fMessages.append("Could not get permissions: %s" % str(e))
         return fl_response(sMessages, fMessages, format, data=permissionData)
 
