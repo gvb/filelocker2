@@ -34,11 +34,11 @@ def file_download_complete(user, fileId, publicShareId=None):
                     orgConfig = get_config_dict_from_objects(session.query(ConfigParameter).filter(ConfigParameter.name.like('org_%')).all())
                     Mail.notify(get_template_file('download_notification.tmpl'),{'sender': None, 'recipient': owner.email, 'fileName': flFile.name, 'downloadUserId': user.id, 'downloadUserName': user.display_name, 'filelockerURL': config['root_url'], 'org_url': orgConfig['org_url'], 'org_name': orgConfig['org_name']})
             except Exception, e:
-                cherrypy.log.error("[%s] [file_download_complete] [Unable to notify user %s of download completion: %s]" % (user.id, owner.id, str(e)))
+                cherrypy.log.error("[%s] [file_download_complete] [(1)Unable to notify user %s of download completion: %s]" % (user.id, owner.id, str(e)))
 
         if publicShareId is not None:
             publicShare = session.query(PublicShare).filter(PublicShare.id == publicShareId).one()
-            session.add(AuditLog(flFile.owner_id,"Download File", "File %s downloaded via Public Share. " % (flFile.name), None, flFile.role_owner_id, flFile.id))
+            session.add(AuditLog(flFile.owner_id, "Download File", "File %s downloaded via Public Share. " % str(flFile.name), None, flFile.role_owner_id, flFile.id))
             if flFile.notify_on_download:
                 try:
                     owner = None
@@ -48,14 +48,14 @@ def file_download_complete(user, fileId, publicShareId=None):
                         orgConfig = get_config_dict_from_objects(session.query(ConfigParameter).filter(ConfigParameter.name.like('org_%')).all())
                         Mail.notify(get_template_file('public_download_notification.tmpl'),{'sender': None, 'recipient': owner.email, 'fileName': flFile.name, 'filelockerURL': config['root_url'], 'org_url': orgConfig['org_url'], 'org_name': orgConfig['org_name']})
                 except Exception, e:
-                    cherrypy.log.error("[%s] [file_download_complete] [Unable to notify user %s of download completion: %s]" % ("admin", owner.id, str(e)))
+                    cherrypy.log.error("[%s] [file_download_complete] [(2)Unable to notify user %s of download completion: %s]" % ("admin", owner.id, str(e)))
             if publicShare.reuse == "single":
                 publicShare.files.remove(flFile)
                 session.commit()
                 publicShare = session.query(PublicShare).filter(PublicShare.id == publicShare.id).one()
                 if len(publicShare.files) == 0:
                     session.delete(publicShare)
-                    session.add(AuditLog(flFile.owner_id, "Delete Public Share", "File %s downloaded via single use public share. File is no longer publicly shared." % (flFile.name, flFile.id), None, flFile.role_owner_id, flFile.id))
+                    session.add(AuditLog(flFile.owner_id, "Delete Public Share", "File %s (%s) downloaded via single use public share. File is no longer publicly shared." % (flFile.name, flFile.id), None, flFile.role_owner_id, flFile.id))
                     session.commit()
         else:
             log = AuditLog(user.id, "Download File", "File %s downloaded by user %s." % (flFile.name, user.id), flFile.owner_id, role.id if role is not None else None, flFile.id)
