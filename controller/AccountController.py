@@ -40,6 +40,7 @@ class AccountController:
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def update_user(self, userId, quota=None, email=None, firstName=None, lastName=None, password=None, confirmPassword=None, format="json", **kwargs):
+        cherrypy.log.error("Updated email: %s" % str(email))
         user, sMessages, fMessages = (cherrypy.session.get("user"), [], [])
         try:
             userId = strip_tags(userId)
@@ -53,7 +54,7 @@ class AccountController:
                     if password == confirmPassword:
                         updateUser.set_password(password)
                     else:
-                        fMessages.append("Passwords do not match, password has not be reset")
+                        fMessages.append("Passwords do not match, password has not been reset")
                 sMessages.append("Successfully updated user settings")
                 session.add(AuditLog(user.id, Actions.UPDATE_USER, "%s updated user account \"%s\"" % (user.id, userId), userId))
                 session.commit()

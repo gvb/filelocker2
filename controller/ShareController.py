@@ -16,6 +16,7 @@ class ShareController:
     @cherrypy.tools.requires_login()
     def create_user_shares(self, fileIds, userId=None, notify="no", cc="false", format="json", **kwargs):
         config = cherrypy.request.app.config['filelocker']
+        orgConfig = get_config_dict_from_objects(session.query(ConfigParameter).filter(ConfigParameter.name.like('org_%')).all())
         user, role, sMessages, fMessages  = (cherrypy.session.get("user"), cherrypy.session.get("current_role"), [], [])
         fileIds = split_list_sanitized(fileIds)
         userId = strip_tags(userId) if userId is not None and userId != "" else None
@@ -45,7 +46,7 @@ class ShareController:
                     cherrypy.session.release_lock()
                     for recipient in recipients:
                         try:
-                            Mail.notify(get_template_file('share_notification.tmpl'),{'sender':user.email if role is None else role.email,'recipient':recipient.email, 'ownerId':user.id if role is None else role.id, 'ownerName':user.display_name if role is None else role.name, 'sharedFiles':sharedFiles, 'filelockerURL': config['root_url'], 'org_url': config['org_url'], 'org_name': config['org_name']})
+                            Mail.notify(get_template_file('share_notification.tmpl'),{'sender':user.email if role is None else role.email,'recipient':recipient.email, 'ownerId':user.id if role is None else role.id, 'ownerName':user.display_name if role is None else role.name, 'sharedFiles':sharedFiles, 'filelockerURL': config['root_url'], 'org_url': orgConfig['org_url'], 'org_name': orgConfig['org_name']})
                             session.add(AuditLog(user.id, Actions.SEND_EMAIL, "%s(%s) has been notified via email that you have shared a file with him or her." % (recipient.display_name, recipient.id), None, role.id if role is not None else None))
                         except Exception, e:
                             session.rollback()
@@ -94,6 +95,7 @@ class ShareController:
     @cherrypy.tools.requires_login()
     def create_group_shares(self, fileIds, groupId, notify="false", cc="false", format="json"):
         user, role, sMessages, fMessages, config  = (cherrypy.session.get("user"), cherrypy.session.get("current_role"), [], [], cherrypy.request.app.config['filelocker'])
+        orgConfig = get_config_dict_from_objects(session.query(ConfigParameter).filter(ConfigParameter.name.like('org_%')).all())
         fileIds = split_list_sanitized(fileIds)
         groupId = strip_tags(groupId) if groupId is not None and groupId != "" else None
         notify = True if notify.lower() == "true" else False
@@ -125,7 +127,7 @@ class ShareController:
                     cherrypy.session.release_lock()
                     for groupMember in group.members:
                         try:
-                            Mail.notify(get_template_file('share_notification.tmpl'),{'sender':user.email if role is not None else role.email,'recipient':groupMember.email, 'ownerId':user.id, 'ownerName':user.display_name, 'sharedFiles':sharedFiles, 'filelockerURL': config['root_url'], 'org_url': config['org_url'], 'org_name': config['org_name']})
+                            Mail.notify(get_template_file('share_notification.tmpl'),{'sender':user.email if role is not None else role.email,'recipient':groupMember.email, 'ownerId':user.id, 'ownerName':user.display_name, 'sharedFiles':sharedFiles, 'filelockerURL': config['root_url'], 'org_url': orgConfig['org_url'], 'org_name': orgConfig['org_name']})
                             session.add(AuditLog(user.id, Actions.SEND_EMAIL, "%s has been notified via email that you have shared a file with him or her." % (groupMember.email), None, role.id if role is not None else None))
                             session.commit()
                         except Exception, e:
@@ -134,7 +136,7 @@ class ShareController:
                     if cc:
                         if (user.email is not None and user.email != ""):
                             try:
-                                Mail.notify(get_template_file('share_notification.tmpl'),{'sender':user.email if role is None else role.email,'recipient':user.email if role is None else role.email, 'ownerId':user.id if role is None else role.id, 'ownerName':user.display_name if role is not None else role.name, 'files':sharedFiles, 'filelockerURL': config['root_url'], 'org_url': config['org_url'], 'org_name': config['org_name']})
+                                Mail.notify(get_template_file('share_notification.tmpl'),{'sender':user.email if role is None else role.email,'recipient':user.email if role is None else role.email, 'ownerId':user.id if role is None else role.id, 'ownerName':user.display_name if role is not None else role.name, 'files':sharedFiles, 'filelockerURL': config['root_url'], 'org_url': orgConfig['org_url'], 'org_name': orgConfig['org_name']})
                                 session.add(AuditLog(user.id, Actions.SEND_EMAIL, "You have been carbon copied via email on the notification that was sent out as a result of your file share."))
                                 session.commit()
                             except Exception, e:
@@ -268,6 +270,7 @@ class ShareController:
     def create_public_share(self, fileIds, expiration, shareType, message, notifyEmails, cc="false", format="json", **kwargs):
         user, role, sMessages, fMessages, shareId, ps = (cherrypy.session.get("user"), cherrypy.session.get("current_role"), [], [], None, None)
         config = cherrypy.request.app.config['filelocker']
+        orgConfig = get_config_dict_from_objects(session.query(ConfigParameter).filter(ConfigParameter.name.like('org_%')).all())
         fileIds = split_list_sanitized(fileIds)
         cc = True if cc == "true" else False
         try:
@@ -312,7 +315,7 @@ class ShareController:
             cherrypy.session.release_lock()
             for recipient in notifyEmailList:
                 if recipient is not None and recipient != "":
-                    Mail.notify(get_template_file('public_share_notification.tmpl'), {'sender':user.email if role is None else role.email, 'recipient':recipient, 'sharedFiles':sharedFiles, 'ownerId':user.id if role is None else role.id, 'ownerName': user.display_name if role is None else role.name, 'shareId':ps.id, 'filelockerURL':config['root_url'], 'org_url': config['org_url'], 'org_name': config['org_name']})
+                    Mail.notify(get_template_file('public_share_notification.tmpl'), {'sender':user.email if role is None else role.email, 'recipient':recipient, 'sharedFiles':sharedFiles, 'ownerId':user.id if role is None else role.id, 'ownerName': user.display_name if role is None else role.name, 'shareId':ps.id, 'filelockerURL':config['root_url'], 'org_url': orgConfig['org_url'], 'org_name': orgConfig['org_name']})
             if len(notifyEmailList) > 0:
                 session.add(AuditLog(user.id, Actions.SEND_EMAIL, "Email notifications about a public share were sent to the following addresses: %s" % ",".join(notifyEmailList), None, role.id if role is not None else None))
             session.commit()
