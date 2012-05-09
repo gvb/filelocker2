@@ -12,7 +12,7 @@ Account = function() {
                 firstName:$("#userFirstName").val(),
                 lastName:$("#userLastName").val(),
                 userId:userId,
-                emailAddress:$("#userEmail").val()
+                email:$("#userEmail").val()
             };
             if ($("#userPassword").val() !== "")
             {
