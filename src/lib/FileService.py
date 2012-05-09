@@ -45,7 +45,8 @@ def file_download_complete(user, fileId, publicShareId=None):
                     if role is not None: owner = session.query(User).filter(User.id==flFile.role_owner_id).one()
                     else: owner = session.query(User).filter(User.id==flFile.owner_id).one()
                     if owner.email is not None and owner.email != "":
-                        Mail.notify(get_template_file('public_download_notification.tmpl'),{'sender': None, 'recipient': owner.email, 'fileName': flFile.name})
+                        orgConfig = get_config_dict_from_objects(session.query(ConfigParameter).filter(ConfigParameter.name.like('org_%')).all())
+                        Mail.notify(get_template_file('public_download_notification.tmpl'),{'sender': None, 'recipient': owner.email, 'fileName': flFile.name, 'filelockerURL': config['root_url'], 'org_url': orgConfig['org_url'], 'org_name': orgConfig['org_name']})
                 except Exception, e:
                     cherrypy.log.error("[%s] [file_download_complete] [Unable to notify user %s of download completion: %s]" % ("admin", owner.id, str(e)))
             if publicShare.reuse == "single":

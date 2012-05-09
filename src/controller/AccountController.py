@@ -40,6 +40,7 @@ class AccountController:
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def update_user(self, userId, quota=None, email=None, firstName=None, lastName=None, password=None, confirmPassword=None, format="json", **kwargs):
+        cherrypy.log.error("Updated email: %s" % str(email))
         user, sMessages, fMessages = (cherrypy.session.get("user"), [], [])
         try:
             userId = strip_tags(userId)
