@@ -17,7 +17,7 @@ Account = function() {
             if ($("#userPassword").val() !== "")
             {
                 data.password = $("#userPassword").val();
-                data.confirmPassword =  $("#userConfirmPassword").val();
+                data.confirmPassword =  $("#userPasswordConfirm").val();
             }
             Filelocker.request("/account/update_user", "updating user account", data, true, function() {
                 $("#editAccountBox").dialog("close");

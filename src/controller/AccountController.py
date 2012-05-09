@@ -54,7 +54,7 @@ class AccountController:
                     if password == confirmPassword:
                         updateUser.set_password(password)
                     else:
-                        fMessages.append("Passwords do not match, password has not be reset")
+                        fMessages.append("Passwords do not match, password has not been reset")
                 sMessages.append("Successfully updated user settings")
                 session.add(AuditLog(user.id, Actions.UPDATE_USER, "%s updated user account \"%s\"" % (user.id, userId), userId))
                 session.commit()
