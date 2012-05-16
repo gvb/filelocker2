@@ -25,7 +25,7 @@ class MessageController:
             expiration = datetime.datetime(*time.strptime(strip_tags(expiration), "%m/%d/%Y")[0:5]) if (kwargs.has_key('expiration') and strip_tags(expiration) is not None and expiration.lower() != "never") else maxExpiration
             recipientIdList = split_list_sanitized(recipientIds)
             subject = strip_tags(subject)
-            if subject is None or subject.trim()=="":
+            if subject is None or subject.strip()=="":
                 raise Exception("Subject cannot be blank")
             #Process the expiration data for the file
             if expiration is None and (AccountService.user_has_permission(user, "expiration_exempt") == False and AccountService.user_has_permission(user, "admin")==False): #Check permission before allowing a non-expiring upload
