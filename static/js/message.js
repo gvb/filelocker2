@@ -61,9 +61,17 @@ Message = function() {
 
     function create(recipientIds)
     {
+        var action = "sending message";
+        var subject = $("#flMessageSubject").val();
+        var body = $("#flMessageBody").val();
+
+        if (subject == null || subject === "")
+            return StatusResponse.create(action, "Message must have a subject.", false);
+        if (body == null || body === "")
+            return StatusResponse.create(action, "Message must have a body.", false);
         var data = {
-            subject: $("#flMessageSubject").val(),
-            body: $("#flMessageBody").val(),
+            subject: subject,
+            body: body,
             expiration: $("#flMessageExpiration").val(),
             recipientIds: recipientIds
         };

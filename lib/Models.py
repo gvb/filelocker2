@@ -248,7 +248,7 @@ class Message(Base):
             messageCreateDatetime = self.date_sent.strftime("%m/%d/%Y")
         if self.date_expires is not None:
             messageExpirationDatetime = self.date_expires.strftime("%m/%d/%Y")
-        messageDict = {'subject': self.subject, 'body': self.body, 'creationDatetime': messageCreateDatetime, 'ownerId': self.owner_id, 'expirationDatetime': messageExpirationDatetime, 'id': self.id}
+        messageDict = {'subject': self.subject if self.subject is not None else "", 'body': self.body, 'creationDatetime': messageCreateDatetime, 'ownerId': self.owner_id, 'expirationDatetime': messageExpirationDatetime, 'id': self.id}
         messageDict['messageRecipients'] = []
         if self.message_shares is not None:
             for messageShare in self.message_shares:
