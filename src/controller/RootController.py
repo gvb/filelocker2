@@ -240,11 +240,19 @@ class RootController:
             sevenDaysAgo = today - sevenDays
             sevenDaysAgo = sevenDaysAgo.replace(hour=0, minute=0, second=0, microsecond=0)
             if startDate is not None:
-                startDateFormatted = datetime.datetime(*time.strptime(strip_tags(startDate), "%m/%d/%Y")[0:5])
+                try:
+                    startDateFormatted = datetime.datetime(*time.strptime(strip_tags(startDate), "%m/%d/%Y")[0:5])
+                except Exception, e:
+                    fMessages.append("Start date was not properly formatted")
+                    startDateFormatted = sevenDaysAgo
             else:
                 startDateFormatted = sevenDaysAgo
             if endDate is not None:
-                endDateFormatted = datetime.datetime(*time.strptime(strip_tags(endDate), "%m/%d/%Y")[0:5])
+                try:
+                    endDateFormatted = datetime.datetime(*time.strptime(strip_tags(endDate), "%m/%d/%Y")[0:5])
+                except Exception, e:
+                    fMessages.append("End date was not properly formatted")
+                    endDateFormatted = today
             else:
                 endDateFormatted = today
             actionLogListAtt = session.query(AuditLog).filter(and_(AuditLog.date >= startDateFormatted, AuditLog.date <= (endDateFormatted + datetime.timedelta(days=1)))).filter(or_(AuditLog.initiator_user_id==userId, AuditLog.affected_user_id==userId))
