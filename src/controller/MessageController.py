@@ -24,13 +24,17 @@ class MessageController:
             maxExpiration = datetime.datetime.today() + datetime.timedelta(days=maxDays)
             expiration = datetime.datetime(*time.strptime(strip_tags(expiration), "%m/%d/%Y")[0:5]) if (kwargs.has_key('expiration') and strip_tags(expiration) is not None and expiration.lower() != "never") else maxExpiration
             recipientIdList = split_list_sanitized(recipientIds)
-            subject= strip_tags(subject)
+            subject = strip_tags(subject)
+            if subject is None or subject.trim()=="":
+                raise Exception("Subject cannot be blank")
             #Process the expiration data for the file
             if expiration is None and (AccountService.user_has_permission(user, "expiration_exempt") == False and AccountService.user_has_permission(user, "admin")==False): #Check permission before allowing a non-expiring upload
                 expiration = maxExpiration
             else:
                 if maxExpiration < expiration and AccountService.user_has_permission(user, "expiration_exempt")==False:
                     raise Exception("Expiration date must be between now and %s." % maxExpiration.strftime("%m/%d/%Y"))
+            if body is None or body.strip()=="":
+                raise Exception("Message body cannot be blank")
             newMessage = Message(subject=subject, body=body, date_sent=datetime.datetime.now(), owner_id=user.id, date_expires=expiration, encryption_key=Encryption.generatePassword())
             session.add(newMessage)
             session.commit()
@@ -92,13 +96,13 @@ class MessageController:
                 messageDict = rMessage.message.get_dict()
                 messageDict['viewedDatetime'] = rMessage.date_viewed.strftime("%m/%d/%Y") if rMessage.date_viewed is not None else None
                 messageBody = strip_tags(cgi.escape(decrypt_message(rMessage.message)), True)
-                messageDict['body'] = str(Template("$messageBody", searchList=[locals()], filter=WebSafe))
+                messageDict['body'] = str(Template("$messageBody", searchList=[locals()], filter=WebSafe)) if messageBody is not None else ""
                 recvMessagesList.append(messageDict)
     
             for message in sentMessages:
                 messageDict = message.get_dict()
                 messageBody = strip_tags(cgi.escape(decrypt_message(message)), True)
-                messageDict['body'] = str(Template("$messageBody", searchList=[locals()], filter=WebSafe))
+                messageDict['body'] = str(Template("$messageBody", searchList=[locals()], filter=WebSafe)) if messageBody is not None else ""
                 sentMessagesList.append(messageDict)
             messagesList.append(recvMessagesList)
             messagesList.append(sentMessagesList)
