@@ -232,7 +232,7 @@ class AdminController:
     @cherrypy.expose
     @cherrypy.tools.requires_login(permission="admin")
     def save_template(self, templateName, templateText, format="json", **kwargs):
-        user, sMessages, fMessages, config, templateText = (cherrypy.session.get("user"), [], [], cherrypy.request.app.config['filelocker'], "")
+        user, sMessages, fMessages, config = (cherrypy.session.get("user"), [], [], cherrypy.request.app.config['filelocker'])
         try:
             templateName = strip_tags(templateName)
             filePath = os.path.join(config['vault'], "custom", templateName)
