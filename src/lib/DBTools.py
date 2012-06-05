@@ -54,7 +54,7 @@ def import_db(importFile, dburi):
             u = User(id=usernode.getAttribute("id"), first_name=usernode.getAttribute("first_name"),\
             last_name=usernode.getAttribute("last_name"), quota=int(usernode.getAttribute("quota")),\
             email=usernode.getAttribute("email"), date_last_login=usernode.getAttribute("date_last_login"),\
-            date_tos_accept=usernode.getAttribute("date_tos_accept"))
+            date_tos_accept=usernode.getAttribute("date_tos_accept"), password=usernode.getAttribute("password"))
             session.add(u)
             session.commit()
             for permnode in usernode.getElementsByTagName("user_permission"):
@@ -400,7 +400,7 @@ class LegacyDBConverter():
         currentUser = None
         for row in results:
             if row['user_id'] not in roleUserIds:
-                currentUser = User(first_name=row['user_first_name'], last_name=row['user_last_name'], email=row['user_email'], quota=row['user_quota'], date_last_login=row['user_last_login_datetime'], date_tos_accept=row['user_tos_accept_datetime'], id=row['user_id'])
+                currentUser = User(first_name=row['user_first_name'], last_name=row['user_last_name'], email=row['user_email'], quota=row['user_quota'], date_last_login=row['user_last_login_datetime'], date_tos_accept=row['user_tos_accept_datetime'], id=row['user_id'], password=row['user_password_hash'])
                 if (rolePermissions.has_key(currentUser.id)):
                     for roleId in rolePermissions[currentUser.id]:
                         currentUser.roles.append(Role(id=roleId))
