@@ -23,6 +23,18 @@ tools.SATransaction.on = True
 tools.SATransaction.dburi = "mysql+mysqldb://db_user:db_password@db_host/db_name"
 tools.SATransaction.echo = False
 ####
+
+    AND replace the [filelocker] section with the following, substituting as necessary for environment:
+
+####
+[filelocker]
+vault="/vault"
+root_url="http://localhost:8080"
+root_path="/usr/filelocker"
+cluster_member_id=0
+####
+
+NOTE: Cluster member ID indicates precedence of a node in becoming the master node. The lower the number, the higher priority in become the master node.
    
     5) Run the following command (you can pass the -h flag to see command help) to back up your current Filelocker database: 
 

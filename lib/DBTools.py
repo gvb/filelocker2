@@ -54,7 +54,7 @@ def import_db(importFile, dburi):
             u = User(id=usernode.getAttribute("id"), first_name=usernode.getAttribute("first_name"),\
             last_name=usernode.getAttribute("last_name"), quota=int(usernode.getAttribute("quota")),\
             email=usernode.getAttribute("email"), date_last_login=usernode.getAttribute("date_last_login"),\
-            date_tos_accept=usernode.getAttribute("date_tos_accept"))
+            date_tos_accept=usernode.getAttribute("date_tos_accept"), password=usernode.getAttribute("password"))
             session.add(u)
             session.commit()
             for permnode in usernode.getElementsByTagName("user_permission"):
@@ -99,7 +99,8 @@ def import_db(importFile, dburi):
             f = File(id=filenode.getAttribute("id"), name=filenode.getAttribute("name"),\
                     type=filenode.getAttribute("type"), size=long(filenode.getAttribute("size")),\
                     notes=filenode.getAttribute("notes"), date_uploaded=filenode.getAttribute("date_uploaded"),\
-                    owner_id=filenode.getAttribute("owner_id"), role_owner_id=filenode.getAttribute("role_owner_id"),\
+                    owner_id=filenode.getAttribute("owner_id") if filenode.getAttribute("owner_id") != "" else None,\
+                    role_owner_id=filenode.getAttribute("role_owner_id") if filenode.getAttribute("role_owner_id") != "" else None,\
                     date_expires=filenode.getAttribute("date_expires"), passed_avscan=filenode.getAttribute("passed_avscan"),\
                     encryption_key=filenode.getAttribute("encryption_key"), status=filenode.getAttribute("status"),\
                     notify_on_download=False if filenode.getAttribute("notify_on_download")=="0" else True,\
@@ -270,9 +271,9 @@ class LegacyDBConverter():
             for row in results:
                 currentFile = None
                 if (row['file_owner_id'] in self.role_user_ids):
-                    currentFile = File(name=row['file_name'], type=row['file_type'], notes=row['file_notes'], size=row['file_size'], date_uploaded=row['file_uploaded_datetime'], role_owner_id=row['file_owner_id'], date_expires=row['file_expiration_datetime'], passed_avscan=row['file_passed_avscan'], encryption_key=row['file_encryption_key'], id=row['file_id'], status=row['file_status'],  notify_on_download=row['file_notify_on_download'], upload_request_id=row['file_upload_ticket_id'])
+                    currentFile = File(name=row['file_name'], type=row['file_type'], notes=row['file_notes'], size=row['file_size'], date_uploaded=row['file_uploaded_datetime'], owner_id=None, role_owner_id=row['file_owner_id'], date_expires=row['file_expiration_datetime'], passed_avscan=row['file_passed_avscan'], encryption_key=row['file_encryption_key'], id=row['file_id'], status=row['file_status'],  notify_on_download=row['file_notify_on_download'], upload_request_id=row['file_upload_ticket_id'])
                 else:
-                    currentFile = File(name=row['file_name'], type=row['file_type'], notes=row['file_notes'], size=row['file_size'], date_uploaded=row['file_uploaded_datetime'], owner_id=row['file_owner_id'], date_expires=row['file_expiration_datetime'], passed_avscan=row['file_passed_avscan'], encryption_key=row['file_encryption_key'], id=row['file_id'], status=row['file_status'],  notify_on_download=row['file_notify_on_download'], upload_request_id=row['file_upload_ticket_id'])
+                    currentFile = File(name=row['file_name'], type=row['file_type'], notes=row['file_notes'], size=row['file_size'], date_uploaded=row['file_uploaded_datetime'], owner_id=row['file_owner_id'], role_owner_id=None, date_expires=row['file_expiration_datetime'], passed_avscan=row['file_passed_avscan'], encryption_key=row['file_encryption_key'], id=row['file_id'], status=row['file_status'],  notify_on_download=row['file_notify_on_download'], upload_request_id=row['file_upload_ticket_id'])
                 allFiles.append(currentFile)
         return allFiles
 
@@ -399,7 +400,7 @@ class LegacyDBConverter():
         currentUser = None
         for row in results:
             if row['user_id'] not in roleUserIds:
-                currentUser = User(first_name=row['user_first_name'], last_name=row['user_last_name'], email=row['user_email'], quota=row['user_quota'], date_last_login=row['user_last_login_datetime'], date_tos_accept=row['user_tos_accept_datetime'], id=row['user_id'])
+                currentUser = User(first_name=row['user_first_name'], last_name=row['user_last_name'], email=row['user_email'], quota=row['user_quota'], date_last_login=row['user_last_login_datetime'], date_tos_accept=row['user_tos_accept_datetime'], id=row['user_id'], password=row['user_password_hash'])
                 if (rolePermissions.has_key(currentUser.id)):
                     for roleId in rolePermissions[currentUser.id]:
                         currentUser.roles.append(Role(id=roleId))

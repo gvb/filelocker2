@@ -737,13 +737,13 @@ Admin = function() {
                 });
             }
         }
-        function create()
+        function save()
         {
             var data = {
                 templateName: $("#template_selector").val(),
                 templateText: $("#templateEditArea").val()
             };
-            Filelocker.request("/admin/create_template", "creating custom template", data, true, function(returnData) {
+            Filelocker.request("/admin/save_template", "creating custom template", data, true, function(returnData) {
                 $("#templateEditArea").val(returnData.data);
             });
         }
@@ -760,7 +760,7 @@ Admin = function() {
         }
         return {
             load:load,
-            create:create,
+            save:save,
             revert:revert
         };
     }();
