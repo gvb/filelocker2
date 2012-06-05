@@ -99,7 +99,8 @@ def import_db(importFile, dburi):
             f = File(id=filenode.getAttribute("id"), name=filenode.getAttribute("name"),\
                     type=filenode.getAttribute("type"), size=long(filenode.getAttribute("size")),\
                     notes=filenode.getAttribute("notes"), date_uploaded=filenode.getAttribute("date_uploaded"),\
-                    owner_id=filenode.getAttribute("owner_id"), role_owner_id=filenode.getAttribute("role_owner_id"),\
+                    owner_id=filenode.getAttribute("owner_id") if filenode.getAttribute("owner_id") != "" else None,\
+                    role_owner_id=filenode.getAttribute("role_owner_id") if filenode.getAttribute("role_owner_id") != "" else None,\
                     date_expires=filenode.getAttribute("date_expires"), passed_avscan=filenode.getAttribute("passed_avscan"),\
                     encryption_key=filenode.getAttribute("encryption_key"), status=filenode.getAttribute("status"),\
                     notify_on_download=False if filenode.getAttribute("notify_on_download")=="0" else True,\
@@ -270,9 +271,9 @@ class LegacyDBConverter():
             for row in results:
                 currentFile = None
                 if (row['file_owner_id'] in self.role_user_ids):
-                    currentFile = File(name=row['file_name'], type=row['file_type'], notes=row['file_notes'], size=row['file_size'], date_uploaded=row['file_uploaded_datetime'], role_owner_id=row['file_owner_id'], date_expires=row['file_expiration_datetime'], passed_avscan=row['file_passed_avscan'], encryption_key=row['file_encryption_key'], id=row['file_id'], status=row['file_status'],  notify_on_download=row['file_notify_on_download'], upload_request_id=row['file_upload_ticket_id'])
+                    currentFile = File(name=row['file_name'], type=row['file_type'], notes=row['file_notes'], size=row['file_size'], date_uploaded=row['file_uploaded_datetime'], owner_id=None, role_owner_id=row['file_owner_id'], date_expires=row['file_expiration_datetime'], passed_avscan=row['file_passed_avscan'], encryption_key=row['file_encryption_key'], id=row['file_id'], status=row['file_status'],  notify_on_download=row['file_notify_on_download'], upload_request_id=row['file_upload_ticket_id'])
                 else:
-                    currentFile = File(name=row['file_name'], type=row['file_type'], notes=row['file_notes'], size=row['file_size'], date_uploaded=row['file_uploaded_datetime'], owner_id=row['file_owner_id'], date_expires=row['file_expiration_datetime'], passed_avscan=row['file_passed_avscan'], encryption_key=row['file_encryption_key'], id=row['file_id'], status=row['file_status'],  notify_on_download=row['file_notify_on_download'], upload_request_id=row['file_upload_ticket_id'])
+                    currentFile = File(name=row['file_name'], type=row['file_type'], notes=row['file_notes'], size=row['file_size'], date_uploaded=row['file_uploaded_datetime'], owner_id=row['file_owner_id'], role_owner_id=None, date_expires=row['file_expiration_datetime'], passed_avscan=row['file_passed_avscan'], encryption_key=row['file_encryption_key'], id=row['file_id'], status=row['file_status'],  notify_on_download=row['file_notify_on_download'], upload_request_id=row['file_upload_ticket_id'])
                 allFiles.append(currentFile)
         return allFiles
 

@@ -390,14 +390,14 @@ class AuditLog(Base):
 
     display_class = None
 
-    def __init__(self, initiatorId, action, message, affectedId=None, role_id=None, file_id=None, date=datetime.datetime.now(), id=None):
+    def __init__(self, initiatorId, action, message, affectedId=None, role_id=None, file_id=None, date=None, id=None):
         self.initiator_user_id = initiatorId
         self.action = action
         self.message = message
         self.affected_user_id = affectedId
         self.affected_role_id = role_id
         self.file_id = file_id
-        self.date = date
+        self.date = date if date is not None else datetime.datetime.now()
 
     def __str__(self):
         return "Message [%s] Date[%s] Initiator[%s] Action[%s] Affected[%s] RoleInvolved[%s] FileId[%s]" % (self.message, self.date.strftime("%m/%d/%Y"), self.initiator_user_id, self.action, self.affected_user_id, self.affected_role_id, self.file_id)
