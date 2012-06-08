@@ -593,9 +593,9 @@ class FileController(object):
         if content_type is None:
             # Set content-type based on filename extension
             ext = ""
-            i = path.rfind('.')
+            i = flFile.name.rfind('.')
             if i != -1:
-                ext = path[i:].lower()
+                ext = flFile.name[i:].lower()
             content_type = mimetypes.types_map.get(ext, "text/plain")
         response.headers['Content-Type'] = content_type
         if disposition is not None:

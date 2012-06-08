@@ -139,9 +139,9 @@ def check_in_file(tempFileName, flFile):
         if data.find(";") >= 0:
             (ftype, lo) = data.split(";")
             del(lo)
-            flFile.fileType = ftype.strip()
+            flFile.type = ftype.strip()
         else:
-            flFile.fileType = data.strip()
+            flFile.type = data.strip()
     except Exception, e:
         cherrypy.log.error("[%s] [checkInFile] [Unable to determine file type: %s]" % (user.id, str(e)))
 
