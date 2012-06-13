@@ -43,7 +43,7 @@ class AccountController:
         user, sMessages, fMessages = (cherrypy.session.get("user"), [], [])
         try:
             userId = strip_tags(userId)
-            if userId == user.id or user_has_permission(user, "admin"):
+            if userId == user.id or AccountService.user_has_permission(user, "admin"):
                 updateUser = AccountService.get_user(userId) #This kind of implicitly enforces permissions
                 updateUser.email = strip_tags(email) if strip_tags(email) is not None else updateUser.email
                 updateUser.quota = int(strip_tags(quota)) if strip_tags(quota) is not None else updateUser.quota
@@ -135,7 +135,7 @@ class AccountController:
             groupIds = split_list_sanitized(groupIds)
             for groupId in groupIds:
                 group = session.query(Group).filter(Group.id==groupId).one()
-                if group.owner_id == user.id or user_has_permission(user, "admin"):
+                if group.owner_id == user.id or AccountService.user_has_permission(user, "admin"):
                     session.delete(group)
                     sMessages.append("Group %s deleted successfully" % group.name)
                     session.add(AuditLog(user.id, Actions.DELETE_GROUP, "%s deleted group \"%s\"(%s)" % (user.id, group.name, group.id), None))
@@ -155,7 +155,7 @@ class AccountController:
         try:
             groupId = strip_tags(groupId)
             group = session.query(Group).filter(Group.id == groupId).one()
-            if group.owner_id == user.id or user_has_permission(user, "admin"):
+            if group.owner_id == user.id or AccountService.user_has_permission(user, "admin"):
                 group.name = strip_tags(groupName) if strip_tags(groupName) is not None else group.name
                 group.scope = strip_tags(groupScope.lower()) if groupScope is not None else group.scope
                 session.add(AuditLog(user.id, Actions.UPDATE_GROUP, "Group \"%s\"(%s) has been updated" % (group.name, group.id)))
@@ -179,7 +179,7 @@ class AccountController:
             userIds = split_list_sanitized(userIds)
             groupId = int(strip_tags(groupId))
             group = session.query(Group).filter(Group.id==groupId).one()
-            if group.owner_id == user.id or user_has_permission(user, "admin"):
+            if group.owner_id == user.id or AccountService.user_has_permission(user, "admin"):
                 for userId in userIds:
                     user = AccountService.get_user(userId)
                     group.members.remove(user)
@@ -206,7 +206,7 @@ class AccountController:
             userId = strip_tags(userId)
             groupId = int(strip_tags(groupId))
             group = session.query(Group).filter(Group.id == groupId).one()
-            if group.owner_id == user.id or user_has_permission(user, "admin"):
+            if group.owner_id == user.id or AccountService.user_has_permission(user, "admin"):
                 try:
                     user = AccountService.get_user(userId)
                     group.members.append(user)
@@ -248,7 +248,7 @@ class AccountController:
         searchWidget = self.get_search_widget("manage_groups")
         groupId = strip_tags(groupId)
         group = session.query(Group).filter(Group.id == groupId).one()
-        if group.owner_id == user.id or user_has_permission(user, "admin"):
+        if group.owner_id == user.id or AccountService.user_has_permission(user, "admin"):
             tpl = Template(file=get_template_file('view_group.tmpl'), searchList=[locals(),globals()])
             return str(tpl)
         else:
