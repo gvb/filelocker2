@@ -186,7 +186,7 @@ class File(Base):
     status = Column(String(255))
     notify_on_download = Column(Boolean, nullable=False)
     md5 = Column(String(64), nullable=True)
-    upload_request_id = Column(String(64), ForeignKey("upload_requests.id"))
+    upload_request_id = Column(String(64))
     document_type = None
 
     user_shares = relation("UserShare", backref="files", cascade="all, delete-orphan")

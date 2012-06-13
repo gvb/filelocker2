@@ -44,6 +44,11 @@ class ShareController:
                         fMessages.append("You do not have permission to share file with ID: %s" % str(flFile.id))
                 if notify:
                     cherrypy.session.release_lock()
+                    if cc:
+                        if (user is not None and user != ""):
+                            recipients.append(user)
+                        else:
+                            fMessages.append("You elected to receive a carbon copy of the share notification, however your account does not have an email address set.")
                     for recipient in recipients:
                         try:
                             Mail.notify(get_template_file('share_notification.tmpl'),{'sender':user.email if role is None else role.email,'recipient':recipient.email, 'ownerId':user.id if role is None else role.id, 'ownerName':user.display_name if role is None else role.name, 'sharedFiles':sharedFiles, 'filelockerURL': config['root_url'], 'org_url': orgConfig['org_url'], 'org_name': orgConfig['org_name']})
