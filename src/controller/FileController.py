@@ -461,7 +461,7 @@ class FileController(object):
     @cherrypy.expose
     def download(self, fileId, **kwargs):
         serveFile, publicShareId, requestedFile = False, None, None
-        if cherrypy.session.has_key("public_share_id") and cherrypy.session.has_key("user")==False:
+        if cherrypy.session.has_key("public_share_id"):
             publicShareId = cherrypy.session.get("public_share_id")
             try:
                 publicShare = session.query(PublicShare).filter(PublicShare.id == publicShareId).one()
@@ -473,7 +473,6 @@ class FileController(object):
             except sqlalchemy.orm.exc.NoResultFound, nrf:
                 raise cherrypy.HTTPError(404, "Could not find share or file")
         else:
-            #cherrypy.tools.requires_login()
             if cherrypy.session.has_key("user")==False:
                 raise cherrypy.HTTPRedirect(cherrypy.request.app.config['filelocker']['root_url'])
             else:
