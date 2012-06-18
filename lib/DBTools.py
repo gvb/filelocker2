@@ -241,7 +241,7 @@ class LegacyDBConverter():
         files = self.GetAllFiles()
         groups = self.GetAllGroups ()
         permissions = self.GetAllPermissions()
-        userShares = self.GetAllUserShares()
+        userShares = self.GetAllUserShares(roles)
         groupShares = self.GetAllGroupShares()
         hiddenShares = self.GetAllHiddenShares()
         attributes = self.GetAllAttributes()
@@ -320,12 +320,13 @@ class LegacyDBConverter():
         return permissions
 
 #Private Shares
-    def GetAllUserShares(self):
+    def GetAllUserShares(self, rolesList=[]):
         sql = "SELECT * FROM private_share"
         privateShareList = []
         results = self.execute(sql, None)
         for prShR in results:
-            privateShareList.append(UserShare(file_id=prShR['private_share_file_id'], user_id=prShR['private_share_target_id']))
+            if prShR['private_share_target_id'] not in rolesList: #Roles no longer have the ability to be shared with
+                privateShareList.append(UserShare(file_id=prShR['private_share_file_id'], user_id=prShR['private_share_target_id']))
         return privateShareList
 
 #Private Group Shares
