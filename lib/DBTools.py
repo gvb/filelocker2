@@ -287,7 +287,6 @@ class LegacyDBConverter():
 
 #Groups
     def GetAllGroups (self):
-		#TODO: Get groups owned by roles.
         sql = "SELECT * FROM groups"
         sql_args = []
         results = self.execute(sql,sql_args)
@@ -323,7 +322,7 @@ class LegacyDBConverter():
     def GetAllUserShares(self, rolesList=[]):
         roles = []
         for role in rolesList:
-            roles.append(roles.id)
+            roles.append(role.id)
         sql = "SELECT * FROM private_share"
         privateShareList = []
         results = self.execute(sql, None)
@@ -485,7 +484,6 @@ class LegacyDBConverter():
         return files
 
     def GetAuditLogs(self):
-		#TODO: Get Role logs and tag them
         logs = []
         sql = "SELECT * FROM audit_log"
         results = self.execute(sql, None)
