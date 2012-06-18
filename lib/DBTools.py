@@ -80,7 +80,6 @@ def import_db(importFile, dburi):
 
 
     #Roles
-    #TODO: Add members
     for node in dom.getElementsByTagName("roles"):
         for rolenode in node.getElementsByTagName("role"):
             r = Role(id=rolenode.getAttribute("id"), name=rolenode.getAttribute("name"),\
@@ -93,7 +92,8 @@ def import_db(importFile, dburi):
                 m = session.query(User).getElementsByTagName("id").one()
                 r.members.append(m)
             session.commit()
-            
+    
+    #Files
     for node in dom.getElementsByTagName("files"):
         for filenode in node.getElementsByTagName("file"):
             f = File(id=filenode.getAttribute("id"), name=filenode.getAttribute("name"),\
@@ -104,10 +104,11 @@ def import_db(importFile, dburi):
                     date_expires=filenode.getAttribute("date_expires"), passed_avscan=filenode.getAttribute("passed_avscan"),\
                     encryption_key=filenode.getAttribute("encryption_key"), status=filenode.getAttribute("status"),\
                     notify_on_download=False if filenode.getAttribute("notify_on_download")=="0" else True,\
-                    md5=filenode.getAttribute("md5"), upload_request_id=filenode.getAttribute("upload_request_id"))
-            session.add(f)
+                    md5=filenode.getAttribute("md5"), upload_request_id=filenode.getAttribute("upload_request_id") if filenode.getAttribute("upload_request_id") != "" else None )
+            session.add(f) 
         session.commit()
     
+    #Upload Requests
     for node in dom.getElementsByTagName("upload_requests"):
         for requestnode in node.getElementsByTagName("upload_request"):
             u = UploadRequest(id=requestnode.getAttribute("id"), owner_id=requestnode.getAttribute("owner_id"), \
@@ -117,6 +118,7 @@ def import_db(importFile, dburi):
             session.add(u)
         session.commit()
         
+    #Messages
     for node in dom.getElementsByTagName("messages"):
         for messagenode in node.getElementsByTagName("message"):
             m = Message(id=messagenode.getAttribute("id"), subject=messagenode.getAttribute("subject"),\
@@ -125,7 +127,7 @@ def import_db(importFile, dburi):
             session.add(m)
         session.commit()
         
-    #TODO: Might have to change schema to make these children of message
+    #Message Shares (Sent Messages)
     for node in dom.getElementsByTagName("message_shares"):
         for msnode in node.getElementsByTagName("message_share"):
             try:
@@ -136,6 +138,7 @@ def import_db(importFile, dburi):
                 print "Problem adding message share: %s" % str(e)
         session.commit()
     
+    #User Shares
     for node in dom.getElementsByTagName("user_shares"):
         for unode in node.getElementsByTagName("user_share"):
             flFile = session.query(File).filter(File.id == unode.getAttribute("file_id")).one()
@@ -144,6 +147,7 @@ def import_db(importFile, dburi):
             session.add(us)
         session.commit()
     
+    #Group Shares
     for node in dom.getElementsByTagName("group_shares"):
         for gnode in node.getElementsByTagName("group_shares"):
             flFile = session.query(File).filter(File.id == gnode.getAttribute("file_id")).one()
@@ -152,6 +156,7 @@ def import_db(importFile, dburi):
             session.add(gs)
         session.commit()
     
+    #Public Shares
     for node in dom.getElementsByTagName("public_shares"):
         for pnode in node.getElementsByTagName("public_share"):
             ps = PublicShare(id=pnode.getAttribute("id"), owner_id=pnode.getAttribute("owner_id"), date_expires=pnode.getAttribute("date_expires"), 
@@ -162,6 +167,7 @@ def import_db(importFile, dburi):
                 ps.files.append(flFile)
         session.commit()
     
+    #Dynamic Attribute Shares
     for node in dom.getElementsByTagName("attribute_shares"):
         for anode in node.getElementsByTagName("attribute_share"):
             flFile = session.query(File).filter(File.id == anode.getAttribute("file_id")).one()
@@ -170,6 +176,7 @@ def import_db(importFile, dburi):
             session.add(ashare)
         session.commit()
 
+    #Config Parameters
     for node in dom.getElementsByTagName("config_parameters"):
         for cnode in node.getElementsByTagName("config_parameter"):
             try:
@@ -184,7 +191,8 @@ def import_db(importFile, dburi):
 			d = DeletedFile(file_name=dnode.getAttribute("file_name"))
 			session.add(d)
 		session.commit()
-	
+		
+    #Audit Logs
     for node in dom.getElementsByTagName("audit_logs"):
         for anode in node.getElementsByTagName("audit_log"):
             log = AuditLog(anode.getAttribute("initiator_user_id"),\
@@ -381,7 +389,7 @@ class LegacyDBConverter():
         sql_args = []
         rolesPermResults = self.execute(pSql, sql_args)
         for row in rolesPermResults:
-            if rolePermission.has_key(row["user_permission_user_id"])==False:
+            if rolePermissions.has_key(row["user_permission_user_id"])==False:
                 rolePermissions[row["user_permission_user_id"]] = []
             rolePermissions[row["user_permission_user_id"]].append(row['user_permission_permission_id'][6:])
 
