@@ -186,7 +186,7 @@ class File(Base):
     status = Column(String(255))
     notify_on_download = Column(Boolean, nullable=False)
     md5 = Column(String(64), nullable=True)
-    upload_request_id = Column(String(64), ForeignKey("upload_requests.id"))
+    upload_request_id = Column(String(64))
     document_type = None
 
     user_shares = relation("UserShare", backref="files", cascade="all, delete-orphan")
@@ -380,12 +380,12 @@ class ClusterNode(Base):
 class AuditLog(Base):
     __tablename__ = "audit_logs"
     id = Column(Integer, primary_key=True)
-    initiator_user_id = Column(String(30), ForeignKey("users.id"), nullable=False)
+    initiator_user_id = Column(String(30),  nullable=False)
     action = Column(String(255), nullable=False)
     affected_user_id = Column(String(30), ForeignKey("users.id"))
     message = Column(Text, nullable=False)
     date = Column(DateTime, nullable=False)
-    affected_role_id = Column(String(30), ForeignKey("roles.id"), nullable=True)
+    affected_role_id = Column(String(30),  nullable=True)
     file_id = Column(Integer, nullable=True)
 
     display_class = None

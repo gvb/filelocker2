@@ -25,7 +25,7 @@ def file_download_complete(user, fileId, publicShareId=None):
         if cherrypy.session.has_key("current_role"):
             role = cherrypy.session.get("current_role")
         flFile = session.query(File).filter(File.id==fileId).one()
-        if ((role is not None and flFile.role_owner_id != role.id) or user == None or user.id != flFile.owner_id) and flFile.notify_on_download:
+        if ((role is not None and flFile.role_owner_id != role.id) or user == None or user.id != flFile.owner_id) and flFile.notify_on_download and publicShareId is None:
             try:
                 owner = None
                 if role is not None: owner = session.query(User).filter(User.id==flFile.role_owner_id).one()
@@ -139,9 +139,9 @@ def check_in_file(tempFileName, flFile):
         if data.find(";") >= 0:
             (ftype, lo) = data.split(";")
             del(lo)
-            flFile.fileType = ftype.strip()
+            flFile.type = ftype.strip()
         else:
-            flFile.fileType = data.strip()
+            flFile.type = data.strip()
     except Exception, e:
         cherrypy.log.error("[%s] [checkInFile] [Unable to determine file type: %s]" % (user.id, str(e)))
 
