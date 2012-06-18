@@ -321,11 +321,14 @@ class LegacyDBConverter():
 
 #Private Shares
     def GetAllUserShares(self, rolesList=[]):
+        roles = []
+        for role in rolesList:
+            roles.append(roles.id)
         sql = "SELECT * FROM private_share"
         privateShareList = []
         results = self.execute(sql, None)
         for prShR in results:
-            if prShR['private_share_target_id'] not in rolesList: #Roles no longer have the ability to be shared with
+            if prShR['private_share_target_id'] not in roles: #Roles no longer have the ability to be shared with
                 privateShareList.append(UserShare(file_id=prShR['private_share_file_id'], user_id=prShR['private_share_target_id']))
         return privateShareList
 
