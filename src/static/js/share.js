@@ -266,9 +266,14 @@ Share = function() {
         }
         function prompt(fileIds)
         {
-            fileIds = fileIds || $("#filesTable tr.rowSelected input.fileSelectBox").val();
-
-            Filelocker.request("/share/get_public_shares_by_file_ids", "retrieving all public shares for file(s)", { fileIds:fileIds }, false, function(returnData) {
+            if (typeof fileIds === "undefined")
+            {
+                fileIds = "";
+                $("#filesTable .fileSelectBox:checked").each(function() {
+                    fileIds+=$(this).val()+",";
+                });
+            }
+            Filelocker.request("/share/get_public_shares_by_file_ids?format=json", "retrieving all public shares for file(s)", { fileIds:fileIds }, false, function(returnData) {
                 $("tbody#publicSharesTable").empty();
                 if (returnData.data.length > 0) {
                 $.each(returnData.data, function(index, share){
