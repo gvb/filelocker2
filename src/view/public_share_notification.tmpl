@@ -15,6 +15,11 @@ $varDict['ownerName'] ($varDict['ownerId']) has shared the following files with 
 $flFile.name
 #end for
 
+#if $varDict['personalMessage'] is not None and $varDict['personalMessage'] != "":
+$varDict['ownerName'] also attached this personal message: 
+"$varDict['personalMessage']"
+#end if
+
 #if $linksObscured
 To view and download this file, please copy the following link and paste it into your browser's URL bar, removing any spaces:
 #else
