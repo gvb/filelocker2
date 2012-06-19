@@ -186,12 +186,12 @@ def import_db(importFile, dburi):
                 print "Found old config parameter, skipping"
         session.commit()
     
-	for node in dom.getElementsByTagName("deleted_files"):
-		for dnode in node.getElementsByTagName("deleted_file"):
-			d = DeletedFile(file_name=dnode.getAttribute("file_name"))
-			session.add(d)
-		session.commit()
-		
+    for node in dom.getElementsByTagName("deleted_files"):
+            for dnode in node.getElementsByTagName("deleted_file"):
+                    d = DeletedFile(file_name=dnode.getAttribute("file_name"))
+                    session.add(d)
+            session.commit()
+                
     #Audit Logs
     for node in dom.getElementsByTagName("audit_logs"):
         for anode in node.getElementsByTagName("audit_log"):
@@ -205,7 +205,7 @@ def import_db(importFile, dburi):
                 log.action = "Create Group Share"
             session.add(log)
         session.commit()
-	
+        
     
     
 
