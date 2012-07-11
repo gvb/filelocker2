@@ -41,13 +41,6 @@ def import_db(importFile, dburi):
     Session = sessionmaker(bind=engine)
     session = Session()
 
-    #Permissions
-#    for node in dom.getElementsByTagName("permissions"):
-#        for permnode in node.getElementsByTagName("permission"):
-#            session.add(Permission(id=permnode.getAttribute("id"), name=permnode.getAttribute("name")))
-#        session.commit()
-
-
     #Users
     for node in dom.getElementsByTagName("users"):
         for usernode in node.getElementsByTagName("user"):
@@ -162,7 +155,7 @@ def import_db(importFile, dburi):
             ps = PublicShare(id=pnode.getAttribute("id"), owner_id=pnode.getAttribute("owner_id"), date_expires=pnode.getAttribute("date_expires"), 
             reuse=pnode.getAttribute("reuse"), password=pnode.getAttribute("password"))
             session.add(ps)
-            for psfnode in node.getElementsByTagName("public_share_file"):
+            for psfnode in pnode.getElementsByTagName("file"):
                 flFile = session.query(File).filter(File.id == int(psfnode.getAttribute("id"))).one()
                 ps.files.append(flFile)
         session.commit()

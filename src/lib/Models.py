@@ -382,10 +382,10 @@ class AuditLog(Base):
     id = Column(Integer, primary_key=True)
     initiator_user_id = Column(String(30),  nullable=False)
     action = Column(String(255), nullable=False)
-    affected_user_id = Column(String(30), ForeignKey("users.id"))
+    affected_user_id = Column(String(30))
     message = Column(Text, nullable=False)
     date = Column(DateTime, nullable=False)
-    affected_role_id = Column(String(30),  nullable=True)
+    affected_role_id = Column(String(30), nullable=True)
     file_id = Column(Integer, nullable=True)
 
     display_class = None
