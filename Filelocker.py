@@ -88,40 +88,43 @@ def error(status, message, traceback, version):
     return tpl
 
 def cluster_elections(config):
-    currentNodeId = int(config['filelocker']['cluster_member_id'])
-    currentNode = session.query(ClusterNode).filter(ClusterNode.member_id == currentNodeId).scalar()
-    if currentNode is None: #This node isn't in the DB yet, check in
-        import socket
-        currentNode = ClusterNode(member_id=currentNodeId, hostname=socket.gethostname(), is_master=False, last_seen_timestamp=datetime.datetime.now())
-        session.add(currentNode)
-        session.commit()
-    else: #In the DB, update last seen to avoid purging
-        currentNode.last_seen_timestamp = datetime.datetime.now()
-        session.commit()
-    currentMaster = session.query(ClusterNode).filter(ClusterNode.is_master==True).scalar()
-
-    #If this is default master node and another node has assumed master, reset and force election
-    if currentNodeId==0 and currentNode.is_master == False and currentMaster is not None:
-        for node in session.query(ClusterNode).all():
-            node.is_master = False
-        session.commit()
-    #This isn't the default master, there is one, but it's expired
-    elif currentMaster is not None and currentMaster.last_seen_timestamp < datetime.datetime.now()-datetime.timedelta(minutes=5): #master is expired
-        session.delete(currentMaster)
-        session.commit()
-    #No master, hold election
-    elif currentMaster is None: #No master nodes found, become master if eligible
-        purge_expired_nodes()
-        highestPriority = currentNode.member_id
-        for node in session.query(ClusterNode).all():
-            if node.member_id < highestPriority:
-                highestPriority = node.member_id
-                break
-        if highestPriority == currentNode.member_id: #Current node has lowest node id, thus highest priority, assume master
-            currentNode.is_master = True
+    try:
+        currentNodeId = int(config['filelocker']['cluster_member_id'])
+        currentNode = session.query(ClusterNode).filter(ClusterNode.member_id == currentNodeId).scalar()
+        if currentNode is None: #This node isn't in the DB yet, check in
+            import socket
+            currentNode = ClusterNode(member_id=currentNodeId, hostname=socket.gethostname(), is_master=False, last_seen_timestamp=datetime.datetime.now())
+            session.add(currentNode)
             session.commit()
-    
+        else: #In the DB, update last seen to avoid purging
+            currentNode.last_seen_timestamp = datetime.datetime.now()
+            session.commit()
+        currentMaster = session.query(ClusterNode).filter(ClusterNode.is_master==True).scalar()
 
+        #If this is default master node and another node has assumed master, reset and force election
+        if currentNodeId==0 and currentNode.is_master == False and currentMaster is not None:
+            for node in session.query(ClusterNode).all():
+                node.is_master = False
+            session.commit()
+        #This isn't the default master, there is one, but it's expired
+        elif currentMaster is not None and currentMaster.last_seen_timestamp < datetime.datetime.now()-datetime.timedelta(minutes=5): #master is expired
+            session.delete(currentMaster)
+            session.commit()
+        #No master, hold election
+        elif currentMaster is None: #No master nodes found, become master if eligible
+            purge_expired_nodes()
+            highestPriority = currentNode.member_id
+            for node in session.query(ClusterNode).all():
+                if node.member_id < highestPriority:
+                    highestPriority = node.member_id
+                    break
+            if highestPriority == currentNode.member_id: #Current node has lowest node id, thus highest priority, assume master
+                currentNode.is_master = True
+                session.commit()
+    except sqlalchemy.orm.exc.ConcurrentModificationError, cme:
+        cherrypy.log.error("[system] [cluster_elections] [Concurrency error during elections. This can occur if locks on the DB inhibit normal cluster elections. If this error occurs infrequently, it can usually be disregarded. Full Error: %s]" % str(cme))
+        session.rollback()
+        
 def purge_expired_nodes():
     #Clean node table, check for master, if none run election
     expirationTime = datetime.datetime.now()-datetime.timedelta(minutes=5)
