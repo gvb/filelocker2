@@ -153,7 +153,7 @@ def import_db(importFile, dburi):
     for node in dom.getElementsByTagName("public_shares"):
         for pnode in node.getElementsByTagName("public_share"):
             ps = PublicShare(id=pnode.getAttribute("id"), owner_id=pnode.getAttribute("owner_id"), date_expires=pnode.getAttribute("date_expires"), 
-            reuse=pnode.getAttribute("reuse"), password=pnode.getAttribute("password"))
+            reuse=pnode.getAttribute("reuse"), password=pnode.getAttribute("password") if pnode.getAttribute("password") != "" else None )
             session.add(ps)
             for psfnode in pnode.getElementsByTagName("file"):
                 flFile = session.query(File).filter(File.id == int(psfnode.getAttribute("id"))).one()
