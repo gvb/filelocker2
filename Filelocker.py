@@ -100,7 +100,6 @@ def cluster_elections(config):
             currentNode.last_seen_timestamp = datetime.datetime.now()
             session.commit()
         currentMaster = session.query(ClusterNode).filter(ClusterNode.is_master==True).scalar()
-
         #If this is default master node and another node has assumed master, reset and force election
         if currentNodeId==0 and currentNode.is_master == False and currentMaster is not None:
             for node in session.query(ClusterNode).all():
@@ -121,9 +120,15 @@ def cluster_elections(config):
             if highestPriority == currentNode.member_id: #Current node has lowest node id, thus highest priority, assume master
                 currentNode.is_master = True
                 session.commit()
+        return True
     except sqlalchemy.orm.exc.ConcurrentModificationError, cme:
-        cherrypy.log.error("[system] [cluster_elections] [Concurrency error during elections. This can occur if locks on the DB inhibit normal cluster elections. If this error occurs infrequently, it can usually be disregarded. Full Error: %s]" % str(cme))
+        cherrypy.log.warning("[system] [cluster_elections] [Concurrency error during elections. This can occur if locks on the DB inhibit normal cluster elections. If this error occurs infrequently, it can usually be disregarded. Full Error: %s]" % str(cme))
         session.rollback()
+        return False
+    except Exception, e:
+        cherrypy.log.warning("[system] [cluster_elections] [Concurrency error during elections. This can occur if locks on the DB inhibit normal cluster elections. If this error occurs infrequently, it can usually be disregarded. Full Error: %s]" % str(cme))
+        session.rollback()
+        return False
         
 def purge_expired_nodes():
     #Clean node table, check for master, if none run election
@@ -372,23 +377,27 @@ def start(configfile=None, daemonize=False, pidfile=None):
         maxSize = long(maxSizeParam.value)
         cherrypy.config.update({'server.max_request_body_size': maxSize*1024*1024})
     except Exception, e:
-        cherrypy.log.error("[admin] [maintenance] [Problem setting max file size: %s]" % str(e))
+        cherrypy.log.error("[system] [maintenance] [Problem setting max file size: %s]" % str(e))
 
     #Maintenance Loop
     try:
         while True:
-            cluster_elections(app.config)
+            if cluster_elections(app.config): #only run the  
+                try:                
+                    currentNode = session.query(ClusterNode).filter(ClusterNode.member_id==int(app.config['filelocker']["cluster_member_id"])).one()
+                    if currentNode.is_master: # This will allow you set up other front ends that don't run maintenance on the DB or FS
+                        purge_expired_nodes()
+                        routine_maintenance(app.config)
+                        FileService.process_deletion_queue(app.config) #process deletion queue every 12 minutes
+                except Exception, e:
+                    cherrypy.log.error("[system] [maintenance] [There was a problem loading data for node[%s]: %s\nIf this message appears repeatedly there could be a problem with the election process. Verify that each cluster node has a unique ID in the config.]" % (app.config['filelocker']["cluster_member_id"], str(e)))
+            
             try:
-                currentNode = session.query(ClusterNode).filter(ClusterNode.member_id==int(app.config['filelocker']["cluster_member_id"])).one()
-                if currentNode.is_master: # This will allow you set up other front ends that don't run maintenance on the DB or FS
-                    purge_expired_nodes()
-                    routine_maintenance(app.config)
-                    FileService.process_deletion_queue(app.config) #process deletion queue every 12 minutes
                 clean_temp_files(app.config)
             except Exception, e:
-                cherrypy.log.error("There was a problem loading data for node[%s]: %s\nIf this message appears repeatedly there could be a problem with the election process. Verify that each cluster node has a unique ID in the config." % (app.config['filelocker']["cluster_member_id"], str(e)))
-
-            time.sleep(15) #Sleep 15 seconds after everything is done
+                cherrypy.log.error("[system] [maintenance] [There was an error while cleaning temp files: %s]" % str(e))
+            
+            time.sleep(60) #Sleep 15 seconds after everything is done
     except KeyboardInterrupt, ki:
         print "Keyboard Interrupt"
         cherrypy.log.error("Keyboard interrupt")
