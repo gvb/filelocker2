@@ -126,7 +126,7 @@ def cluster_elections(config):
         session.rollback()
         return False
     except Exception, e:
-        cherrypy.log.error("[system] [cluster_elections] [Concurrency error during elections. This can occur if locks on the DB inhibit normal cluster elections. If this error occurs infrequently, it can usually be disregarded. Full Error: %s]" % str(cme))
+        cherrypy.log.error("[system] [cluster_elections] [Concurrency error during elections. This can occur if locks on the DB inhibit normal cluster elections. If this error occurs infrequently, it can usually be disregarded. Full Error: %s]" % str(e))
         session.rollback()
         return False
         
