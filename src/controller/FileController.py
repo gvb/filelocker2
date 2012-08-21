@@ -24,6 +24,7 @@ from lib import Mail
 from lib import Encryption
 from lib import AccountService
 from lib import FileService
+from lib.FileFieldStorage import get_field_storage
 __author__="wbdavis"
 __date__ ="$Sep 25, 2011 9:28:54 PM$"
 
@@ -347,11 +348,12 @@ class FileController(object):
                 raise cherrypy.HTTPError("412 Precondition Failed", "The file transfer completed, but the file appears to be missing data. If you did not intentionally cancel the file, please try re-uploading.")
         else:
             cherrypy.request.headers['uploadindex'] = uploadIndex
-            formFields = myFieldStorage(fp=cherrypy.request.rfile,
+            fieldStorage = get_field_storage()
+            upFile = fieldStorage(fp=cherrypy.request.rfile,
                                         headers=lcHDRS,
                                         environ={'REQUEST_METHOD':'POST'},
                                         keep_blank_values=True)
-            upFile = formFields['fileName']
+            #upFile = formFields.file
             if fileName is None:
                 fileName = upFile.filename
             if str(type(upFile.file)) == '<type \'cStringIO.StringO\'>' or isinstance(upFile.file, StringIO.StringIO):
@@ -681,3 +683,5 @@ class FileController(object):
         except KeyError:
             sMessages = ["No active uploads"]
         yield fl_response(sMessages, fMessages, format, data=uploadStats)
+        
+    
