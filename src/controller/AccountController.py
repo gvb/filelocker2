@@ -7,7 +7,7 @@ from lib.SQLAlchemyTool import session
 from Cheetah.Template import Template
 from lib.Formatters import *
 from lib.Models import *
-from lib import AccountService
+from lib import AccountService, FileService
 import directory
 import plugins
 
@@ -75,6 +75,10 @@ class AccountController:
                 try:
                     delUser = session.query(User).filter(User.id == userId).one()
                     session.delete(delUser)
+                    for flFile in session.query(File).filter(File.owner_id == delUser.id):
+                        FileService.queue_for_deletion(flFile.id)
+                        session.delete(flFile)
+                        session.add(AuditLog(user.id, Actions.DELETE_FILE, "File %s (%s) owned by user %s has been deleted as a result of the owner being deleted. " % (flFile.name, flFile.id, delUser.id), "admin"))
                     session.add(AuditLog(user.id, Actions.DELETE_USER, "User with ID: \"%s\" deleted from system" % delUser.id, "admin"))
                     sMessages.append("Successfully deleted user %s" % userId)
                 except sqlalchemy.orm.exc.NoResultFound:
@@ -339,6 +343,10 @@ class AccountController:
                 try:
                     role = session.query(Role).filter(Role.id == roleId).one()
                     session.delete(role)
+                    for flFile in session.query(File).filter(File.role_owner_id == role.id):
+                        FileService.queue_for_deletion(flFile.id)
+                        session.delete(flFile)
+                        session.add(AuditLog(user.id, Actions.DELETE_FILE, "File %s (%s) owned by role %s has been deleted as a result of the role owner being deleted. " % (flFile.name, flFile.id, role.id), "admin"))
                     session.add(AuditLog(user.id, Actions.DELETE_ROLE, "%s deleted role \"%s\"(%s) from the system" % (user.id, role.name, role.id), None))
                     sMessages.append("Successfully deleted roles%s." % str(roleId))
                 except sqlalchemy.orm.exc.NoResultFound:
