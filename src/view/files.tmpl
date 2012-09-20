@@ -208,7 +208,7 @@
                                     <li><div class="itemTitle"><span class="clock">Uploaded:</span></div>$f.date_uploaded</li>
                                     #set $notesStripped = $re.sub(r'\[geo\]-?\d+\.\d+,-?\d+\.\d+\[/geo\]', '', $str($f.notes))
                                     #if $notesStripped != ""
-                                        <li><div class="itemTitleMedium"><span class="view"><a href="javascript:viewnotes('$notesStripped');" title="View the user-entered notes for this file">View File Notes</a></span></div></li>
+                                        <li><div class="itemTitleMedium"><span class="view"><a href="javascript:FLFile.viewNotes('$notesStripped');" title="View the user-entered notes for this file">View File Notes</a></span></div></li>
                                     #end if
                                     #set $fileGeoData = $re.search(r'.*\[geo\](-?\d+\.\d+),(-?\d+\.\d+)\[/geo\].*', $str($f.notes))
                                     #if $fileGeoData and $geoTagging
@@ -303,7 +303,7 @@
                                             <li><div class="itemTitle"><span class="clock">Uploaded:</span></div>$f.date_uploaded</li>
                                             #set $notesStripped = $re.sub(r'\[geo\]-?\d+\.\d+,-?\d+\.\d+\[/geo\]', '', $str($f.notes))
                                             #if $notesStripped != ""
-                                                <li><div class="itemTitleMedium"><span class="view"><a href="javascript:viewnotes('$notesStripped');" title="View the user-entered notes for this file">View File Notes</a></span></div></li>
+                                                <li><div class="itemTitleMedium"><span class="view"><a href="javascript:FLFile.viewNotes('$notesStripped');" title="View the user-entered notes for this file">View File Notes</a></span></div></li>
                                             #end if
                                             #set $fileGeoData = $re.search(r'.*\[geo\](-?\d+\.\d+),(-?\d+\.\d+)\[/geo\].*', $str($f.notes))
                                             #if $fileGeoData and $geoTagging
