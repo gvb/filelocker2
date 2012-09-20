@@ -96,9 +96,9 @@ class RootController:
         return str(tpl)
 
     @cherrypy.expose
-    def process_login(self, username, password, **kwargs):
+    def process_login(self, local, username, password, **kwargs):
         rootURL, local = cherrypy.request.app.config['filelocker']['root_url'], False
-        if kwargs.has_key("local") and kwargs['local']==str(True):
+        if kwargs.has_key("local") and local ==str(True):
             local = True
         username = strip_tags(username)
 
@@ -109,7 +109,7 @@ class RootController:
             if directory.authenticate(username, password):
                 currentUser = AccountService.get_user(username, True) #if they are authenticated and local, this MUST return a user object
                 if currentUser is not None:
-                    if currentUser.authorized == False:
+                    if not currentUser.authorized:
                         raise cherrypy.HTTPError(403, "You do not have permission to access this system")
                     session.add(AuditLog(cherrypy.session.get("user").id, "Login", "User %s logged in successfully from IP %s" % (currentUser.id, cherrypy.request.remote.ip)))
                     session.commit()
@@ -140,7 +140,7 @@ class RootController:
     @cherrypy.tools.requires_login()
     def index(self, **kwargs):
         config = cherrypy.request.app.config['filelocker']
-	orgConfig = get_config_dict_from_objects(session.query(ConfigParameter).filter(ConfigParameter.name.like('org_%')).all())
+        orgConfig = get_config_dict_from_objects(session.query(ConfigParameter).filter(ConfigParameter.name.like('org_%')).all())
         user, originalUser = (cherrypy.session.get("user"),  cherrypy.session.get("original_user"))
         maxDays = int(session.query(ConfigParameter).filter(ConfigParameter.name=='max_file_life_days').one().value)
         roles = session.query(User).filter(User.id == user.id).one().roles
@@ -189,13 +189,13 @@ class RootController:
                 footerText = str(Template(file=get_template_file('footer_text.tmpl'), searchList=[locals(),globals()]))
                 return str(Template(file=get_template_file('tos.tmpl'), searchList=[locals(),globals()]))
         else:
-            raise cherrypy.HTTPRedirect(rootURL)
+            raise cherrypy.HTTPRedirect(config['root_url'])
 
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def admin_console(self, **kwargs):
         user, config = cherrypy.session.get("user"), cherrypy.request.app.config['filelocker']
-	orgConfig = get_config_dict_from_objects(session.query(ConfigParameter).filter(ConfigParameter.name.like('org_%')).all())
+        orgConfig = get_config_dict_from_objects(session.query(ConfigParameter).filter(ConfigParameter.name.like('org_%')).all())
         templateFiles = os.listdir(os.path.join(config['root_path'], "view"))
         configParameters = session.query(ConfigParameter).order_by(ConfigParameter.name).all()
         flUsers = session.query(User).slice(0,50)
@@ -342,7 +342,7 @@ class RootController:
                 if (uploadRequest.type == "single" and uploadRequest.password == None):
                     raise cherrypy.HTTPRedirect(config['root_url']+'/upload_request_uploader?requestId=%s' % requestId)
             except sqlalchemy.orm.exc.NoResultFound, nrf:
-                message.append("Invalid upload request ID")
+                messages.append("Invalid upload request ID")
         currentYear = datetime.date.today().year
         geoTagging = get_config_dict_from_objects([session.query(ConfigParameter).filter(ConfigParameter.name=='geotagging').one()])['geotagging']
         banner = session.query(ConfigParameter).filter(ConfigParameter.name=='banner').one().value

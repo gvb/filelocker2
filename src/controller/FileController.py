@@ -24,7 +24,7 @@ from lib import Mail
 from lib import Encryption
 from lib import AccountService
 from lib import FileService
-from lib.FileFieldStorage import get_field_storage
+from lib.FileFieldStorage import FileFieldStorage, ProgressFile
 __author__="wbdavis"
 __date__ ="$Sep 25, 2011 9:28:54 PM$"
 
@@ -67,7 +67,7 @@ class FileController(object):
                 endDateFormatted = today
 
 
-            if (role is not None and flFile.role_owner_id == role.id) or flFile.owner_id == user.id or AccuontController.user_has_permission(user, "admin"):
+            if (role is not None and flFile.role_owner_id == role.id) or flFile.owner_id == user.id or AccountService.user_has_permission(user, "admin"):
                 if endDateFormatted is not None:
                     endDateFormatted = endDateFormatted + datetime.timedelta(days=1)
 
@@ -179,7 +179,7 @@ class FileController(object):
                 fMessages.append("You cannot take your own file")
             elif flFile.shared_with(user) or AccountService.user_has_permission(user, "admin"):
                 if (FileService.get_user_quota_usage_bytes(user) + flFile.size) >= (user.quota*1024*1024):
-                    logging.warning("[%s] [take_file] [User has insufficient quota space remaining to check in file: %s]" % (user.id, flFile.name))
+                    cherrypy.log.error("[%s] [take_file] [User has insufficient quota space remaining to check in file: %s]" % (user.id, flFile.name))
                     raise Exception("You may not copy this file because doing so would exceed your quota")
                 takenFile = flFile.get_copy()
                 takenFile.owner_id = user.id
@@ -193,7 +193,7 @@ class FileController(object):
                 fMessages.append("You do not have permission to take this file")
         except sqlalchemy.orm.exc.NoResultFound, nrf:
             fMessages.append("Could not find file with ID: %s" % str(fileId))
-        except Except, e:
+        except Exception, e:
             session.rollback()
             fMessages.append(str(e))
         return fl_response(sMessages, fMessages, format)
@@ -210,7 +210,7 @@ class FileController(object):
                 if flFile.role_owner_id is not None and role is not None and flFile.role_owner_id == role.id:
                     FileService.queue_for_deletion(flFile.id)
                     session.delete(flFile)
-                    session.add(AuditLog(user.id, Actions.DELETE_FILE, "File %s (%s) owned by role %s has been deleted by user %s. " % (flFile.name, flFile.id, role.name, user.id, role.id)))
+                    session.add(AuditLog(user.id, Actions.DELETE_FILE, "File %s (%s) owned by role %s has been deleted by user %s. " % (flFile.name, flFile.id, role.name, user.id)))
                     session.commit()
                     sMessages.append("File %s deleted successfully" % flFile.name)
                 elif flFile.owner_id == user.id or AccountService.user_has_permission(user, "admin"):
@@ -257,7 +257,7 @@ class FileController(object):
     @cherrypy.tools.before_upload()
     def upload(self, format="json", **kwargs):
         cherrypy.response.timeout = 86400
-        user, role, uploadRequest, uploadKey, config, sMessages, fMessages = None, None, None, None, cherrypy.request.app.config['filelocker'], [], []
+        user, role, uploadRequest, uploadKey, config, sMessages, fMessages, uploadIndex = None, None, None, None, cherrypy.request.app.config['filelocker'], [], [], None
 
         #Check Permission to upload since we can't wrap in requires login for public uploads
         if cherrypy.session.has_key("uploadRequest") and cherrypy.session.get("uploadRequest") is not None and cherrypy.session.get("uploadRequest").expired == False:
@@ -265,7 +265,7 @@ class FileController(object):
             user = AccountService.get_user(uploadRequest.owner_id)
             uploadKey = "%s:%s" % (user.id, uploadRequest.id)
         else:
-            cherrypy.tools.requires_login()
+            #cherrypy.tools.requires_login()
             user, sMessages, fMessages = cherrypy.session.get("user"), cherrypy.session.get("sMessages"), cherrypy.session.get("fMessages")
             uploadKey = user.id
             if cherrypy.session.get("current_role") is not None:
@@ -279,22 +279,22 @@ class FileController(object):
             fileSizeBytes = int(lcHDRS['content-length'])
         except KeyError, ke:
             fMessages.append("Request must have a valid content length")
-            raise HTTPError(411, "Request must have a valid content length")
+            raise cherrypy.HTTPError(411, "Request must have a valid content length")
         fileSizeMB = ((fileSizeBytes/1024)/1024)
         vaultSpaceFreeMB, vaultCapacityMB = FileService.get_vault_usage()
         
         if (fileSizeMB*2) >= vaultSpaceFreeMB:
-            logging.critical("[system] [upload] [File vault is running out of space and cannot fit this file. Remaining Space is %s MB, fileSizeBytes is %s]" % (vaultSpaceFreeMB, fileSizeBytes))
+            cherrypy.log.error("[system] [upload] [File vault is running out of space and cannot fit this file. Remaining Space is %s MB, fileSizeBytes is %s]" % (vaultSpaceFreeMB, fileSizeBytes))
             fMessages.append("The server doesn't have enough space left on its drive to fit this file. The administrator has been notified.")
-            raise HTTPError(413, "The server doesn't have enough space left on its drive to fit this file. The administrator has been notified.")
+            raise cherrypy.HTTPError(413, "The server doesn't have enough space left on its drive to fit this file. The administrator has been notified.")
         quotaSpaceRemainingBytes = 0
         if role is not None:
             quotaSpaceRemainingBytes = (role.quota*1024*1024) - FileService.get_role_quota_usage_bytes(role.id)
         else:
             quotaSpaceRemainingBytes = (user.quota*1024*1024) - FileService.get_user_quota_usage_bytes(user.id)
         if fileSizeBytes > quotaSpaceRemainingBytes:
-            fMessages.append("File size is larger than your quota will accomodate")
-            raise HTTPError(413, "File size is larger than your quota will accomodate")
+            fMessages.append("File size is larger than your quota will accommodate")
+            raise cherrypy.HTTPError(413, "File size is larger than your quota will accommodate")
 
         #The server won't respond to additional user requests (polling) until we release the lock
         cherrypy.session.release_lock()
@@ -336,7 +336,7 @@ class FileController(object):
             upFile.seek(0)
             #If the file didn't get all the way there
             if long(os.path.getsize(upFile.file_object.name)) != long(fileSizeBytes): #The file transfer stopped prematurely, take out of transfers and queue partial file for deletion
-                logging.debug("[system] [upload] [File upload was prematurely stopped, rejected]")
+                cherrypy.log.error("[system] [upload] [File upload was prematurely stopped, rejected]")
                 FileService.queue_for_deletion(tempFileName)
                 fMessages.append("The file %s did not upload completely before the transfer ended" % fileName)
                 if cherrypy.file_uploads.has_key(uploadKey):
@@ -348,12 +348,12 @@ class FileController(object):
                 raise cherrypy.HTTPError("412 Precondition Failed", "The file transfer completed, but the file appears to be missing data. If you did not intentionally cancel the file, please try re-uploading.")
         else:
             cherrypy.request.headers['uploadindex'] = uploadIndex
-            fieldStorage = get_field_storage()
-            upFile = fieldStorage(fp=cherrypy.request.rfile,
-                                        headers=lcHDRS,
-                                        environ={'REQUEST_METHOD':'POST'},
-                                        keep_blank_values=True)
-            #upFile = formFields.file
+            forms = cherrypy._cpcgifs.FieldStorage(fp=cherrypy.request.rfile,
+                headers=lcHDRS,
+                # FieldStorage only recognizes POST.
+                environ={'REQUEST_METHOD': "POST"},
+                keep_blank_values=1)
+            upFile = forms.list[0]
             if fileName is None:
                 fileName = upFile.filename
             if str(type(upFile.file)) == '<type \'cStringIO.StringO\'>' or isinstance(upFile.file, StringIO.StringIO):
@@ -386,7 +386,7 @@ class FileController(object):
         maxDays = int(session.query(ConfigParameter).filter(ConfigParameter.name=='max_file_life_days').one().value)
         maxExpiration = datetime.datetime.today() + datetime.timedelta(days=maxDays)
         expiration = kwargs['expiration'] if kwargs.has_key("expiration") else None
-        if (expiration is None or expiration == "" or expiration.lower() =="never"):
+        if expiration is None or expiration == "" or expiration.lower() =="never":
             if role is not None and AccountService.role_has_permission(role, "expiration_exempt") or AccountService.role_has_permission(role, "admin"):
                 expiration = None
             elif AccountService.user_has_permission(user,  "expiration_exempt") or AccountService.user_has_permission(user, "admin"): #Check permission before allowing a non-expiring upload
@@ -400,9 +400,9 @@ class FileController(object):
                 expiration = maxExpiration
         newFile.date_expires = expiration
 
-        scanFile = True if ((kwargs.has_key("scanFile") and kwargs['scanFile'].lower() == "true") or (uploadRequest is not None and uploadRequest.scan_file)) else False
+        scanFile = True if (kwargs.has_key("scanFile") and kwargs['scanFile'].lower() == "true") or (uploadRequest is not None and uploadRequest.scan_file) else False
 
-        newFile.notify_on_download = True if (kwargs.has_key("notifyOnDownload") and strip_tags(notifyOnDownload.lower()) == "on") else False
+        newFile.notify_on_download = False
         newFile.date_uploaded = datetime.datetime.now()
         newFile.status = "Processing"
         newFile.upload_request_id = None if (uploadRequest is None) else uploadRequest.id
@@ -448,14 +448,14 @@ class FileController(object):
                 if len(cherrypy.file_uploads[uploadKey]) == 0:
                     del cherrypy.file_uploads[uploadKey]
         except KeyError, ke:
-            logging.warning("[%s] [upload] [Key error deleting entry in file_transfer]" % user.id)
+            cherrypy.log.error("[%s] [upload] [Key error deleting entry in file_transfer]" % user.id)
 
         #Queue the temp file for secure erasure
         FileService.queue_for_deletion(tempFileName)
 
         #Return the response
         if format=="cli":
-            newFileXML = "<file id='%s' name='%s'></file>" % (createdFile.id, createdFile.name)
+            newFileXML = "<file id='%s' name='%s'></file>" % (newFile.id, newFile.name)
             return fl_response(sMessages, fMessages, format, data=newFileXML)
         else:
             return fl_response(sMessages, fMessages, format)
@@ -475,7 +475,7 @@ class FileController(object):
             except sqlalchemy.orm.exc.NoResultFound, nrf:
                 raise cherrypy.HTTPError(404, "Could not find share or file")
         else:
-            if cherrypy.session.has_key("user")==False:
+            if not cherrypy.session.has_key("user"):
                 raise cherrypy.HTTPRedirect(cherrypy.request.app.config['filelocker']['root_url'])
             else:
                 user, role = cherrypy.session.get("user"), cherrypy.session.get("current_role")
@@ -515,7 +515,7 @@ class FileController(object):
             uploadRequest = UploadRequest(date_expires=expiration, max_file_size=maxFileSize, scan_file=scanFile, type=requestType, owner_id=user.id)
             if password is not None:
                 uploadRequest.set_password(password)
-            if requestType == "multi" and password == None:
+            if requestType == "multi" and password is None:
                 fMessages.append("You must specify a password for upload requests that allow more than 1 file to be uploaded")
             else:
                 uploadRequest.generate_id()
@@ -555,11 +555,6 @@ class FileController(object):
         return fl_response(sMessages, fMessages, format)
 
     def serve_file(self, flFile, user=None, content_type=None, publicShareId=None):
-        config = cherrypy.request.app.config['filelocker']
-        cherrypy.response.headers['Pragma']="cache"
-        cherrypy.response.headers['Cache-Control']="private"
-        cherrypy.response.headers['Content-Length'] = flFile.size
-        cherrypy.response.stream = True
         """Set status, headers, and body in order to serve the given file.
 
         The Content-Type header will be set to the content_type arg, if provided.
@@ -571,6 +566,12 @@ class FileController(object):
         to the basename of path. If disposition is None, no Content-Disposition
         header will be written.
         """
+        config = cherrypy.request.app.config['filelocker']
+        cherrypy.response.headers['Pragma']="cache"
+        cherrypy.response.headers['Cache-Control']="private"
+        cherrypy.response.headers['Content-Length'] = flFile.size
+        cherrypy.response.stream = True
+
         success, message = (True, "")
         if user is None:
             user = cherrypy.session.get("user")
@@ -612,7 +613,7 @@ class FileController(object):
         try:
             response.body = self.enc_file_generator(user, decrypter, bodyfile, flFile.id, publicShareId)
             return response.body
-        except HTTPError, he:
+        except cherrypy.HTTPError, he:
             raise he
 
     def enc_file_generator(self, user, decrypter, dFile, fileId=None, publicShareId=None):

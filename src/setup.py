@@ -1,4 +1,5 @@
 import ConfigParser
+from lib import Models
 import lib.DBTools
 import os
 from getpass import getpass
@@ -30,14 +31,15 @@ def check_packages():
         import datetime,time
         import json
         import getpass
+        from lib import Models
         from twisted.plugin import getPlugins, IPlugin
         try: #This bit here is to handle backwards compatibility with python-json modules. The .write and .dumps methods work analagously as far as I can tell
             json.write("test")
-        except AttributeError, ae:
+        except AttributeError:
             json.dumps("test")
         try:
             from hashlib import md5
-        except ImportError, ie:
+        except ImportError:
             from md5 import md5
         return True
     except Exception, e:
@@ -60,7 +62,7 @@ def setup_config():
         except Exception, e:
             print "Found existing configuration file, but there were problems importing the data. Creating config from scratch."
     configXML = os.path.join(os.getcwd(), "etc", "cherrypy_config_template.xml")
-    #TODO: Read cherrypy config XML and iterage through user questions to build config file
+    #TODO: Read cherrypy config XML and iterate through user questions to build config file
 
 def backup_legacy_db(dburi, outfile, host=None, username=None, password=None, db=None):
     from lib.DBTools import LegacyDBConverter
@@ -82,8 +84,8 @@ def backup_database(dburi):
     pass
             
 def build_database(dburi):
-    lib.Models.drop_database_tables(dburi)
-    lib.Models.create_database_tables(dburi)
+    Models.drop_database_tables(dburi)
+    Models.create_database_tables(dburi)
 
 def reset_admin(dburi):
     password = getpass("Enter Admin password: ")
@@ -122,9 +124,9 @@ if __name__ == '__main__':
         config.read(options.configfile)
     else:
         configfile = os.path.join(os.getcwd(),"etc","filelocker.conf")
-        if os.path.exists(configfile)==False:
+        if not os.path.exists(configfile):
             configfile = os.path.join("/","etc","filelocker.conf")
-        if os.path.exists(configfile)==False:
+        if not os.path.exists(configfile):
             raise Exception("Could not find config file, please specify one using the -c option")
         config.read(configfile)
     dburi = config.get("/","tools.SATransaction.dburi").replace("\"", "").replace("'","")

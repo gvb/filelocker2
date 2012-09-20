@@ -52,11 +52,11 @@ class KeyGen:
             float(keyLength) 
             int(count)
         except:
-            raise "ERROR! Input is not correct!"
+            raise Exception("ERROR! Input is not correct!")
 
         if keyLength > ((2^32 - 1) * self.hashLength):
             maxlength = (2^32 - 1) * self.hashLength
-            raise "ERROR! Key is to large! Maxlength is", str(maxlength)
+            raise Exception("ERROR! Key is to large! Maxlength is", str(maxlength))
         l = math.ceil(keyLength / float(self.hashLength))
         r = keyLength - (l - 1) * self.hashLength
         T = ""
@@ -118,5 +118,5 @@ def generatePassword():
    chars = string.letters + string.digits
    newpasswd=""
    for i in range(32):
-      newpasswd = newpasswd + SystemRandom().choice(chars)
+       newpasswd += SystemRandom().choice(chars)
    return newpasswd

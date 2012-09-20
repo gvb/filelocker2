@@ -54,24 +54,6 @@ class MessageController:
             cherrypy.log.error("[%s] [create_message] [Could not create message: %s]" % (user.id, str(e)))
             fMessages.append("Could not send message: %s" % str(e))
         return fl_response(sMessages, fMessages, format)
-    
-    @cherrypy.expose
-    @cherrypy.tools.requires_login()
-    def share_message(self, message, recipientIds):
-        try:
-            recipientIdList = split_list_sanitized(recipientIds)
-            for recipientId in recipientIdList:
-                rUser = AccountService.get_user(recipientId)
-                if rUser is not None:
-                    session.add(MessageShare(message_id=newMessage.id, recipient_id=rUser.id))
-                    session.add(AuditLog(user.id, "Send Message", "%s sent a message with subject: \"%s\" to %s(%s)" % (user.id, newMessage.subject, rUser.display_name, rUser.id), rUser.id, None))
-                else:
-                    fMessages.append("Could not send to user with ID:%s - Invalid user ID" % str(recipientId))
-            session.commit()
-        except Exception, e:
-            cherrypy.log.error("[%s] [share_message] [Could not share message: %s]" % (user.id, str(e)))
-            fMessages.append("Could not share message: %s" % str(e))
-        return fl_response(sMessages, fMessages, format)
 
     @cherrypy.expose
     @cherrypy.tools.requires_login()
@@ -193,7 +175,7 @@ def decrypt_message(message):
             while True:
                 if endOfFile:
                     break
-                next_data = decrypter.decrypt(dFile.read(1024*8))
+                next_data = decrypter.decrypt(bodyfile.read(1024*8))
                 if (next_data is not None and next_data != "") and not len(next_data)<(1024*8):
                     yData = data
                     data = next_data
@@ -250,9 +232,9 @@ def encrypt_message(message):
         newFile.close()
         f.close()
     except IOError, ioe:
-        logging.critical("[%s] [encrypt_message] [There was an IOError while checking in new file: %s]" % (message.owner_id,str(ioe)))
+        cherrypy.log.error("[%s] [encrypt_message] [There was an IOError while checking in new file: %s]" % (message.owner_id,str(ioe)))
         raise Exception("There was an IO error while uploading: %s. The administrator has been notified of this error." % str(ioe))
     except Exception, e:
-        logging.critical("[%s] [encrypt_message] [There was an Error while checking in new file: %s]" % (message.owner_id,str(e)))
+        cherrypy.log.error("[%s] [encrypt_message] [There was an Error while checking in new file: %s]" % (message.owner_id,str(e)))
 if __name__ == "__main__":
-    print "Hello";
+    pass

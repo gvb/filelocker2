@@ -46,7 +46,7 @@ class AdminController:
                         permission = session.query(Permission).filter(Permission.id==permissionId).one()
                         newUser.permissions.append(permission)
                     session.commit()
-                    count = count + 1
+                    count += 1
                 else:
                     fMessages.append("User %s already exists." % userId)
                 line = cherrypy.request.body.readline()
@@ -159,9 +159,9 @@ class AdminController:
     @cherrypy.tools.requires_login(permission="admin")
     def get_monthly_statistics(self, format="json", **kwargs):
         user, sMessages, fMessages = (cherrypy.session.get("user"), [], [])
+        downloadData, uploadData = ({}, {})
         try:
             dateCounter = datetime.date.today() - datetime.timedelta(days=365)
-            downloadData, uploadData = ({}, {})
             while dateCounter < datetime.date.today():
                 downloadData[dateCounter.month] = 0
                 uploadData[dateCounter.month] = 0
@@ -236,7 +236,7 @@ class AdminController:
         try:
             templateName = strip_tags(templateName)
             filePath = os.path.join(config['vault'], "custom", templateName)
-            if os.path.exists(os.path.join(config['vault'], "custom")) == False:
+            if not os.path.exists(os.path.join(config['vault'], "custom")):
                 os.mkdir(os.path.join(config['vault'], "custom"))
             templateFile = open(filePath, "w")
             templateFile.write(templateText)
@@ -267,4 +267,4 @@ class AdminController:
         return fl_response(sMessages, fMessages, format, data=templateText)
     
 if __name__ == "__main__":
-    print "Hello";
+    pass

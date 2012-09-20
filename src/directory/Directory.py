@@ -2,9 +2,9 @@
 import logging
 
 class Directory:
-    def lookup_user(userId):
+    def lookup_user(self, userId):
         pass #Return either a user object or None
-    def authenticate(userId, password):
+    def authenticate(self, userId, password):
         pass #Return either True or False
-    def get_user_matches(firstname, lastname, userId):
+    def get_user_matches(self, firstname, lastname, userId):
         pass #Returns list of User objects based off info in the directory

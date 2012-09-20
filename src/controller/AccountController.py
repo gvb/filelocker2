@@ -49,7 +49,7 @@ class AccountController:
                 updateUser.quota = int(strip_tags(quota)) if strip_tags(quota) is not None else updateUser.quota
                 updateUser.first_name = strip_tags(firstName) if strip_tags(firstName) is not None else updateUser.first_name
                 updateUser.last_name = strip_tags(lastName) if strip_tags(lastName) is not None else updateUser.last_name
-                if password != "" and password != None and confirmPassword != "" and confirmPassword != None:
+                if password != "" and password is not None and confirmPassword != "" and confirmPassword is not None:
                     if password == confirmPassword:
                         updateUser.set_password(password)
                     else:
@@ -91,13 +91,13 @@ class AccountController:
     @cherrypy.expose
     @cherrypy.tools.requires_login(permission="admin")
     def get_all_users(self, start=0, length=50, format="json", **kwargs):
-        user, sMessages, fMessages = cherrypy.session.get("user"), [], []
+        user, sMessages, fMessages, flUsers = cherrypy.session.get("user"), [], [], []
         try:
             start, length = int(strip_tags(start)), int(strip_tags(length))
             flUserQuery = session.query(User)
-            if (length is not None):
+            if length is not None:
                 flUserQuery = flUserQuery.limit(length)
-            if (start is not None and start > 0):
+            if start is not None and start > 0:
                 flUserQuery = flUserQuery.offset(start)
             flUsers = flUserQuery.all()
         except Exception, e:
@@ -134,14 +134,15 @@ class AccountController:
         try:
             groupIds = split_list_sanitized(groupIds)
             for groupId in groupIds:
-                group = session.query(Group).filter(Group.id==groupId).one()
-                if group.owner_id == user.id or AccountService.user_has_permission(user, "admin"):
-                    session.delete(group)
-                    sMessages.append("Group %s deleted successfully" % group.name)
-                    session.add(AuditLog(user.id, Actions.DELETE_GROUP, "%s deleted group \"%s\"(%s)" % (user.id, group.name, group.id), None))
+                try:
+                    group = session.query(Group).filter(Group.id==groupId).one()
+                    if group.owner_id == user.id or AccountService.user_has_permission(user, "admin"):
+                        session.delete(group)
+                        sMessages.append("Group %s deleted successfully" % group.name)
+                        session.add(AuditLog(user.id, Actions.DELETE_GROUP, "%s deleted group \"%s\"(%s)" % (user.id, group.name, group.id), None))
+                except sqlalchemy.orm.exc.NoResultFound, nrf:
+                    fMessages.append("Could not find group with ID: %s" % str(groupId))
             session.commit()
-        except sqlalchemy.orm.exc.NoResultFound, nrf:
-            fMessages.append("Could not find group with ID: %s" % str(groupId))
         except Exception, e:
             session.rollback()
             fMessages.append("Could not delete groups: %s" % str(e))
@@ -229,7 +230,7 @@ class AccountController:
     @cherrypy.expose
     @cherrypy.tools.requires_login()
     def get_groups(self, format="json"):
-        user, sMessages, fMessages = (cherrypy.session.get("user"),  [], [])
+        user, sMessages, fMessages, groups = (cherrypy.session.get("user"),  [], [], [])
         try:
             groups = session.query(Group).filter(Group.owner_id==user.id).all()
             if format == "cli":
@@ -306,7 +307,7 @@ class AccountController:
     @cherrypy.expose
     @cherrypy.tools.requires_login(permission="admin")
     def get_all_roles(self, roleId, roleName, email, quota, format="json", **kwargs):
-        user, sMessages, fMessages = (cherrypy.session.get("user"), [], [])
+        user, sMessages, fMessages, roles = (cherrypy.session.get("user"), [], [], [])
         try:
             roles = session.query(Role).all()
             sMessages.append("Successfully fetched roles %s")
@@ -339,10 +340,10 @@ class AccountController:
                     role = session.query(Role).filter(Role.id == roleId).one()
                     session.delete(role)
                     session.add(AuditLog(user.id, Actions.DELETE_ROLE, "%s deleted role \"%s\"(%s) from the system" % (user.id, role.name, role.id), None))
+                    sMessages.append("Successfully deleted roles%s." % str(roleId))
                 except sqlalchemy.orm.exc.NoResultFound:
                     fMessages.append("The role ID: %s does not exist" % str(roleId))
             session.commit()
-            sMessages.append("Successfully deleted roles%s." % str(roleId))
         except Exception, e:
             session.rollback()
             cherrypy.log.error("[%s] [delete_roles] [Problem deleting roles: %s]" % (user.id, str(e)))
@@ -476,19 +477,19 @@ class AccountController:
                             permissionFound = True
                             permissionData.append({'permissionId': permission.id, 'permissionName': permission.name, 'inheritedFrom': "(group) %s" % group.name})
                             break
-                    if permissionFound == False:
+                    if not permissionFound:
                         permissionData.append({'permissionId': permission.id, 'permissionName': permission.name, 'inheritedFrom': ""})
         except sqlalchemy.orm.exc.NoResultFound:
             fMessages.append("The user ID: %s does not exist" % str(userId))
         except Exception, e:
-            cherrypy.log.error("[%s] [get_user_permissions] [Couldn't get permissions for user %s: %s]" % (userId, str(e)))
+            cherrypy.log.error("[%s] [get_user_permissions] [Couldn't get permissions for user: %s]" % (userId, str(e)))
             fMessages.append("Could not get permissions: %s" % str(e))
         return fl_response(sMessages, fMessages, format, data=permissionData)
 
     @cherrypy.expose
     @cherrypy.tools.requires_login(permission="admin")
     def get_role_permissions(self, roleId, format="json", **kwargs):
-        sMessages, fMessages, permissionData = ([], [], [])
+        user, sMessages, fMessages, permissionData = (cherrypy.session.get("user"),[], [], [])
         try:
             roleId = strip_tags(roleId)
             role = session.query(Role).filter(Role.id == roleId).one()
@@ -571,7 +572,7 @@ class AccountController:
             permission = session.query(Permission).filter(Permission.id == permissionId).one()
             try:
                 flUser = session.query(User).filter(User.id == userId).one()
-                if (flUser.id == user.id and permission.id == "admin"):
+                if flUser.id == user.id and permission.id == "admin":
                     fMessages.append("You cannot remove admin permissions from your own account")
                 else:
                     flUser.permissions.remove(permission)
@@ -657,4 +658,4 @@ class AccountController:
             return fl_response(sMessages, fMessages, format, data=foundUsers)
 
 if __name__ == "__main__":
-    print "Hello";
+    pass

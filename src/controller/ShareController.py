@@ -7,6 +7,7 @@ from lib.Constants import Actions
 from lib.Formatters import *
 from lib.Models import *
 from lib import Mail
+from lib import ShareService
 __author__="wbdavis"
 __date__ ="$Sep 25, 2011 9:28:23 PM$"
 
@@ -107,9 +108,9 @@ class ShareController:
         cc = True if cc.lower() == "true" else False
         try:
             if groupId is not None:
+                sharedFiles = []
                 group = session.query(Group).filter(Group.id==groupId).one()
                 if (role is not None and group.role_owner_id == role.id) or group.owner_id == user.id or AccountService.user_has_permission(user, "admin"):
-                    sharedFiles = []
                     for fileId in fileIds:
                         flFile = session.query(File).filter(File.id == fileId).one()
                         existingShare = session.query(GroupShare).filter(and_(GroupShare.group_id==group.id, GroupShare.file_id==fileId)).scalar()
@@ -150,7 +151,7 @@ class ShareController:
                         else:
                             fMessages.append("You elected to receive a carbon copy of the share notification, however your account does not have an email address set.")
         except Exception, e:
-            session.rollback
+            session.rollback()
             fMessages.append(str(e))
         return fl_response(sMessages, fMessages, format)
 
@@ -192,7 +193,6 @@ class ShareController:
             for flFile in ShareService.get_files_shared_with_user(user):
                 if flFile.id not in hiddenFileIds:
                     sharedFiles.append(flFile.get_dict())
-                    fileIds.append(flFile.id)
         except Exception, e:
             cherrypy.log.error("[%s] [get_files_shared_with_user] [Couldn't get files shared with user: %s]" % (user.id, str(e)))
             fMessages.append(str(e))
@@ -263,7 +263,7 @@ class ShareController:
                 for fileId in fileIdList:
                     share = session.query(AttributeShare).filter(AttributeShare.attribute_id==attributeId and AttributeShare.fileId==fileId).one()
                     session.delete(share)
-                sMessages.append("Successfully unshared file(s) with users having the %s attribute") % attributeId
+                sMessages.append("Successfully unshared file(s) with users having the %s attribute" % attributeId)
             else:
                 fMessages.append("You do not have permission to delete attribute shares for this attribute")
         except Exception, e:
@@ -286,7 +286,7 @@ class ShareController:
             if expiration is None or expiration == "":
                 raise Exception("Public shares must have a valid expiration date")
             message = strip_tags(message)
-            shareType != "single" if shareType != "multi" else "multi"
+            shareType = "single" if shareType != "multi" else "multi"
             ps = PublicShare(date_expires=expiration, reuse=shareType, message=message)
             if role is not None:
                 ps.role_owner_id = role.id
