@@ -9,10 +9,7 @@ import sys
 from xml.dom.minidom import parse, parseString
 from Models import *
 import sqlalchemy
-from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy import *
-from lib.SQLAlchemyTool import configure_session_for_app, session, _engines
 
 def create_admin_user(dburi, password):
     adminUser = User(id="admin", first_name="Administrator", quota=1024, date_tos_accept=datetime.datetime.now())
@@ -27,8 +24,6 @@ def create_admin_user(dburi, password):
     if oldAdmin is not None:
         session.delete(oldAdmin)
     session.add(adminUser)
-    session.add(testUser1)
-    session.add(testUser2)
     session.commit()
     print "Password after set: %s" % str(adminUser.password)
 
@@ -385,7 +380,7 @@ class LegacyDBConverter():
         sql_args = []
         rolesPermResults = self.execute(pSql, sql_args)
         for row in rolesPermResults:
-            if rolePermissions.has_key(row["user_permission_user_id"])==False:
+            if not rolePermissions.has_key(row["user_permission_user_id"]):
                 rolePermissions[row["user_permission_user_id"]] = []
             rolePermissions[row["user_permission_user_id"]].append(row['user_permission_permission_id'][6:])
 
@@ -394,7 +389,7 @@ class LegacyDBConverter():
         sql_args = []
         permResults = self.execute(pSql, sql_args)
         for row in permResults:
-            if userPermissions.has_key(row["user_permission_user_id"])==False:
+            if not userPermissions.has_key(row["user_permission_user_id"]):
                 userPermissions[row["user_permission_user_id"]] = []
             userPermissions[row["user_permission_user_id"]].append(row['user_permission_permission_id'])
 
@@ -422,7 +417,7 @@ class LegacyDBConverter():
         pSql = "SELECT * FROM user_permission WHERE user_permission_permission_id NOT LIKE '(role)%%'"
         permResults = self.execute(pSql, None)
         for row in permResults:
-            if role_permissions.has_key(row["user_permission_user_id"])==False:
+            if not role_permissions.has_key(row["user_permission_user_id"]):
                 role_permissions[row["user_permission_user_id"]] = []
             role_permissions[row["user_permission_user_id"]].append(row['user_permission_permission_id'])
         rolesResults = self.execute(rSql, None)
@@ -499,15 +494,15 @@ class LegacyDBConverter():
         return logs
 
 #CLI Key Management
-    def getCLIKeyList(self, userId):
-        sql = "SELECT * FROM cli_key WHERE cli_key_user_id=%s"
-        sql_args = [userId]
-        CLIKeys = []
-        results = self.execute(sql, sql_args)
-        for row in results:
-            newKey = CLIKey(row['cli_key_host_ipv4'], row['cli_key_host_ipv6'], row['cli_key_value'])
-            CLIKeys.append(newKey)
-        return CLIKeys
+#    def getCLIKeyList(self, userId):
+#        sql = "SELECT * FROM cli_key WHERE cli_key_user_id=%s"
+#        sql_args = [userId]
+#        CLIKeys = []
+#        results = self.execute(sql, sql_args)
+#        for row in results:
+#            newKey = CLIKey(row['cli_key_host_ipv4'], row['cli_key_host_ipv6'], row['cli_key_value'])
+#            CLIKeys.append(newKey)
+#        return CLIKeys
 
     def execute(self, sql, sql_args, getId = False):
         """Executor function, takes arbitrary SQL and argument list, returns all results """

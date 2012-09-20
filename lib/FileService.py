@@ -4,6 +4,7 @@ from stat import ST_SIZE
 import random
 import cherrypy
 import subprocess
+import lib
 from lib.SQLAlchemyTool import session
 from lib.Models import *
 import os
@@ -25,16 +26,18 @@ def file_download_complete(user, fileId, publicShareId=None):
         if cherrypy.session.has_key("current_role"):
             role = cherrypy.session.get("current_role")
         flFile = session.query(File).filter(File.id==fileId).one()
-        if ((role is not None and flFile.role_owner_id != role.id) or user == None or user.id != flFile.owner_id) and flFile.notify_on_download and publicShareId is None:
+        if ((role is not None and flFile.role_owner_id != role.id) or user is None or user.id != flFile.owner_id) and flFile.notify_on_download and publicShareId is None:
+            ownerName = "Unknown"
             try:
                 owner = None
                 if role is not None: owner = session.query(User).filter(User.id==flFile.role_owner_id).one()
                 else: owner = session.query(User).filter(User.id==flFile.owner_id).one()
+                ownerName = owner.id
                 if owner.email is not None and owner.email != "":
                     orgConfig = get_config_dict_from_objects(session.query(ConfigParameter).filter(ConfigParameter.name.like('org_%')).all())
                     Mail.notify(get_template_file('download_notification.tmpl'),{'sender': None, 'recipient': owner.email, 'fileName': flFile.name, 'downloadUserId': user.id, 'downloadUserName': user.display_name, 'filelockerURL': config['root_url'], 'org_url': orgConfig['org_url'], 'org_name': orgConfig['org_name']})
             except Exception, e:
-                cherrypy.log.error("[%s] [file_download_complete] [(1)Unable to notify user %s of download completion: %s]" % (user.id, owner.id, str(e)))
+                cherrypy.log.error("[%s] [file_download_complete] [Unable to notify user %s of download completion: %s]" % (user.id, ownerName, str(e)))
 
         if publicShareId is not None:
             publicShare = session.query(PublicShare).filter(PublicShare.id == publicShareId).one()
@@ -68,7 +71,7 @@ def get_upload_ticket_by_password(ticketId, password):
     uploadRequest = session.query(UploadRequest).filter(UploadRequest.id == ticketId)
     if uploadRequest is None:
         raise Exception("Invalid Upload Request ID")
-    if password == None and uploadRequest.password == None:
+    if password is None and uploadRequest.password is None:
         return uploadRequest
     else:
         isValid = lib.Encryption.compare_password_hash(password, uploadRequest.password)
@@ -198,7 +201,7 @@ def clean_temp_files(config, validTempFiles):
 
 def queue_for_deletion(filePath):
     try:
-        if session.query(DeletedFile).filter(DeletedFile.file_name==filePath).scalar() == None:
+        if session.query(DeletedFile).filter(DeletedFile.file_name==filePath).scalar() is None:
             session.add(DeletedFile(file_name=filePath))
             session.commit()
     except Exception, e:
@@ -211,7 +214,7 @@ def process_deletion_queue(config):
         try:
             if os.path.isfile(os.path.join(vault, fileRow.file_name)):
                 secure_delete(config, fileRow.file_name)
-                if os.path.isfile(os.path.join(vault,fileRow.file_name))==False:
+                if not os.path.isfile(os.path.join(vault, fileRow.file_name)):
                     deletedFile = session.query(DeletedFile).filter(DeletedFile.file_name==fileRow.file_name).scalar()
                     if deletedFile is not None:
                         session.delete(deletedFile)
@@ -234,8 +237,7 @@ def secure_delete(config, fileName):
     deleteConfig = get_config_dict_from_objects(session.query(ConfigParameter).filter(ConfigParameter.name.like('delete_%')).all())
     deleteCommand = deleteConfig['delete_command']
     deleteArguments = deleteConfig['delete_arguments']
-    deleteList = []
-    deleteList.append(deleteCommand)
+    deleteList = [deleteCommand]
     for argument in deleteArguments.split(" "):
         deleteList.append(argument)
     deleteList.append(os.path.join(vault,fileName))

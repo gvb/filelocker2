@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import cherrypy
 import datetime
-from twisted.plugin import getPlugins, IPlugin
+from twisted.plugin import getPlugins
 from lib.SQLAlchemyTool import session
 from lib.Formatters import *
 from lib.Models import *
@@ -35,7 +35,7 @@ def install_user(user):
         session.add(AuditLog(user.id, "Install User", "User %s (%s) installed" % (user.display_name, user.id)))
         session.commit()
     else:
-        raise Exception("User %s doesn't exist in directory" % userId)
+        raise Exception("User %s doesn't exist in directory" % user.id)
 
 def get_user(userId, login=False):
     import warnings
@@ -61,8 +61,8 @@ def get_user(userId, login=False):
                     attributeList.append(permission.id.split("(attr)")[1])
         if login:
             for flPlugin in getPlugins(FilelockerPlugin, plugins):
-                attributeList.extend(flPlugin.get_user_attributes(user.id, self)) #Send user object off to  plugin to get the list populated
-                if flPlugin.is_authorized(user.userId, self) == False: #Checks if any plugin is going to explicitly deny this user access to Filelocker
+                attributeList.extend(flPlugin.get_user_attributes(user.id)) #Send user object off to  plugin to get the list populated
+                if not flPlugin.is_authorized(user.userId): #Checks if any plugin is going to explicitly deny this user access to Filelocker
                     user.authorized = False
             uniqueAttributeList = []
             for attributeId in attributeList:

@@ -56,7 +56,7 @@ class CAS(object):
                 user = response[startIndex:endIndex]
             else:
                 valid = False
-            return (valid, user)
+            return valid, user
         except Exception, e:
             cherrypy.log.error("Error in CAS ticket validation: %s" % (str(e)))
             return (False, None)
@@ -68,9 +68,9 @@ class CAS(object):
             data = urllib.urlencode(values)
             req = urllib2.Request(authURL, data)
             response = urllib2.urlopen(req)
-            if response.getcode() >=200 and response.getcode() <= 299:
+            if 200 <= response.getcode() <= 299:
                 return True
-        except urllib2.HTTPError, htpe:
+        except urllib2.HTTPError:
             return False
         except Exception, e:
             cherrypy.log.error("[system] [proxyCasLogin] [%s]" % str(e))

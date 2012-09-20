@@ -27,7 +27,7 @@ def get_files_shared_with_user_by_attribute(user):
         attribute = session.query(Attribute).filter(Attribute.id==attributeId).scalar() #Do this to ensure this attribute is even recognized by the system
         if attribute is not None:
             for attributeShare in session.query(AttributeShare).filter(AttributeShare.attribute_id==attribute.id).all():
-                if attributeShareDictionary.has_key(attributeShare.attribute_id)==False:
+                if not attributeShareDictionary.has_key(attributeShare.attribute_id):
                     attributeShareDictionary[attributeShare.attribute_id] = []
                 attributeShareDictionary[attributeShare.attribute_id].append(attributeShare.flFile)
     return attributeShareDictionary

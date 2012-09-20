@@ -21,7 +21,7 @@ from lib.CAS import CAS
 from lib.Constants import Actions
 from lib.Models import *
 from lib.Formatters import *
-from lib.FileFieldStorage import get_field_storage
+from lib.FileFieldStorage import FileFieldStorage
 
 cherrypy.server.max_request_body_size = 0
 def before_upload(**kwargs):
@@ -38,8 +38,8 @@ def requires_login(permissionId=None, **kwargs):
         if user.date_tos_accept == None:
             raise cherrypy.HTTPRedirect(rootURL+"/sign_tos")
         elif permissionId is not None:
-            if AccountService.user_has_permission(user, permissionId)==False:
-                raise HTTPError(403)
+            if not AccountService.user_has_permission(user, permissionId):
+                raise cherrypy.HTTPError(403)
         else:
             pass
     else:
@@ -56,7 +56,7 @@ def requires_login(permissionId=None, **kwargs):
                         cherrypy.log.error("[%s] [requires_login] [User authenticated, but not found in directory - installing with defaults]"%str(userId))
                         AccountService.install_user(currentUser)
                         currentUser = AccountService.get_user(currentUser.id, True) #To populate attributes
-                    if currentUser.authorized == False:
+                    if not currentUser.authorized:
                         raise cherrypy.HTTPError(403, "Your user account does not have access to this system.")
                     session.add(AuditLog(currentUser.id, "Login", "User %s logged in successfully from IP %s" % (currentUser.id, cherrypy.request.remote.ip)))
 
@@ -268,12 +268,9 @@ def start(configfile=None, daemonize=False, pidfile=None):
     if hasattr(engine, "console_control_handler"):
         engine.console_control_handler.subscribe()
     
-    #This line override the cgi Fieldstorage with the one we defined in order to track upload progress
-    try:
-        cherrypy._cpreqbody.RequestBody = get_field_storage()
-    except Exception:
 
-        cherrypy._cpcgifs.FieldStorage = get_field_storage()
+
+    cherrypy._cpcgifs.FieldStorage = FileFieldStorage
         
     engine.start()
     configure_session_for_app(app)
@@ -352,10 +349,9 @@ def check_updates(config):
                 build_database(dburi)
                 print "Filelocker requires an admin account to be set. You will now be prompted to create a local password for the local admin account"
                 create_admin(dburi)
+                
 
 
-
-    
 if __name__ == '__main__':
     from optparse import OptionParser
 
@@ -375,10 +371,10 @@ if __name__ == '__main__':
         configParser.read(options.configfile)
     else:
         configfile = os.path.join(os.getcwd(),"etc","filelocker.conf")
-        if os.path.exists(configfile)==False:
+        if not os.path.exists(configfile):
             configfile = os.path.join("/","etc","filelocker.conf")
-        if os.path.exists(configfile)==False:
-            raise Exception("Could not find config file, please specify one using the -c option")
+        if not os.path.exists(configfile):
+            raise Exception('Could not find config file, please specify one using the -c option')
         configParser.read(configfile)
     dburi = configParser.get("/","tools.SATransaction.dburi").replace("\"", "").replace("'","")
 

@@ -6,7 +6,7 @@ sys.path.append("../")
 import logging
 from zope.interface import implements
 from twisted.plugin import IPlugin
-from core.dao.models.FilelockerPlugin import FilelockerPlugin
+import FilelockerPlugin
 from SOAPpy import Config, HTTPTransport, SOAPAddress, WSDL
 
 wsdlFile = "userinfoservice.wsdl" 
@@ -51,7 +51,7 @@ class myHTTPTransport(HTTPTransport):
         if not isinstance(addr, SOAPAddress):
             addr=SOAPAddress(addr, config)
 
-        if self.username != None:
+        if self.username is not None:
             addr.user = self.username+":"+self.passwd
 
         return HTTPTransport.call(self, addr, data, namespace, soapaction, encoding, http_proxy, config)
