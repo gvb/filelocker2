@@ -624,7 +624,7 @@ class AccountController:
         user, sMessages, fMessages = (cherrypy.session.get("user"), [], [])
         orgConfig = get_config_dict_from_objects(session.query(ConfigParameter).filter(ConfigParameter.name.like('org_%')).all())
         groups = session.query(User).filter(User.id==user.id).one().groups
-        authType = session.query(ConfigParameter).filter(ConfigParameter.name=="auth_type").one().value
+        directoryType = session.query(ConfigParameter).filter(ConfigParameter.name=="directory_type").one().value
         userShareableAttributes = AccountService.get_shareable_attributes_by_user(user)
         tpl = Template(file=get_template_file('search_widget.tmpl'), searchList=[locals(),globals()])
         return str(tpl)
@@ -640,7 +640,7 @@ class AccountController:
                 firstName = strip_tags(firstName)
                 lastName = strip_tags(lastName)
                 userId = strip_tags(userId)
-                directory = AccountService.ExternalDirectory(config)
+                directory = AccountService.ExternalDirectory(external != True)
                 foundUsers = directory.get_user_matches(firstName, lastName, userId)
             else:
                 fMessages.append("Please specify the first name, last name, or username of the user for whom you are searching")

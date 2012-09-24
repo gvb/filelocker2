@@ -153,7 +153,7 @@ class FileController(object):
                 selectedFileIds = ",".join(fileIdList)
                 context = "private_sharing"
                 groups = session.query(Group).filter(Group.owner_id == user.id).all()
-                authType = session.query(ConfigParameter).filter(ConfigParameter.name=="auth_type").one().value
+                directoryType = session.query(ConfigParameter).filter(ConfigParameter.name=="directory_type").one().value
                 searchWidget = str(Template(file=get_template_file('search_widget.tmpl'), searchList=[locals(),globals()]))
                 tpl = Template(file=get_template_file('share_files.tmpl'), searchList=[locals(),globals()])
                 return str(tpl)
