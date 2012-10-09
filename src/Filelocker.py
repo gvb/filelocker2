@@ -38,47 +38,60 @@ def requires_login(permissionId=None, **kwargs):
         if user.date_tos_accept == None:
             raise cherrypy.HTTPRedirect(rootURL+"/sign_tos")
         elif permissionId is not None:
-            if not AccountService.user_has_permission(user, permissionId):
-                raise cherrypy.HTTPError(403)
+            try:
+                if not AccountService.user_has_permission(user, permissionId):
+                    raise cherrypy.HTTPError(403)
+            except Exception, e:
+                raise cherrypy.HTTPError(500, "The server is having problems communicating with the database server. Please try again in a few minutes.")
         else:
             pass
     else:
-        authType = session.query(ConfigParameter).filter(ConfigParameter.name=="auth_type").one().value
-        if authType == "cas":
-            casUrl = session.query(ConfigParameter).filter(ConfigParameter.name=="cas_url").one().value
-            casConnector = CAS(casUrl)
-            if cherrypy.request.params.has_key("ticket"):
-                valid_ticket, userId = casConnector.validate_ticket(rootURL, cherrypy.request.params['ticket'])
-                if valid_ticket:
-                    currentUser = AccountService.get_user(userId, True)
-                    if currentUser is None:
-                        currentUser = User(id=userId, display_name="Guest user", first_name="Unknown", last_name="Unknown")
-                        cherrypy.log.error("[%s] [requires_login] [User authenticated, but not found in directory - installing with defaults]"%str(userId))
-                        AccountService.install_user(currentUser)
-                        currentUser = AccountService.get_user(currentUser.id, True) #To populate attributes
-                    if not currentUser.authorized:
-                        raise cherrypy.HTTPError(403, "Your user account does not have access to this system.")
-                    session.add(AuditLog(currentUser.id, "Login", "User %s logged in successfully from IP %s" % (currentUser.id, cherrypy.request.remote.ip)))
+        authType = None
+        try:
+            authType = session.query(ConfigParameter).filter(ConfigParameter.name=="auth_type").one().value
+            if authType == "cas":
+                casUrl = session.query(ConfigParameter).filter(ConfigParameter.name=="cas_url").one().value
+                casConnector = CAS(casUrl)
+                if cherrypy.request.params.has_key("ticket"):
+                    valid_ticket, userId = casConnector.validate_ticket(rootURL, cherrypy.request.params['ticket'])
+                    if valid_ticket:
+                        currentUser = AccountService.get_user(userId, True)
+                        if currentUser is None:
+                            currentUser = User(id=userId, display_name="Guest user", first_name="Unknown", last_name="Unknown")
+                            cherrypy.log.error("[%s] [requires_login] [User authenticated, but not found in directory - installing with defaults]"%str(userId))
+                            AccountService.install_user(currentUser)
+                            currentUser = AccountService.get_user(currentUser.id, True) #To populate attributes
+                        if not currentUser.authorized:
+                            raise cherrypy.HTTPError(403, "Your user account does not have access to this system.")
+                        session.add(AuditLog(currentUser.id, "Login", "User %s logged in successfully from IP %s" % (currentUser.id, cherrypy.request.remote.ip)))
 
-                    session.commit()
-                    if currentUser.date_tos_accept is None:
-                        if format == None:
-                            raise cherrypy.HTTPRedirect(rootURL+"/sign_tos")
-                        else:
-                            raise cherrypy.HTTPError(401)
-                    raise cherrypy.HTTPRedirect(rootURL)
+                        session.commit()
+                        if currentUser.date_tos_accept is None:
+                            if format == None:
+                                raise cherrypy.HTTPRedirect(rootURL+"/sign_tos")
+                            else:
+                                raise cherrypy.HTTPError(401)
+                        raise cherrypy.HTTPRedirect(rootURL)
+                    else:
+                        raise cherrypy.HTTPError(403, "Invalid CAS Ticket. If you copied and pasted the URL for this server, you might need to remove the 'ticket' parameter from the URL.")
                 else:
-                    raise cherrypy.HTTPError(403, "Invalid CAS Ticket. If you copied and pasted the URL for this server, you might need to remove the 'ticket' parameter from the URL.")
+                    if format == None:
+                        raise cherrypy.HTTPRedirect(casConnector.login_url(rootURL))
+                    else:
+                        raise cherrypy.HTTPError(401)
             else:
                 if format == None:
-                    raise cherrypy.HTTPRedirect(casConnector.login_url(rootURL))
+                    raise cherrypy.HTTPRedirect(rootURL+"/login")
                 else:
                     raise cherrypy.HTTPError(401)
-        else:
-            if format == None:
-                raise cherrypy.HTTPRedirect(rootURL+"/login")
-            else:
-                raise cherrypy.HTTPError(401)
+        except cherrypy.HTTPRedirect, redirect:
+            raise redirect
+        except cherrypy.HTTPError, httpe:
+            raise httpe
+        except Exception, e:
+            cherrypy.log.error("Unable to check parameter auth_type:(%s) %s" % (str(type(e)), str(e)))
+            raise cherrypy.HTTPError(500, "The server is having problems communicating with the database server. Please try again in a few minutes.")
+
 cherrypy.tools.requires_login = cherrypy.Tool('before_request_body', requires_login, priority=70)
 
 def error(status, message, traceback, version):
