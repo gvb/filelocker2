@@ -381,8 +381,13 @@ class RootController:
                         cherrypy.session['uploadRequest'] = uploadRequest.get_copy()
                     else:
                         messages.append("This upload request requires a password before you can upload files")
+                        uploadRequest = None
+                        raise cherrypy.HTTPError(500, "Invalid password") if format == "content_only" else cherrypy.HTTPRedirect(config['root_url']+'/upload_request?requestId=%s&msg=3' % requestId)
                     requestOwner = session.query(User).filter(User.id == uploadRequest.owner_id).one()
-
+                except cherrypy.HTTPError, httpe:
+                    raise httpe
+                except cherrypy.HTTPRedirect, httpr:
+                    raise httpr
                 except Exception, e:
                     messages.append(str(e))
             elif password is not None and password!="": # if they do have a password and requestId, try to load the whole upload ticket
@@ -409,7 +414,7 @@ class RootController:
             footerText = str(Template(file=get_template_file('footer_text.tmpl'), searchList=[locals(),globals()]))
             tpl = str(Template(file=get_template_file('public_upload_request_uploader.tmpl'), searchList=[locals(),globals()]))
         else:
-        	raise cherrypy.HTTPError(500, "Unable to load upload request") if format == "content_only" else cherrypy.HTTPRedirect("%s/upload_request?msg=2" % (config['root_url']))
+            raise cherrypy.HTTPError(500, "Unable to load upload request") if format == "content_only" else cherrypy.HTTPRedirect("%s/upload_request?msg=2" % (config['root_url']))
         geoTagging = get_config_dict_from_objects([session.query(ConfigParameter).filter(ConfigParameter.name=='geotagging').one()])['geotagging']
         banner = session.query(ConfigParameter).filter(ConfigParameter.name=='banner').one().value
         headerHTML = str(Template(file=get_template_file('header.tmpl'), searchList=[locals(),globals()]))

@@ -87,10 +87,10 @@ class FileFieldStorage(cherrypy._cpcgifs.FieldStorage):
         fo = ProgressFile(self.bufsize, self.filename if self.filename is not None else "Default", uploadIndex=uploadIndex)
         self.file_location = fo.file_object.name
         uploadKey = None
-        if cherrypy.session.has_key("uploadRequest"):
-            uploadKey = cherrypy.session.get("uploadRequest").owner_id+":"+cherrypy.session.get("uploadRequest").id
-        elif cherrypy.session.has_key("user"):
+        if cherrypy.session.has_key("user"):
             uploadKey = cherrypy.session.get('user').id
+        elif cherrypy.session.has_key("uploadRequest"):
+            uploadKey = cherrypy.session.get("uploadRequest").owner_id+":"+cherrypy.session.get("uploadRequest").id
 
         if cherrypy.file_uploads.has_key(uploadKey):
             cherrypy.file_uploads[uploadKey].append(fo)
