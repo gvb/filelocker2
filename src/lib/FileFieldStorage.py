@@ -61,7 +61,7 @@ class FileFieldStorage(cherrypy._cpcgifs.FieldStorage):
             if cherrypy.session.has_key("user"):
                 uploadKey = cherrypy.session.get('user').id
             elif cherrypy.session.has_key("uploadRequest"):
-                uploadKey = cherrypy.session.has_key("uploadRequest").owner_id+":"+cherrypy.session.has_key("uploadRequest").id
+                uploadKey = cherrypy.session.get("uploadRequest").owner_id+":"+cherrypy.session.get("uploadRequest").id
             if cherrypy.file_uploads.has_key(uploadKey):
                 for transfer in cherrypy.file_uploads[uploadKey]:
                     if transfer.file_object.name == self.file_location:
