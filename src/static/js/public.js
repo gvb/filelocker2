@@ -26,7 +26,10 @@ PublicUpload = function() {
                         pollerId = setInterval(function() { poll(); }, 1000);
                 },
                 onComplete: function(id, fileName, response){
-                    location.reload(true);
+                    $("#wrapper_2col").load(FILELOCKER_ROOT+"/upload_request_uploader?format=content_only&ms=" + new Date().getTime(), {}, function (responseText, textStatus, xhr) {
+                        if (textStatus == "error")
+                            StatusResponse.create("loading files", "Error "+xhr.status+": "+xhr.textStatus, false);
+                    });
                 },
                 onCancel: function(id, fileName){
                     StatusResponse.create("cancelling upload", "File upload of " + fileName + " cancelled by user.", true);

@@ -356,6 +356,7 @@ class RootController:
     @cherrypy.expose
     def upload_request_uploader(self, requestId=None, password=None, **kwargs):
         user = None
+        format = "content_only" if kwargs.has_key("format") and kwargs["format"] == "content_only" else "html"
         requestOwner, uploadRequest, tpl, messages, config = (None, None, None, [], cherrypy.request.app.config['filelocker'])
         orgConfig = get_config_dict_from_objects(session.query(ConfigParameter).filter(ConfigParameter.name.like('org_%')).all())
         maxDays = int(session.query(ConfigParameter).filter(ConfigParameter.name=='max_file_life_days').one().value)
@@ -391,12 +392,12 @@ class RootController:
                     requestOwner = session.query(User).filter(User.id == uploadRequest.owner_id).one()
                 else:
                     uploadRequest = None
-                    raise cherrypy.HTTPRedirect(config['root_url']+'/upload_request?requestId=%s&msg=3' % requestId)
+                    raise cherrypy.HTTPError(500, "Invalid password") if format == "content_only" else cherrypy.HTTPRedirect(config['root_url']+'/upload_request?requestId=%s&msg=3' % requestId)
         elif cherrypy.session.has_key("uploadRequest"):
             uploadRequest = cherrypy.session.get("uploadRequest")
             requestOwner = session.query(User).filter(User.id == uploadRequest.owner_id).one()
         else:
-            raise cherrypy.HTTPRedirect("%s/upload_request?msg=1" % (config['root_url']))
+            raise cherrypy.HTTPError(500, "Unable to load upload request") if format == "content_only" else cherrypy.HTTPRedirect("%s/upload_request?msg=1" % (config['root_url']))
 
         if uploadRequest is not None:
             fileList = session.query(File).filter(File.upload_request_id==uploadRequest.id).all()
@@ -408,13 +409,17 @@ class RootController:
             footerText = str(Template(file=get_template_file('footer_text.tmpl'), searchList=[locals(),globals()]))
             tpl = str(Template(file=get_template_file('public_upload_request_uploader.tmpl'), searchList=[locals(),globals()]))
         else:
-             raise cherrypy.HTTPRedirect("%s/upload_request?msg=2" % (config['root_url']))
+        	raise cherrypy.HTTPError(500, "Unable to load upload request") if format == "content_only" else cherrypy.HTTPRedirect("%s/upload_request?msg=2" % (config['root_url']))
         geoTagging = get_config_dict_from_objects([session.query(ConfigParameter).filter(ConfigParameter.name=='geotagging').one()])['geotagging']
         banner = session.query(ConfigParameter).filter(ConfigParameter.name=='banner').one().value
         headerHTML = str(Template(file=get_template_file('header.tmpl'), searchList=[locals(),globals()]))
         footerText = str(Template(file=get_template_file('footer_text.tmpl'), searchList=[locals(),globals()]))
         footerHTML = str(Template(file=get_template_file('footer.tmpl'), searchList=[locals(),globals()]))
-        uploadRequestUploaderHTML = headerHTML+tpl+footerHTML
+        uploadRequestUploaderHTML = ""
+        if format == "content_only":
+        	uploadRequestUploaderHTML = tpl
+        else:
+        	uploadRequestUploaderHTML = headerHTML+tpl+footerHTML
         return uploadRequestUploaderHTML
 
     @cherrypy.expose
