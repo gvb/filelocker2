@@ -140,6 +140,7 @@ class RootController:
     @cherrypy.tools.requires_login()
     def index(self, **kwargs):
         config = cherrypy.request.app.config['filelocker']
+        authType = session.query(ConfigParameter).filter(ConfigParameter.name=="auth_type").one().value
         orgConfig = get_config_dict_from_objects(session.query(ConfigParameter).filter(ConfigParameter.name.like('org_%')).all())
         user, originalUser = (cherrypy.session.get("user"),  cherrypy.session.get("original_user"))
         maxDays = int(session.query(ConfigParameter).filter(ConfigParameter.name=='max_file_life_days').one().value)
@@ -269,9 +270,10 @@ class RootController:
                 log.display_class = re.sub('_\(.*?\)', '', log.display_class) # Removes (You) and (Recipient) from Read Message actions
                 actionLogList.append(log)
             actionNames = session.query(AuditLog.action).filter(or_(AuditLog.initiator_user_id==userId, AuditLog.affected_user_id==userId)).distinct()
-            for actionLog in actionNames:
-                if actionLog not in actionList:
-                    actionList.append(actionLog.action)
+            #for actionLog in actionNames:
+                #if actionLog not in actionList:
+                    #actionList.append(actionLog.action)
+            actionList = Actions.ACTION_LIST
         except Exception, e:
             fMessages.append(str(e))
         if format == "html":

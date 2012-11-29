@@ -469,6 +469,7 @@
                             <label for="userEmail">Email Address:</label>
                             <input type="text" name="userEmail" id="userEmail" value="$user.email" />
                         </div>
+                        #if $authType != "cas" and $authType != "ldap"
                         <div>
                             <label for="userPassword">New Password:</label>
                             <input type="password" name="userPassword" id="userPassword" value="" />
@@ -477,6 +478,7 @@
                             <label for="userPasswordConfirm">Confirm Password:</label>
                             <input type="password" name="userPasswordConfirm" id="userPasswordConfirm" value="" />
                         </div>
+                        #end if
                         <div>
                             <div class="button" id="updateButton"><a href="javascript:Account.update('$user.id');" title="Save changes to your account settings" class="saveButton"><span>Update Account</span></a></div>
                         </div>
