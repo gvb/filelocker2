@@ -1,0 +1,44 @@
+[global]
+tools.sessions.on=True
+engine.autoreload.on=False
+tools.sessions.secure=False
+server.thread_pool=20
+log.screen=False
+tools.sessions.name="filelocker"
+server.socket_port=8080
+tools.gzip.on=True
+log.access_file="/var/filelocker/filelocker.access.log"
+server.reverse_dns=False
+tools.gzip.mime_types=['text/html', 'text/css', 'image/jpeg', 'image/gif', 'text/javascript', 'image/png']
+tools.sessions.storage_type="ram"
+tools.sessions.timeout=15
+server.environment="production"
+server.socket_timeout=60
+log.error_file="/var/filelocker/filelocker.error.log"
+server.socket_host="0.0.0.0"
+
+[/]
+tools.SATransaction.on = True
+#It should be noted that with SQLAlchemy v0.5 variants, you'll need to remove the +mysqldb part of the URI below
+tools.SATransaction.dburi = "mysql+mysqldb://filelocker:l0ck;files@localhost/filelocker_sqlalchemy"
+tools.SATransaction.echo = False
+
+[filelocker]
+vault="/vault"
+root_url="http://localhost:8080"
+root_path="/usr/filelocker"
+cluster_member_id=0
+
+[/static]
+tools.staticdir.root="/usr/filelocker"
+tools.staticdir.dir="static"
+tools.staticdir.on=True
+
+#This section is necessary if you want to upgrade a legacy (<2.6) database or backup a legacy database
+[database]
+dbtype="mysql"
+dbuser="filelocker"
+dbhost="localhost"
+dbname="filelocker"
+dbpassword="l0ck;files"
+

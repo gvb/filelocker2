@@ -1,0 +1,344 @@
+<div id="wrapper_col1">
+    <div class="section_title">
+        <h1 class="admin_title">Administration</h1>
+    </div>
+    <div id="admin_sections" style="margin-left: 5px; width: 100%; border:none;">
+        <ul>
+            <li><a href="#users">Users</a></li>
+            <li><a href="#roles">Roles</a></li>
+            <li><a href="#templates">Templates</a></li>
+            <li><a href="#attributes">Attributes</a></li>
+            <li><a href="#config">Config</a></li>
+            <li><a href="#logs">Logs</a></li>
+        </ul>
+            
+        <div id="users">
+            <div class="button"><a href="javascript:Admin.User.promptCreate();" title="Create a new Filelocker user" class="userNewButton"><span>Create User</span></a></div>
+            <div class="button"><a href="javascript:Admin.User.del();" title="Delete the selected Filelocker users" class="deleteButton"><span>Delete Selected</span></a></div>
+            <div class="button"><a href="javascript:Account.prompt()" title="Edit your personal account settings" class="editAccountButton"><span>Your Account</span></a></div>
+            <div id="userSorterLoading" class="hidden">&nbsp;</div><br/><br/><br/><br/><!-- Fixes a Chrome display issue -->
+            <div id="userTableSorterWrapper">
+                <table class="file_table" id="userTableSorter">
+                    <thead>
+                        <tr>
+                            <th class="selectAllCol"><input type="checkbox" id="allUsersCheckbox" onClick="javascript:Admin.User.selectAll();"/></th>
+                            <th class="userIdCol pseudoLink">User ID</th>
+                            <th class="userLastNameCol pseudoLink">Last Name</th>
+                            <th class="userFirstNameCol pseudoLink">First Name</th>
+                            <th class="userEmailCol pseudoLink">Email</th>
+                            <th class="userQuotaCol pseudoLink">Quota</th>
+                            <th class="menuCol"></th>
+                        </tr>
+                        <tr>
+                            <td></td>
+                            <td colspan="6" class="dotted"></td>
+                        </tr>
+                    </thead>
+                    <tbody id="userTable">
+                    #for $flUser in $flUsers
+                        <tr id="user_$flUser.id" class="userRow">
+                            <td id="userNameElement_$flUser.id" class="userNameElement"><input type="checkbox" name="select_user" value="$flUser.id" class="userSelectBox" id="checkbox_$flUser.id">
+                                <div class="posrel">
+                                    <div id="menu_userRow_$flUser.id" class="menuUsers hidden">
+                                    <ul class="menu">
+                                        <li><div class="button" style="width: 185px;"><a href="javascript:Admin.User.promptUpdate('$flUser.id', '$flUser.first_name', '$flUser.last_name', '$flUser.email', $flUser.quota);" title="Edit user account for '$flUser.id'" class="editButton"><span><center>Edit Account</center></span></a></div></li>
+                                        <li><div class="button" style="width: 185px;"><a href="javascript:Admin.Permission.load('$flUser.id');" title="Grant and revoke user permissions for '$flUser.id'" class="wandButton"><span><center>Edit Permissions</center></span></a></div></li>
+                                    </ul>
+                                </div>
+                            </td>
+
+                            #if $AccountService.user_has_permission($flUser, "admin") is False:
+                            <td><a href="javascript:User.promptViewHistory('$flUser.id');" class="clock" title="View Filelocker interactions for '$flUser.id'">$flUser.id</a></td>
+                            #else
+                            <td><a href="javascript:User.promptViewHistory('$flUser.id');" class="admin" title="View Filelocker interactions for '$flUser.id' (admin)">$flUser.id</a></td>
+                            #end if
+                            <td onClick="Admin.User.rowClick('$flUser.id')">$flUser.last_name</td>
+                            <td onClick="Admin.User.rowClick('$flUser.id')">$flUser.first_name</td>
+                            <td onClick="Admin.User.rowClick('$flUser.id')">$flUser.email</td>
+                        #if $flUser.quota is not None and float($flUser.quota) > 0:
+                            #set $percentUsed = int(round(float($FileService.get_user_quota_usage_bytes(flUser))/float($flUser.quota)*100,0))
+                        #else
+                            #set $percentUsed = 0
+                        #end if
+                        #set $quotaUsedMB = int(round($flUser.quota_used,0))
+                        #if $flUser.quota is not None and $flUser.quota >= 1024
+                            #set $quotaInGB = round(float($flUser.quota)/1024,2)
+                            <td onClick="Admin.User.rowClick('$flUser.id')"><span class="userQuotaUsage pseudoLink" title="${percentUsed}% ($quotaUsedMB MB) used">$quotaInGB GB</span></td>
+                        #else
+                            <td onClick="Admin.User.rowClick('$flUser.id')"><span class="userQuotaUsage pseudoLink" title="${percentUsed}% ($quotaUsedMB MB) used">$flUser.quota MB</span></td>
+                        #end if
+                            <td onClick="Admin.User.rowClick('$flUser.id')" class="dropdownArrowNarrow rightborder"></td>
+                        </tr>
+                    #end for
+                    </tbody>
+                </table> <!-- End User listing -->
+            </div>
+            <br />
+            <ul>
+                #if $totalUserCount < 50
+                <li><span id="usersLoadedNow">$totalUserCount</span> of $totalUserCount users loaded. <a href="javascript:User.load($totalUserCount);" title="Load all Filelocker users into the above table.">Load all users...</a></li>
+                #else
+                <li><span id="usersLoadedNow">50</span> of $totalUserCount users loaded. <a href="javascript:User.load($totalUserCount);" title="Load all Filelocker users into the above table.">Load all users...</a></li>
+                #end if
+                <li><div class="itemTitleWide"><span class="excel"><a href="javascript:Admin.downloadUserData();" title="Download a CSV file with all Filelocker user data.">Download all Filelocker user data</a></span></div></li>
+            </ul>
+        </div>
+
+        <div id="roles">
+            <div class="button"><a href="javascript:Admin.Role.promptCreate();" title="Create a new Filelocker role" class="roleNewButton"><span>Create Role</span></a></div>
+            <div class="button"><a href="javascript:Admin.Role.del();" title="Delete the selected Filelocker roles" class="deleteButton"><span>Delete Selected</span></a></div>
+            <div id="roleSorterLoading" class="hidden">&nbsp;</div><br/><br/><br/><br/><!-- Fixes a Chrome display issue -->
+            <div id="roleTableSorterWrapper">
+                <table class="file_table" id="roleTableSorter">
+                    <thead>
+                        <tr>
+                            <th class="selectAllCol"><input type="checkbox" id="allRolesCheckbox" onClick="javascript:Admin.Role.selectAll();"/></th>
+                            <th class="userIdCol pseudoLink">Role ID</th>
+                            <th class="userFullNameCol pseudoLink">Role Name</th>
+                            <th class="userEmailCol pseudoLink">Email</th>
+                            <th class="userQuotaCol pseudoLink">Quota</th>
+                            <th class="menuCol"></th>
+                        </tr>
+                        <tr>
+                            <td></td>
+                            <td colspan="5" class="dotted"></td>
+                        </tr>
+                    </thead>
+                    <tbody id="roleTable">
+                    #for $flRole in $flRoles
+                        <tr id="role_$flRole.id" class="roleRow">
+                            <td id="roleNameElement_$flRole.id" class="roleNameElement"><input type="checkbox" name="select_role" value="$flRole.id" class="roleSelectBox" id="checkbox_$flRole.id">
+                                <div class="posrel">
+                                    <div id="menu_roleRow_$flRole.id" class="menuRoles hidden">
+                                    <ul class="menu">
+                                        <li><div class="button" style="width: 185px;"><a href="javascript:Admin.Role.promptUpdate('$flRole.id', '$flRole.name', '$flRole.email', $flRole.quota);" title="Edit account for '$flRole.id'" class="editButton"><span><center>Edit Role Account</center></span></a></div></li>
+                                        <li><div class="button" style="width: 185px;"><a href="javascript:Admin.RolePermission.load('$flRole.id');" title="Grant and revoke role permissions for '$flRole.id'" class="wandButton"><span><center>Edit Permissions</center></span></a></div></li>
+                                        <li><div class="button" style="width: 185px;"><a href="javascript:Admin.Role.prompt('$flRole.id');" title="Manage membership for '$flRole.name'" class="editButton"><span><center>Manage Members</center></span></a></div></li>
+                                    </ul>
+                                </div>
+                            </td>
+                            <td onClick="Admin.Role.rowClick('$flRole.id')"><span class="role">$flRole.id</span></td>
+                            <td onClick="Admin.Role.rowClick('$flRole.id')">$flRole.name</td>
+                            <td onClick="Admin.Role.rowClick('$flRole.id')">$flRole.email</td>
+                        #if $flRole.quota is not None and float($flRole.quota) > 0:
+                            #set $percentUsed = int(round(float($FileService.get_role_quota_usage_bytes($flRole.id))/float($flRole.quota)*100,0))
+                        #else
+                            #set $percentUsed = 0
+                        #end if
+                        #set $quotaUsedMB = int(round($FileService.get_role_quota_usage_bytes($flRole),0)) * 1024 * 1024
+                        #if $flRole.quota is not None and $flRole.quota >= 1024
+                            #set $quotaInGB = round(float($flRole.quota)/1024,2)
+                            <td onClick="Admin.Role.rowClick('$flRole.id')"><span class="roleQuotaUsage pseudoLink" title="${percentUsed}% ($quotaUsedMB MB) used">$quotaInGB GB</span></td>
+                        #else
+                            <td onClick="Admin.Role.rowClick('$flRole.id')"><span class="roleQuotaUsage pseudoLink" title="${percentUsed}% ($quotaUsedMB MB) used">$flRole.quota MB</span></td>
+                        #end if
+                            <td onClick="Admin.Role.rowClick('$flRole.id')" class="dropdownArrowNarrow rightborder"></td>
+                        </tr>
+                    #end for
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="templates">
+            <select name="template_selector" id="template_selector" onchange="Admin.Template.load()">
+            <optgroup label = "Email Templates">
+                <option value="share_notification.tmpl" selected>Share Notification</option>
+                <option value="upload_request_notification.tmpl">Upload Request</option>
+                <option value="public_share_notification.tmpl">Public Share Notification</option>
+                <option value="download_notification.tmpl">Download Notifcation</option> 
+            </optgroup>
+            <optgroup label="Site Appearance">
+                <option value="tos.tmpl">Terms of Service</option>
+                <option value="footer_text.tmpl">Footer Text</option>
+                <option value="error.tmpl">Error Page</option>
+            </optgroup>
+            </select><br/>
+            <textarea id="templateEditArea"></textarea>
+            <br/>
+            <div class="button"><a href="javascript:Template.save();" title="Save this template" class="saveButton"><span>Save Template</span></a></div>
+            <div class="button"><a href="javascript:Template.revert();" title="Reload this template from the default" class="revertButton"><span>Revert to Default</span></a></div>
+        </div>
+
+        <div id="attributes">
+            <div class="button"><a href="javascript:Attribute.promptCreate();" title="Create a new Filelocker role attribute" class="attributeNewButton"><span>Create Attribute</span></a></div>
+            <div class="button"><a href="javascript:Attribute.del();" title="Delete the selected Filelocker role attributes" class="deleteButton"><span>Delete Selected</span></a></div><br/><br/><br/><br/>
+            <table class="file_table" id="attributeTableSorter">
+                <thead>
+                    <tr>
+                        <th class="selectAllCol"><input type="checkbox" id="allAttributesCheckbox" onClick="allClassBoxChecked('allAttributesCheckbox', 'attrSelectBox')"/></th>
+                        <th class="attrIdCol pseudoLink">Attribute ID</th>
+                        <th class="attrNameCol pseudoLink">Attribute Name</th>
+                    </tr>
+                    <tr>
+                        <td></td>
+                        <td colspan="2" class="dotted"></td>
+                    </tr>
+                </thead>
+                <tbody id="attributeTable">
+                #for $attribute in $attributes
+                    <tr id="attr_$attribute.id" class="roleRow" >
+                        <td><input type="checkbox" name="select_attr" value="$attribute.id" class="attrSelectBox"></td>
+                        <td>$attribute.id</td>
+                        <td>$attribute.name</td>
+                    </tr>
+                #end for
+                </tbody>
+            </table>
+        </div>
+
+        <div id="config">
+            <form action="$config['root_url']/admin_interface/update_server_config" method="POST" id="configForm">
+            <table>
+            #for $param in $configParameters
+                #if $param.name == "auth_type"
+                <tr>
+                    <td>$param.name</td>
+                    <td>$param.description<input type="text" name="config_desc_$param.name" style="display: none"/></td>
+                    <td>$param.value
+                        <select name="config_name_$param.name">
+                        <option value="ldap"
+                        #if $param.value=='ldap'#slurp
+                        selected
+                        #end if#slurp
+                        >LDAP</option>
+                        <option value="cas"
+                        #if $param.value=='cas'#slurp
+                        selected
+                        #end if#slurp
+                        >CAS</option>
+                        <option value="local"
+                        #if $param.value=='local'#slurp
+                        selected
+                        #end if#slurp
+                        >Local</option>
+                        </select>
+                    </td>
+                </tr>
+                #elif $param.name == "directory_type"
+                <tr>
+                    <td>$param.name</td>
+                    <td>$param.description<input type="text" name="config_desc_$param.name" style="display: none"/></td>
+                    <td>$param.value
+                        <select name="config_name_$param.name">
+                        <option value="ldap"
+                        #if $param.value=='ldap'#slurp
+                        selected
+                        #end if#slurp
+                        >LDAP</option>
+                        <option value="ws"
+                        #if $param.value=='ws'#slurp
+                        selected
+                        #end if#slurp
+                        >Webservices</option>
+                        <option value="local"
+                        #if $param.value=='local'#slurp
+                        selected
+                        #end if#slurp
+                        >Local</option>
+                        </select>
+                    </td>
+                </tr>
+                #elif $param.name == "version"
+                <tr>
+                    <td>$param.name</td>
+                    <td>$param.description</td>
+                    <td>$param.value</td>
+                </tr>
+                #elif $param.name.endswith("pass")
+                <tr>
+                    <td>$param.name</td>
+                    <td>$param.description<input type="text" name="config_desc_$param.name" style="display: none"/></td>
+                    <td><input type="password" name="config_name_$param.name" value="$param.value" /></td>
+                </tr>
+                #elif $param.type == "boolean"
+                <tr>    
+                    <td>$param.name</td>
+                    <td>$param.description<input type="text" name="config_desc_$param.name" style="display: none"/></td>
+                    <td>$param.value
+                        <select name="config_name_$param.name">
+                        #if $param.value == "Yes"
+                            <option value="Yes" selected>Yes</option>
+                            <option value="No">No</option>
+                        #else
+                            <option value="No" selected>No</option>
+                            <option value="Yes">Yes</option>
+                        #end if
+                        </select>
+                    </td>
+                </tr>
+                #else
+                <tr>    
+                    <td>$param.name</td>
+                    <td>$param.description<input type="text" name="config_desc_$param.name" style="display: none"/></td>
+                    <td><input type="text" name="config_name_$param.name" value="$param.value" /></td>
+                </tr>
+                #end if
+            #end for
+            </table>
+            <input type="button" value="Update Config" onClick="javascript:Admin.updateConfig();"/>
+            </form>
+        </div>
+
+        <div id="logs">
+            <p>
+                #for $logLine in $logs
+                $logLine.replace('<','&lt;').replace('>','&gt;') <br/>
+                #end for
+            </p>
+        </div>
+
+    </div> <!-- End Admin Sections -->
+    <!--end content area-->
+</div> <!--End wrapper Col 1-->
+<div id="wrapper_col2">
+    <div class="text_col2">
+        <a href="$orgConfig['org_url']" target="_blank" title="Take me to the $orgConfig['org_name'] home page"><img src="$config['root_url']/static/images/logos/logo.gif" alt="$orgConfig['org_name']" class="orgLogo" /></a>
+        <img src="$config['root_url']/static/images/page_elements/horizontal_rule.gif" alt="" class="horizontal_rule" />
+        <p><span class="strong">Admin</span> <br/> This area allows you to edit the installed role directory, edit custom templates, edit dynamic attributes, configure the server, and view logs.</p>
+        <img src="$config['root_url']/static/images/page_elements/horizontal_rule.gif" alt="" class="horizontal_rule" />
+        <p><strong>File Vault Usage</strong></p>
+        <div id="fileVaultUsageBar" class="vaultUsage"></div>
+        <p><strong>System State</strong></p>
+        #set $currentUsers = len($currentUsersList)
+        <div><span class="systemStateItem"><a href="javascript:User.showCurrent();" title="Show a list of every current Filelocker role">Current Users:</a></span><span class="systemStateValue">$currentUsers</span></div>
+        <div><span class="systemStateItem">Installed Users:</span><span class="systemStateValue">$totalUserCount</span></div>
+        <div><span class="systemStateItem">Current Uploads:</span><span class="systemStateValue">$currentUploads</span></div>
+        <div><span class="systemStateItem">Locked Files:</span><span class="systemStateValue">$totalFileCount</span></div>
+        <div><span class="systemStateItem">Secure Messages:</span><span class="systemStateValue">$totalMessageCount</span></div>
+        <div><span class="itemTitleWide"><a href="javascript:Admin.Statistics.load();" class="statistics" title="View hourly, daily, and monthly usage metrics"><strong>View System Usage Statistics</strong></a></span></div>
+    </div> <!-- End Text_col2 -->
+</div> <!--End Wrapper Col 2 -->
+
+<!-- Begin Lightboxes -->
+
+<div id="currentUsersBox" class="hidden">
+    <div class="popup_wrapper">
+        <div class="popup_small">
+            <table class="file_table" id="currentUsersTableSorter">
+            <thead>
+                <tr>
+                    <th class="spacerCol"></th>
+                    <th class="idCol pseudoLink">User ID</th>
+                    <th class="roleFullNameCol pseudoLink">User Name</th>
+                </tr>
+                <tr>
+                    <td></td>
+                    <td colspan="2" class="dotted"></td>
+                </tr>
+            </thead>
+            <tbody>
+            #for $currentUser in $currentUsersList
+                <tr>
+                    <td></td>
+                    <td>$currentUser.id</td>
+                    <td>$currentUser.display_name</td>
+                </tr>
+            #end for
+            </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- End Lightboxes -->

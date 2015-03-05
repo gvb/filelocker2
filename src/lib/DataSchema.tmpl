@@ -1,0 +1,130 @@
+<filelocker_database>
+    <permissions>
+    #for $permission in $permissions
+        <permission id="$permission.id" name="$permission.name"/>
+    #end for
+    </permissions>
+
+    <attributes>
+    #for $att in $attributes
+        <attribute id="$att.id" name="$att.name"/>
+    #end for
+    </attributes>
+
+    <roles>
+    #for $role in $roles
+        <role id="$role.id" name="$role.name" quota="$role.quota" email="$role.email">
+            <role_permissions>
+            #if $role_permissions.has_key($role.id)
+                #for $permissionId in $role_permissions[$role.id]
+                    <role_permission id="$permissionId"/>
+                #end for
+            #end if
+            </role_permissions>
+
+        </role>
+    #end for
+    </roles>
+
+    <users>
+    #for $user in $users
+        <user id="$user.id" first_name="$user.first_name" last_name="$user.last_name" quota="$user.quota" email="$user.email" date_last_login="$user.date_last_login" date_tos_accept="$user.date_tos_accept" password="$user.password">
+            <user_permissions>
+            #for $permission in $user.permissions
+                <user_permission id="$permission.id"/>
+            #end for
+            </user_permissions>
+            <user_roles>
+            #for $role in $roles
+                <user_role id="$role.id"/>
+            #end for
+            </user_roles>
+        </user>
+    #end for
+    </users>
+
+    <groups>
+    #for $group in $groups
+        <group id="$group.id" name="$group.name" scope="$group.scope" owner_id="$group.owner_id" role_owner_id="$group.role_owner_id">
+            <group_members>
+            #for $member in $group.members
+                <group_member id="$member.id"/>
+            #end for
+            </group_members>
+        </group>
+    #end for
+    </groups>
+
+
+    <files>
+    #for $f in $files
+        <file id="$f.id" name="$f.name" type="$f.type" size="$f.size" date_uploaded="$f.date_uploaded" owner_id="$f.owner_id" role_owner_id="$f.role_owner_id" date_expires="$f.date_expires" passed_avscan="$f.passed_avscan" encryption_key="$f.encryption_key" status="$f.status" notify_on_download="$f.notify_on_download" md5="$f.md5" upload_request_id="$f.upload_request_id" />
+    #end for
+    </files>
+
+    <deleted_files>
+    #for $f in $deletedFiles
+        <deleted_file file_name="$f.file_name"/>
+    #end for
+    </deleted_files>
+
+    <messages>
+    #for $m in $messages
+        <message id="$m.id" subject="$m.subject" date_sent="$m.date_sent" owner_id="$m.owner_id" date_expires="$m.date_expires" encryption_key="$m.encryption_key"/>
+    #end for
+    </messages>
+
+    <message_shares>
+    #for $ms in $messageShares
+        <message_share message_id="$ms.message_id" recipient_id="$ms.recipient_id" date_viewed="$ms.date_viewed"/>
+    #end for
+    </message_shares>
+
+    <user_shares>
+    #for $us in $userShares
+        <user_share file_id="$us.file_id" user_id="$us.user_id" />
+    #end for
+    </user_shares>
+
+    <group_shares>
+    #for $gs in $groupShares
+        <group_share file_id="$gs.file_id" group_id="$gs.group_id" />
+    #end for
+    </group_shares>
+
+    <public_shares>
+    #for $ps in $publicShares
+        <public_share id="$ps.id" owner_id="$ps.owner_id" date_expires="$ps.date_expires" password="$ps.password" reuse="$ps.reuse">
+            <public_share_files>
+            #for $flFile in $ps.files
+                <file id="$flFile.id"/>
+            #end for
+            </public_share_files>
+        </public_share>
+    #end for
+    </public_shares>
+
+    <attribute_shares>
+    #for $ats in $attributeShares
+        <attribute_share attribute_id="$ats.attribute_id" file_id="$ats.file_id/>"
+    #end for
+    </attribute_shares>
+
+    <hidden_shares>
+    #for $hs in $hiddenShares
+        <hidden_share file_id="$hs.file_id" owner_id="$hs.owner_id"/>
+    #end for
+    </hidden_shares>
+
+    <upload_requests>
+    #for $u in $uploadRequests
+        <upload_request id="$u.id" owner_id="$u.owner_id" max_file_size="$u.max_file_size" scan_file="$u.scan_file" date_expires="$u.date_expires" password="$u.password" type="$u.type"/>
+    #end for
+    </upload_requests>
+
+    <config_parameters>
+    #for $cf in $configParameters
+        <config_parameter name="$cf.name" description="$cf.description" type="$cf.type" value="$cf.value"/>
+    #end for
+    </config_parameters>
+</filelocker_database>

@@ -1,0 +1,76 @@
+#if $len($fMessages) > 0
+    #for $message in $fMessages
+    <input type="hidden" class="flErrorMessage" value="$message">
+    #end for
+#end if
+<div id="wrapper_col1">
+    <div class="section_title">
+        <h1 class="history_title">History</h1>
+    </div>
+    
+    <div class="toolbar">
+        <div class="button"><a href="javascript:StatusResponse.hide();javascript:FLFile.load()" title="Take me back to 'My Files'" class="back_to_files"><span>Back to Files</span></a></div>
+    </div>
+    <div class="file_list"> <!-- File Area -->
+        <table class="file_table" id="historyTableSorter">
+        <thead>
+            <tr>
+                <th class="timestampCol pseudoLink">Timestamp</th>
+                <th class="actionCol pseudoLink">Action</th>
+                <th class="detailsCol pseudoLink">Details</th>
+            </tr>
+            <tr>
+                <td colspan="3" class="dotted"></td>
+            </tr>
+        </thead>
+        
+        <tbody>
+        #for $actionLog in $actionLogList
+        <tr>
+            <td>$actionLog.date.strftime("%m/%d/%Y %H:%M")</td>
+            <td class="$actionLog.display_class audit_action">$actionLog.action</td>
+            <td>$actionLog.message</td>
+        </tr>
+        #end for
+        </tbody>
+        </table>
+    </div> <!-- End File List -->
+</div> <!-- Wrapper Col 1-->
+
+<div id="wrapper_col2">
+    <div class="text_col2">
+        <a href="$orgConfig['org_url']" target="_blank" title="Take me to the $orgConfig['org_name'] home page"><img src="$config['root_url']/static/images/logos/logo.gif" alt="$orgConfig['org_name']" class="orgLogo" /></a>
+        <img src="$config['root_url']/static/images/page_elements/horizontal_rule.gif" alt="" class="horizontal_rule" />
+        <p><span class="strong">History</span> <br/> This area allows you to view all of your interactions with Filelocker.  Below you can filter the results by action and/or date.</p>
+        <img src="$config['root_url']/static/images/page_elements/horizontal_rule.gif" alt="" class="horizontal_rule" />
+        <div class="historyFilter">
+            <h3>Filter Results</h3>
+            <label for="logActions">Action:</label>
+            <select id="logActions" onChange="History.load()">
+            #if $logAction == "all"
+                <option value="all" selected>All</option>
+            #else
+                <option value="all">All</option>
+            #end if
+            
+            #if $logAction is None or $logAction == "" or $logAction == "all_minus_login"
+                <option value="all_minus_login" selected>All (hide logins)</option>
+            #else
+                <option value="all_minus_login">All (hide logins)</option>
+            #end if
+            
+                #for $action in $actionList
+                    #if $logAction is not None and $logAction == $action
+                        <option value="$action" selected>$str($action)</option>
+                    #else
+                        <option value="$action">$action</option>
+                    #end if
+                #end for
+            </select>
+            <label for="historyStartDate">Start Date:</label>
+            <input type="text" id="historyStartDate" class="datePast" value="$startDateFormatted.strftime("%m/%d/%Y")" onchange="History.load()" onselect="this.value=''" />
+            <label for="historyEndDate">End Date:</label>
+            <input type="text" id="historyEndDate" class="datePast" value="$endDateFormatted.strftime("%m/%d/%Y")" onchange="History.load()" onselect="this.value=''" />
+        </div>
+    </div> <!-- End Text_col2 -->
+</div> <!--End wrapper col 2 -->

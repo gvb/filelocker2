@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="description" content="Developed at Purdue University, Filelocker allows you to share files with other people both inside and outside of your organization. It is a temporary and secure storage system for sharing files and data."/> 
+    <meta name="keywords" content="filelocker, encryption, security application, enterprise, auditing, secure storage, information security, online storage, file sharing, share files, online backup, sharing, collaboration" /> 
+    <title>Filelocker</title>
+    <link href="$config['root_url']/css?style=jquery-ui" rel="stylesheet" type="text/css" />
+    <link href="$config['root_url']/css?style=filelocker" rel="stylesheet" type="text/css" />
+    <link href="$config['root_url']/static/images/favicon.ico" rel="shortcut icon" />
+</head>
+<body class="greyBackground">
+<div id="background">
+    <div id="wrapper_all">
+        <div id="wrapper_header">
+            <div class="logo"><a href="$config['root_url']"><img src="$config['root_url']/static/images/logos/filelocker_logo.png" alt="Filelocker" /></a></div>
+        </div>
+        <div id="wrapper_2col">
+            <div id="wrapper_col1">
+                <div class="section_title">
+                    <h1 class="denied_title">There was a problem with your request</h1>
+                </div>
+                <h2 class="errorMessage">$message</h2>
+            </div>
+            <div id="wrapper_col2">
+                <div class="text_col2">
+                    <a href="$orgConfig['org_url']" target="_blank" title="Take me to the $orgConfig['org_name'] home page"><img src="$config['root_url']/static/images/logos/logo.gif" alt="$orgConfig['org_name']" class="orgLogo" /></a>
+                    <img src="$config['root_url']/static/images/page_elements/horizontal_rule.gif" alt="" class="horizontal_rule" />
+                    <p><span class="strong">Filelocker</span> allows you to share files with other people both inside and outside of $orgConfig['org_name']. It is a temporary and secure storage system for sharing files and data.</p>
+                    <img src="$config['root_url']/static/images/page_elements/horizontal_rule.gif" alt="" class="horizontal_rule" />
+                </div>
+            </div>
+        </div>
+        <div id="footer">$footerText</div>
+    </div>
+</div>
+</body>
+</html>

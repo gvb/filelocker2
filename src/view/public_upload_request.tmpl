@@ -1,0 +1,72 @@
+<div id="wrapper_col1">
+    <div class="section_title">
+    #if $uploadRequest is not None
+        <h1 class="files_title">Upload a file for $uploadRequest.owner.display_name</h1>
+    #else
+        <h1 class="files_title">Upload a file for a Filelocker user</h1>
+    #end if
+    </div>
+
+    <div class="login">
+        #for $message in $messages
+        <h2 class="errorMessage">$message</h2>
+        #end for
+        <form action="$config['root_url']/upload_request_uploader" name="form" method="POST" id="verifyTicketForm">
+            <div>
+                #if $requestId is None or $requestId == ""
+                <label for="requestId">Request ID: </label>
+                <input type="text" name="requestId" value=""/>
+                #else
+                <p>Request ID: <b>$requestId</b></p>
+                <input type="hidden" name="requestId" value="$requestId" />
+                #end if
+            </div>
+            <div>
+                #if $uploadRequest is None or $uploadRequest.password is not None
+                <label for="password">Password:</label>
+                <input type="password" name="password" id="password" />
+                #else
+                <input type="test" disabled="disabled" name="password" id="password" value="No password required" />
+                #end if
+            </div>
+            <div>
+                <div class="button"><a href="#" onClick="document.forms['verifyTicketForm'].submit();" title="Verify password for upload request" class="uploadButton"><span>Verify Password</span></a></div>
+            </div>
+        </form>
+    </div>
+</div>
+<div id="wrapper_col2">
+    <div class="text_col2">
+        <a href="$orgConfig['org_url']" target="_blank" title="Take me to the $orgConfig['org_name'] home page"><img src="$config['root_url']/static/images/logos/logo.gif" alt="$orgConfig['org_name']" class="orgLogo" /></a>
+        <img src="$config['root_url']/static/images/page_elements/horizontal_rule.gif" alt="" class="horizontal_rule" />
+        <p><span class="strong">Public Upload</span> <br/> This area allows you to upload files for a user who has requested them. Once a file is uploaded, it will be available to the requestor on their Files page.</p>
+        <img src="$config['root_url']/static/images/page_elements/horizontal_rule.gif" alt="" class="horizontal_rule" />
+    </div>
+</div>
+
+<div id="helpBox" class="hidden">
+    <div class="popup_wrapper">
+        <div class="popup_large">
+            <table id="help">
+            <tr>
+                <td>
+                    <table class="file_table" style="width: 180px;">
+                        <thead>
+                            <tr>
+                                <th class="spacerCol"></th>
+                                <th class="helpTableOfContentsCol pseudoLink">Topic</th>
+                            </tr>
+                            <tr>
+                                <td></td>
+                                <td class="dotted"></td>
+                            </tr>
+                        </thead>
+                        <tbody id="helpTableOfContents"></tbody>
+                    </table>
+                </td>
+                <td id="helpViewer"></td>
+            </tr>
+            </table>
+        </div>
+    </div>
+</div>
